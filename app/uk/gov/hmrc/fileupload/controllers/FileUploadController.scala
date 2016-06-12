@@ -35,7 +35,7 @@ trait FileUploadController extends FrontendController {
   }
 
   def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
-    Try(UploadParameters(request.body.dataParts.map(findAndMapFirstParamValue))) match {
+    Try(UploadParameters(request.body.dataParts)) match {
       case Failure(e) =>
         Logger.info(s"Exception: $e was thrown")
         Future.successful(BadRequest)
@@ -43,21 +43,28 @@ trait FileUploadController extends FrontendController {
         Future.successful(MovedPermanently(params.successRedirect))
     }
   }
-
-  private def findAndMapFirstParamValue(kv: (String, Seq[String])): (String, String) = { kv match {
-      case (k, Seq(v:String, _*)) if !Option(v).getOrElse("").isEmpty => (k, v)
-      case _ => (null,null)
-    }
-  }
 }
 
 sealed case class UploadParameters(successRedirect:String, failureRedirect:String, envelopeId:String, fileId:String)
 
 object UploadParameters {
-  def apply(params:Map[String, String]): UploadParameters = {
-    UploadParameters(params.getOrElse("successRedirect", throw new BadRequestException("successRedirect is missing")),
-                     params.getOrElse("failureRedirect", throw new BadRequestException("failureRedirect is missing")),
-                     params.getOrElse("envelopeId", throw new BadRequestException("envelopeId is missing")),
-                     params.getOrElse("fileId", throw new BadRequestException("fileId is missing")))
+  def apply(dataParts:Map[String, Seq[String]]): UploadParameters = {
+    implicit val filteredParams = dataParts.mapValues(toFirstValue).filter(removeEntriesWithNoValue)
+
+    UploadParameters(requiredValue("successRedirect"),
+                     requiredValue("failureRedirect"),
+                     requiredValue("envelopeId"),
+                     requiredValue("fileId"))
   }
+
+  private def requiredValue(key:String)(implicit map:Map[String, Option[String]]): String = {
+    map.getOrElse(key, throw new BadRequestException(s"$key is missing")).get
+  }
+
+  private def toFirstValue(vals: Seq[String]): Option[String] = vals.headOption match {
+    case some @ Some(v) if v.trim.length > 0 => some
+    case _ => None
+  }
+
+  private def removeEntriesWithNoValue(t: (String, Option[String])): Boolean = t._2.isDefined
 }
