@@ -16,15 +16,12 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import play.api.Logger
 import play.api.libs.Files.TemporaryFile
-import uk.gov.hmrc.play.frontend.controller.FrontendController
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryString
-import uk.gov.hmrc.play.http.BadRequestException
+import uk.gov.hmrc.play.frontend.controller.FrontendController
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 
 
 object FileUploadController extends FileUploadController
@@ -63,7 +60,7 @@ object UploadParameters {
   }
 
   def buildInvalidQueryString(uploadParameters: UploadParameters): String = {
-    "?" + asMap(uploadParameters).filter(_._2.isEmpty).map { a => s"invalidParam=${a._1}" }.mkString("&")
+    "?" + asMap(uploadParameters).filter(_._2.isEmpty).map { entry => s"invalidParam=${entry._1}" }.mkString("&")
   }
 
   private def asMap(params: UploadParameters) = {
