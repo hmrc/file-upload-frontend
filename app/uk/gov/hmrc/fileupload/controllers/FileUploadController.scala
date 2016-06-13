@@ -20,6 +20,7 @@ import play.api.Logger
 import play.api.libs.Files.TemporaryFile
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 import play.api.mvc._
+import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryString
 import uk.gov.hmrc.play.http.BadRequestException
 
 import scala.concurrent.Future
@@ -35,30 +36,42 @@ trait FileUploadController extends FrontendController {
   }
 
   def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
-    Try(UploadParameters(request.body.dataParts)) match {
-      case Failure(e) =>
-        Logger.info(s"Exception: $e was thrown")
-        Future.successful(BadRequest)
-      case Success(params:UploadParameters) =>
-        Future.successful(MovedPermanently(params.successRedirect))
+    UploadParameters(request.body.dataParts) match {
+      case UploadParameters(Some(successRedirect), Some(_), Some(_), Some(_)) =>
+        Future.successful(SeeOther(successRedirect))
+      case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
+        Future.successful(SeeOther(failureRedirect + buildInvalidQueryString(params)))
+      case params @ UploadParameters(_, None, _, _) =>
+        request.headers.get("Referer") match {
+          case Some(referer) => Future.successful(SeeOther(referer + buildInvalidQueryString(params)))
+          case None => Future.successful(BadRequest)
+        }
     }
   }
 }
 
-sealed case class UploadParameters(successRedirect:String, failureRedirect:String, envelopeId:String, fileId:String)
+sealed case class UploadParameters(successRedirect:Option[String], failureRedirect:Option[String], envelopeId:Option[String], fileId:Option[String])
 
 object UploadParameters {
   def apply(dataParts:Map[String, Seq[String]]): UploadParameters = {
     implicit val filteredParams = dataParts.mapValues(toFirstValue).filter(removeEntriesWithNoValue)
 
-    UploadParameters(requiredValue("successRedirect"),
-                     requiredValue("failureRedirect"),
-                     requiredValue("envelopeId"),
-                     requiredValue("fileId"))
+    UploadParameters(getOptionValue("successRedirect"),
+                     getOptionValue("failureRedirect"),
+                     getOptionValue("envelopeId"),
+                     getOptionValue("fileId"))
   }
 
-  private def requiredValue(key:String)(implicit map:Map[String, Option[String]]): String = {
-    map.getOrElse(key, throw new BadRequestException(s"$key is missing")).get
+  def buildInvalidQueryString(uploadParameters: UploadParameters): String = {
+    "?" + asMap(uploadParameters).filter(_._2.isEmpty).map { a => s"invalidParam=${a._1}" }.mkString("&")
+  }
+
+  private def asMap(params: UploadParameters) = {
+    Map("successRedirect" -> params.successRedirect, "failureRedirect" -> params.failureRedirect, "envelopeId" -> params.envelopeId, "fileId" -> params.fileId)
+  }
+
+  private def getOptionValue(key:String)(implicit map:Map[String, Option[String]]): Option[String] = {
+    map.getOrElse(key, None)
   }
 
   private def toFirstValue(vals: Seq[String]): Option[String] = vals.headOption match {
