@@ -22,11 +22,14 @@ import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryStri
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 
 import scala.concurrent.Future
+import scala.util.parsing.json.JSONObject
 
 
 object FileUploadController extends FileUploadController
 
 trait FileUploadController extends FrontendController {
+
+  def fileUploadConnector = ???
 
   def upload() = Action.async(parse.multipartFormData) { implicit request =>
     doUpload(request)
@@ -34,7 +37,14 @@ trait FileUploadController extends FrontendController {
 
   def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
     UploadParameters(request.body.dataParts) match {
-      case UploadParameters(Some(successRedirect), Some(_), Some(_), Some(_)) =>
+      case UploadParameters(Some(successRedirect), Some(_), Some(envelopeId), Some(fileId)) =>
+
+        val envelope = fileUploadConnector.retrieveEnvelope(envelopeId)
+
+        envelope match {
+          case ??? => ???
+        }
+
         Future.successful(SeeOther(successRedirect))
       case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
         Future.successful(SeeOther(failureRedirect + buildInvalidQueryString(params)))

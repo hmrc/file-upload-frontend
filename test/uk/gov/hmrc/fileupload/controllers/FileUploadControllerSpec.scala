@@ -46,7 +46,7 @@ class FileUploadControllerSpec extends UnitSpec with WithFakeApplication {
     FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(headers), body = multipartBody)
   }
 
-  "POST /upload" should {
+  "validation - POST /upload" should {
     "return 303 (redirect) to the `successRedirect` parameter if a valid request is received" in {
       val successRedirectURL = "http://somewhere.com/success"
       val fakeRequest = createUploadRequest(successRedirectURL = Some(successRedirectURL))
@@ -144,6 +144,15 @@ class FileUploadControllerSpec extends UnitSpec with WithFakeApplication {
       val result: Future[Result] = FileUploadController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(originalURL + "?invalidParam=successRedirect&invalidParam=failureRedirect&invalidParam=envelopeId&invalidParam=fileId")
+    }
+
+    "return 303 (redirect) to the `failureRedirect` if the `envelopeId` is invalid" in {
+      val failureRedirectURL = "http://somewhere.com/failure"
+      val fakeRequest = createUploadRequest(failureRedirectURL = Some(failureRedirectURL), envelopeId = Some("INVALID"))
+
+      val result: Future[Result] = FileUploadController.upload().apply(fakeRequest)
+      status(result) shouldBe Status.SEE_OTHER
+      redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=envelopeId")
     }
   }
 }
