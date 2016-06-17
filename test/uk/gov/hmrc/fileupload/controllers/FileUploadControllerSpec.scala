@@ -158,6 +158,13 @@ class FileUploadControllerSpec extends UnitSpec {
       redirectLocation(result) shouldBe Some(originalURL + "?invalidParam=successRedirect&invalidParam=failureRedirect&invalidParam=envelopeId&invalidParam=fileId")
     }
 
+    "return 400 (BadRequest) if no parameters are present and referer cannot be established" in {
+      val fakeRequest = createUploadRequest(fileId = None, successRedirectURL = None, envelopeId = None, failureRedirectURL = None)
+
+      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      status(result) shouldBe Status.BAD_REQUEST
+    }
+
     "return 303 (redirect) to the `failureRedirect` if the `envelopeId` is invalid" in {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(failureRedirectURL = Some(failureRedirectURL), envelopeId = Some("INVALID"))
