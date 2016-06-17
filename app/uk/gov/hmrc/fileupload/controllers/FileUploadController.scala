@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
-import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
+import uk.gov.hmrc.fileupload.connectors.{FileUploadConnector, InvalidEnvelope, ValidEnvelope}
 import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryString
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 
@@ -27,7 +27,7 @@ import scala.util.parsing.json.JSONObject
 
 object FileUploadController extends FileUploadController {
   override lazy val fileUploadConnector = FileUploadConnector
-}
+  }
 
 trait FileUploadController extends FrontendController {
 
@@ -40,21 +40,23 @@ trait FileUploadController extends FrontendController {
   def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
     UploadParameters(request.body.dataParts) match {
       case params @ UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Some(fileId)) =>
-
-        val envelope = fileUploadConnector.retrieveEnvelope(envelopeId)
-
-        envelope match {
-          case None => Future.successful(SeeOther(failureRedirect + "?invalidParam=envelopeId"))
-          case Some(_) => Future.successful(SeeOther(successRedirect))
+        fileUploadConnector.retrieveEnvelope(envelopeId) match {
+          case env:ValidEnvelope if env.fileIds.contains(fileId) => sendRedirect(successRedirect)
+          case _:ValidEnvelope => sendRedirect(failureRedirect + "?invalidParam=fileId")
+          case InvalidEnvelope => sendRedirect(failureRedirect + "?invalidParam=envelopeId")
         }
       case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
-        Future.successful(SeeOther(failureRedirect + buildInvalidQueryString(params)))
+        sendRedirect(failureRedirect + buildInvalidQueryString(params))
       case params @ UploadParameters(_, None, _, _) =>
         request.headers.get("Referer") match {
-          case Some(referer) => Future.successful(SeeOther(referer + buildInvalidQueryString(params)))
+          case Some(referer) => sendRedirect(referer + buildInvalidQueryString(params))
           case None => Future.successful(BadRequest)
         }
     }
+  }
+  
+  def sendRedirect(destination:String) = {
+    Future.successful(SeeOther(destination))
   }
 }
 
@@ -71,7 +73,7 @@ object UploadParameters {
   }
 
   def buildInvalidQueryString(uploadParameters: UploadParameters): String = {
-    "?" + asMap(uploadParameters).filter(_._2.isEmpty).map { entry => s"invalidParam=${entry._1}" }.mkString("&")
+    asMap(uploadParameters).filter(_._2.isEmpty).map { entry => s"invalidParam=${entry._1}" }.mkString("?", "&", "")
   }
 
   private def asMap(params: UploadParameters) = {

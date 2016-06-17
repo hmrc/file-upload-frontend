@@ -22,26 +22,29 @@ import play.api.mvc.MultipartFormData.{BadPart, MissingFilePart}
 import play.api.mvc.{MultipartFormData, Result}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
+import uk.gov.hmrc.fileupload.connectors.{Envelope, FileUploadConnector, InvalidEnvelope, ValidEnvelope}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
 class FileUploadControllerSpec extends UnitSpec {
 
+  val validEnvelopeId = "1234567890"
+  val validFileId = "0987654321"
+
   val controller = new FileUploadController {
     override lazy val fileUploadConnector = new FileUploadConnector {
-      override def retrieveEnvelope(envelopeId: String): Option[String] = envelopeId match {
-        case "INVALID" => None
-        case _ => Some("12345")
+      override def retrieveEnvelope(envelopeId: String): Envelope = envelopeId match {
+        case "INVALID" => InvalidEnvelope
+        case _ => ValidEnvelope(validEnvelopeId, Seq(validFileId))
       }
     }
   }
 
   def createUploadRequest(successRedirectURL:Option[String] = Some("http://somewhere.com/success"),
                           failureRedirectURL:Option[String] = Some("http://somewhere.com/failure"),
-                          envelopeId:Option[String] = Some("1234567890"),
-                          fileId:Option[String] = Some("1234567890"),
+                          envelopeId:Option[String] = Some(validEnvelopeId),
+                          fileId:Option[String] = Some(validFileId),
                           headers:Seq[(String, Seq[String])] = Seq()) = {
     var params = Map[String, Seq[String]]()
 
@@ -162,6 +165,15 @@ class FileUploadControllerSpec extends UnitSpec {
       val result: Future[Result] = controller.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=envelopeId")
+    }
+
+    "return 303 (redirect) to the `failureRedirect` if the `envelopeId` is valid but the `fileId` is invalid" in {
+      val failureRedirectURL = "http://somewhere.com/failure"
+      val fakeRequest = createUploadRequest(failureRedirectURL = Some(failureRedirectURL), fileId = Some("INVALID"))
+
+      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      status(result) shouldBe Status.SEE_OTHER
+      redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=fileId")
     }
   }
 }
