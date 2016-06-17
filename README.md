@@ -46,7 +46,9 @@ the actual file content:
 |Outcome|Response Code|Definition|Parameters|Description|
 |---|---|---|---|---|
 |Success|303|`SEE OTHER` -> `successRedirect`|`None`|Returned if the file was uploaded successfully to the service|
-|Failure|303|`SEE OTHER` -> `failureRedirect`|`invalidParam` -> `[paramName]` (0-*)|Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters). If the `failureRedirect` is missing, a redirect will be made back to the original page|
+|Failure|303|`SEE OTHER` -> `failureRedirect`|`invalidParam` -> `[paramName]` (0-*)|Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
+|Failure|303|`SEE OTHER` -> `REFERER`|`invalidParam` -> `[paramName]` (0-*)|If `failureRedirect` is absent. Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
+|Failure|400|`BAD REQUEST`|`None`|If both `failureRedirect` and `Referer` header are not present|
 
 ### License
 
