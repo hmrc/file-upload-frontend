@@ -18,18 +18,20 @@ package uk.gov.hmrc.fileupload.controllers
 
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
+import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
 import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryString
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 
 import scala.concurrent.Future
 import scala.util.parsing.json.JSONObject
 
-
-object FileUploadController extends FileUploadController
+object FileUploadController extends FileUploadController {
+  override lazy val fileUploadConnector = FileUploadConnector
+}
 
 trait FileUploadController extends FrontendController {
 
-  def fileUploadConnector = ???
+  lazy val fileUploadConnector:FileUploadConnector = ???
 
   def upload() = Action.async(parse.multipartFormData) { implicit request =>
     doUpload(request)
@@ -37,15 +39,14 @@ trait FileUploadController extends FrontendController {
 
   def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
     UploadParameters(request.body.dataParts) match {
-      case UploadParameters(Some(successRedirect), Some(_), Some(envelopeId), Some(fileId)) =>
+      case params @ UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Some(fileId)) =>
 
         val envelope = fileUploadConnector.retrieveEnvelope(envelopeId)
 
         envelope match {
-          case ??? => ???
+          case None => Future.successful(SeeOther(failureRedirect + "?invalidParam=envelopeId"))
+          case Some(_) => Future.successful(SeeOther(successRedirect))
         }
-
-        Future.successful(SeeOther(successRedirect))
       case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
         Future.successful(SeeOther(failureRedirect + buildInvalidQueryString(params)))
       case params @ UploadParameters(_, None, _, _) =>
