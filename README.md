@@ -57,6 +57,8 @@ This endpoint *requires*:
 |Failure|303|`SEE OTHER` -> `REFERER`|`invalidParam` -> `[paramName]` (0-*)|If `failureRedirect` is absent. Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
 |Failure|400|`BAD REQUEST`|`None`|If both `failureRedirect` and `Referer` header are not present|
 
+Note: If no, or more than one fileParts are specified, the special `invalidParam=file` will be returned indicating an error in the request.
+
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")
