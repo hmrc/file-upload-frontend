@@ -23,7 +23,6 @@ import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryStri
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 
 import scala.concurrent.Future
-import scala.util.parsing.json.JSONObject
 
 object FileUploadController extends FileUploadController {
   override lazy val fileUploadConnector = FileUploadConnector
