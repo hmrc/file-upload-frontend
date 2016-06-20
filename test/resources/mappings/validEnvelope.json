@@ -1,13 +1,13 @@
 {
   "request": {
     "method": "GET",
-    "url": "/invalidId"
+    "url": "/envelopeId"
   },
   "response": {
     "status": 200,
-    "body": "true",
+    "body": "",
     "headers": {
-      "Content-Type": "text/plain"
+      "Content-Type": "application/json"
     }
   }
 }

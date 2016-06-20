@@ -16,61 +16,38 @@
 
 package uk.gov.hmrc.fileupload.connectors
 
-import java.util.concurrent.TimeUnit
-
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mock.MockitoSugar
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import org.scalatestplus.play.OneServerPerSuite
-import uk.gov.hmrc.fileupload.WSHttp
+import com.github.tomakehurst.wiremock.common.SingleRootFileSource
+import com.github.tomakehurst.wiremock.standalone.JsonFileMappingsLoader
+import uk.gov.hmrc.fileupload.{WSHttp, WireMockSpec}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.duration.FiniteDuration
-
-class FileUploadConnectorSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with ScalaFutures with OneServerPerSuite {
-  override implicit val defaultTimeout = FiniteDuration(100, TimeUnit.SECONDS)
-
-  private val WIREMOCK_PORT = 21212
-  private val stubHost = "localhost"
-
-  protected val wiremockBaseUrl: String = s"http://localhost:$WIREMOCK_PORT"
-  private val wireMockServer = new WireMockServer(wireMockConfig().port(WIREMOCK_PORT))
-
-  override def beforeAll() = {
-    wireMockServer.stop()
-    wireMockServer.start()
-    WireMock.configureFor(stubHost, WIREMOCK_PORT)
-  }
-
-  override def afterAll() = {
-    wireMockServer.stop()
-  }
-
-  override def beforeEach() = {
-    WireMock.reset()
-  }
-
+class FileUploadConnectorSpec extends UnitSpec with WireMockSpec {
   "The fileUploadConnector" should {
     "result in a ValidEnvelope response for a valid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
+      wireMockServer.loadMappingsUsing(new JsonFileMappingsLoader(new SingleRootFileSource("test/resources/mappings")))
       retrieveEnvelope("envelopeId") shouldBe ValidEnvelope(id = "envelopeId", fileIds = Seq("12345"))
     }
 
     "result in an InvalidEnvelope response for an invalid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
+      wireMockServer.loadMappingsUsing(new JsonFileMappingsLoader(new SingleRootFileSource("test/resources/mappings")))
       retrieveEnvelope("invalidId") shouldBe InvalidEnvelope
     }
   }
 
-  class TestFileUploadConnector(baseUrl:String) extends FileUploadConnector with MockitoSugar {
+  class TestFileUploadConnector(baseUrl:String) extends FileUploadConnector {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     override def validate(envelopeId: String): Boolean = {
       implicit val hc = HeaderCarrier()
+
       val http: HttpGet = WSHttp
 
-      await(http.GET(s"$baseUrl/$envelopeId")).body == "true"
-
+      http.GET(s"$baseUrl/$envelopeId").map { _.status match {
+          case 200 => true
+          case _ => false
+        }
+      }.recoverWith { case _ => false }
     }
   }
 }
