@@ -41,7 +41,7 @@ class FileUploadControllerSpec extends UnitSpec {
     }
   }
 
-  def defaultFilePart(idx:Int) = MultipartFormData.FilePart(key = "1",
+  def defaultFilePart(idx:Int) = MultipartFormData.FilePart(key = s"$idx",
                                                    filename = s"default$idx",
                                                    contentType = Some("text/plain"),
                                                    ref = Files.TemporaryFile("test_", "_txt"))
