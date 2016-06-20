@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/invalidId"
+  },
+  "response": {
+    "status": 200,
+    "body": "true",
+    "headers": {
+      "Content-Type": "text/plain"
+    }
+  }
+}

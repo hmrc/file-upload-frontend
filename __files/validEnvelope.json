@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/envelopeId"
+  },
+  "response": {
+    "status": 200,
+    "body": "true",
+    "headers": {
+      "Content-Type": "text/plain"
+    }
+  }
+}
