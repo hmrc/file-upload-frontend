@@ -26,7 +26,7 @@ import scala.concurrent.Future
 
 object FileUploadController extends FileUploadController {
   override lazy val fileUploadConnector = FileUploadConnector
-  }
+}
 
 trait FileUploadController extends FrontendController {
 
