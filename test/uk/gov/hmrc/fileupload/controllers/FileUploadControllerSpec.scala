@@ -41,12 +41,12 @@ class FileUploadControllerSpec extends UnitSpec {
     }
   }
 
-  def defaultFilePart = MultipartFormData.FilePart(key = "1",
-                                                   filename = "",
+  def defaultFilePart(idx:Int) = MultipartFormData.FilePart(key = "1",
+                                                   filename = s"default$idx",
                                                    contentType = Some("text/plain"),
-                                                   ref = Files.TemporaryFile("prefix", "suffix"))
+                                                   ref = Files.TemporaryFile("test_", "_txt"))
 
-  def defaultFiles = Seq(defaultFilePart)
+  def defaultFiles = Seq(defaultFilePart(1))
 
   def createUploadRequest(successRedirectURL:Option[String] = Some("http://somewhere.com/success"),
                           failureRedirectURL:Option[String] = Some("http://somewhere.com/failure"),
@@ -217,7 +217,7 @@ class FileUploadControllerSpec extends UnitSpec {
 
     "return 303 (redirect) to the `failureRedirect` if MULTIPLE file entries areattached to the request" in {
       val failureRedirectURL = "http://somewhere.com/failure"
-      val fakeRequest = createUploadRequest(failureRedirectURL = Some(failureRedirectURL), fileParts = Seq(defaultFilePart, defaultFilePart))
+      val fakeRequest = createUploadRequest(failureRedirectURL = Some(failureRedirectURL), fileParts = Seq(defaultFilePart(1), defaultFilePart(2)))
 
       val result: Future[Result] = controller.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
