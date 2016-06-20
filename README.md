@@ -28,11 +28,18 @@ http://localhost:9000/file-upload-frontend/
 
 This endpoint allows the uploading of a file to the tax platform by means of the `file-upload` service.
 
-The microservice *must* have previously created an envelope and defined its contents before this endpoint can be invoked
-as a valid envelope and file identifier *must* be specified within the request.
+The calling service *must* ensure that:
 
-This endpoint *requires* the contentType to be defined as `multipart/form-data` with the below parameters defined alongside
-the actual file content:
+* an envelope was defined via the `file-upload` service and an `envelopeId` and `fileId` are registered for that envelope
+* the request contains the above valid `envelopeId` and `fileId`
+
+i.e. If being invoked from an HTML form - the service generating the form should ensure that these fields are present
+and have valid values assigned by the `file-upload` service.
+
+This endpoint *requires*:
+ 
+* the contentType to be defined as `multipart/form-data` with the below parameters defined alongside the actual file content.
+* a single filePart be present containing the data to be uploaded to the corresponding `fileId` within the envelope.
 
 #### Parameters
 |Parameter|Required?|Example|Description|
