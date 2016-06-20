@@ -20,9 +20,8 @@ import com.github.tomakehurst.wiremock.common.SingleRootFileSource
 import com.github.tomakehurst.wiremock.standalone.JsonFileMappingsLoader
 import uk.gov.hmrc.fileupload.{WSHttp, WireMockSpec}
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
-import uk.gov.hmrc.play.test.UnitSpec
 
-class FileUploadConnectorSpec extends UnitSpec with WireMockSpec {
+class FileUploadConnectorSpec extends WireMockSpec {
   "The fileUploadConnector" should {
     "result in a ValidEnvelope response for a valid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
       wireMockServer.loadMappingsUsing(new JsonFileMappingsLoader(new SingleRootFileSource("test/resources/mappings")))
