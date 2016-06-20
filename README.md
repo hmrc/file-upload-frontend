@@ -34,7 +34,7 @@ The calling service *must* ensure that:
 * the request contains the above valid `envelopeId` and `fileId`
 
 i.e. If being invoked from an HTML form - the service generating the form should ensure that these fields are present
-and have valid values assigned by the `file-upload` service.
+and have valid values assigned by the [`file-upload` (backend) service](https://github.com/hmrc/file-upload).
 
 This endpoint *requires*:
  
@@ -56,8 +56,6 @@ This endpoint *requires*:
 |Failure|303|`SEE OTHER` -> `failureRedirect`|`invalidParam` -> `[paramName]` (0-*)|Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
 |Failure|303|`SEE OTHER` -> `REFERER`|`invalidParam` -> `[paramName]` (0-*)|If `failureRedirect` is absent. Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
 |Failure|400|`BAD REQUEST`|`None`|If both `failureRedirect` and `Referer` header are not present|
-
-Note: If no, or more than one fileParts are specified, the special `invalidParam=file` will be returned indicating an error in the request.
 
 ### License
 
