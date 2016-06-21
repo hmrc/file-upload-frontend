@@ -16,15 +16,13 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import java.io.File
-
 import play.api.http.Status
 import play.api.libs.Files
 import play.api.mvc.MultipartFormData.{BadPart, MissingFilePart}
 import play.api.mvc.{MultipartFormData, Result}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.fileupload.connectors.{Envelope, FileUploadConnector, InvalidEnvelope, ValidEnvelope}
+import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
@@ -36,10 +34,7 @@ class FileUploadControllerSpec extends UnitSpec {
 
   val controller = new FileUploadController {
     override lazy val fileUploadConnector = new FileUploadConnector {
-      override def retrieveEnvelope(envelopeId: String): Envelope = envelopeId match {
-        case "INVALID" => InvalidEnvelope
-        case _ => ValidEnvelope(validEnvelopeId, Seq(validFileId))
-      }
+      override def validate(envelopeId: String): Boolean = envelopeId != "INVALID"
     }
   }
 

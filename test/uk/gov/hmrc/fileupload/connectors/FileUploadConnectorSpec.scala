@@ -26,11 +26,11 @@ class FileUploadConnectorSpec extends WireMockSpec {
 
   "The fileUploadConnector" should {
     "result in a ValidEnvelope response for a valid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      retrieveEnvelope("envelopeId") shouldBe ValidEnvelope(id = "envelopeId", fileIds = Seq("12345"))
+      validate("envelopeId") shouldBe true
     }
 
     "result in an InvalidEnvelope response for an invalid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      retrieveEnvelope("invalidId") shouldBe InvalidEnvelope
+      validate("invalidId") shouldBe false
     }
   }
 

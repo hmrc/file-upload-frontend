@@ -16,25 +16,10 @@
 
 package uk.gov.hmrc.fileupload.connectors
 
-object FileUploadConnector extends FileUploadConnector {
+object FileUploadConnector extends FileUploadConnector
 
-}
-
-trait FileUploadConnector extends EnvelopeValidator {
-  def retrieveEnvelope(envelopeId: String): Envelope = {
-    if (validate(envelopeId)) {
-      ValidEnvelope(envelopeId, Seq("12345"))
-    } else {
-      InvalidEnvelope
-    }
-  }
-}
+trait FileUploadConnector extends EnvelopeValidator
 
 trait EnvelopeValidator {
   def validate(envelopeId: String): Boolean = ???
 }
-
-sealed trait Envelope
-
-sealed case class ValidEnvelope(id: String, fileIds: Seq[String]) extends Envelope
-case object InvalidEnvelope extends Envelope

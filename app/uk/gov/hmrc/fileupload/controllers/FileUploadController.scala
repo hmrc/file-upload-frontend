@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
-import uk.gov.hmrc.fileupload.connectors.{FileUploadConnector, InvalidEnvelope, ValidEnvelope}
+import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
 import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryString
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 
@@ -39,9 +39,9 @@ trait FileUploadController extends FrontendController {
   def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
     UploadParameters(request.body.dataParts, request.body.files) match {
       case params @ UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Seq(filePart)) =>
-        fileUploadConnector.retrieveEnvelope(envelopeId) match {
-          case env:ValidEnvelope => sendRedirect(successRedirect)
-          case InvalidEnvelope => sendRedirect(failureRedirect + "?invalidParam=envelopeId")
+        fileUploadConnector.validate(envelopeId) match {
+          case true  => sendRedirect(successRedirect)
+          case false => sendRedirect(failureRedirect + "?invalidParam=envelopeId")
         }
       case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
         sendRedirect(failureRedirect + buildInvalidQueryString(params))
