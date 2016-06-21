@@ -20,7 +20,9 @@ import java.util.concurrent.TimeUnit
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.common.SingleRootFileSource
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
+import com.github.tomakehurst.wiremock.standalone.{JsonFileMappingsLoader, MappingsLoader}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatestplus.play.OneServerPerSuite
@@ -49,5 +51,8 @@ trait WireMockSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
 
   override def beforeEach() = {
     WireMock.reset()
+    wireMockServer.loadMappingsUsing(mappings)
   }
+
+  lazy val mappings:MappingsLoader = ???
 }
