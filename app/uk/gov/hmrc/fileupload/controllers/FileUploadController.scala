@@ -38,15 +38,14 @@ trait FileUploadController extends FrontendController {
 
   def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
     UploadParameters(request.body.dataParts, request.body.files) match {
-      case params @ UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Some(fileId), Seq(filePart)) =>
+      case params @ UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Seq(filePart)) =>
         fileUploadConnector.retrieveEnvelope(envelopeId) match {
-          case env:ValidEnvelope if env.fileIds.contains(fileId) => sendRedirect(successRedirect)
-          case _:ValidEnvelope => sendRedirect(failureRedirect + "?invalidParam=fileId")
+          case env:ValidEnvelope => sendRedirect(successRedirect)
           case InvalidEnvelope => sendRedirect(failureRedirect + "?invalidParam=envelopeId")
         }
-      case params @ UploadParameters(_, Some(failureRedirect), _, _, _) =>
+      case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
         sendRedirect(failureRedirect + buildInvalidQueryString(params))
-      case params @ UploadParameters(_, None, _, _, _) =>
+      case params @ UploadParameters(_, None, _, _) =>
         request.headers.get("Referer") match {
           case Some(referer) => sendRedirect(referer + buildInvalidQueryString(params))
           case None => Future.successful(BadRequest)
@@ -62,7 +61,6 @@ trait FileUploadController extends FrontendController {
 sealed case class UploadParameters(successRedirect:Option[String],
                                    failureRedirect:Option[String],
                                    envelopeId:Option[String],
-                                   fileId:Option[String],
                                    files:Seq[MultipartFormData.FilePart[TemporaryFile]])
 
 object UploadParameters {
@@ -72,7 +70,6 @@ object UploadParameters {
     UploadParameters(getOptionValue("successRedirect"),
                      getOptionValue("failureRedirect"),
                      getOptionValue("envelopeId"),
-                     getOptionValue("fileId"),
                      fileParts)
   }
 
@@ -89,7 +86,6 @@ object UploadParameters {
     Map("successRedirect" -> params.successRedirect,
         "failureRedirect" -> params.failureRedirect,
         "envelopeId"      -> params.envelopeId,
-        "fileId"          -> params.fileId,
         "file"            -> fileMatch)
   }
 
