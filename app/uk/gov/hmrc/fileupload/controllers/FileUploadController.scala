@@ -21,28 +21,27 @@ import play.api.mvc._
 import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
 import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryString
 import uk.gov.hmrc.play.frontend.controller.FrontendController
+import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.Future
 
 object FileUploadController extends FileUploadController {
-  override lazy val fileUploadConnector = FileUploadConnector
+  override val fileUploadConnector = FileUploadConnector
 }
 
 trait FileUploadController extends FrontendController {
-
-  lazy val fileUploadConnector:FileUploadConnector = ???
+  val fileUploadConnector:FileUploadConnector
 
   def upload() = Action.async(parse.multipartFormData) { implicit request =>
     doUpload(request)
   }
 
-  def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
+  def doUpload(request: Request[MultipartFormData[TemporaryFile]])(implicit hc:HeaderCarrier) = {
     UploadParameters(request.body.dataParts, request.body.files) match {
       case params @ UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Seq(filePart)) =>
-        if(fileUploadConnector.validate(envelopeId)) {
-          sendRedirect(successRedirect)
-        } else {
-          sendRedirect(failureRedirect + "?invalidParam=envelopeId")
+        fileUploadConnector.validate(envelopeId).flatMap {
+          case true => sendRedirect(successRedirect)
+          case false => sendRedirect(failureRedirect + "?invalidParam=envelopeId")
         }
       case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
         sendRedirect(failureRedirect + buildInvalidQueryString(params))

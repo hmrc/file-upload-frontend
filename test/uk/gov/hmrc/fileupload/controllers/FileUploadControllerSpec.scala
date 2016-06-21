@@ -23,6 +23,7 @@ import play.api.mvc.{MultipartFormData, Result}
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
@@ -33,8 +34,10 @@ class FileUploadControllerSpec extends UnitSpec {
   val validFileId = "0987654321"
 
   val controller = new FileUploadController {
-    override lazy val fileUploadConnector = new FileUploadConnector {
-      override def validate(envelopeId: String): Boolean = envelopeId != "INVALID"
+    override val fileUploadConnector = new FileUploadConnector {
+      override def validate(envelopeId: String)(implicit hc:HeaderCarrier): Future[Boolean] = Future.successful(envelopeId != "INVALID")
+      override val baseUrl: String = null
+      override val http: HttpGet = null
     }
   }
 

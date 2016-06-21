@@ -24,26 +24,24 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
 class FileUploadConnectorSpec extends WireMockSpec {
   override lazy val mappings:MappingsLoader = new JsonFileMappingsLoader(new SingleRootFileSource("test/resources/mappings"))
 
+  implicit val hc = HeaderCarrier()
+
   "The fileUploadConnector" should {
     "result in a ValidEnvelope response for a valid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      validate("envelopeId") shouldBe true
+      await(validate("envelopeId")) shouldBe true
     }
 
     "result in an InvalidEnvelope response for an invalid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      validate("invalidId") shouldBe false
+      await(validate("invalidId")) shouldBe false
+    }
+
+    "is populated with a baseURL from constituent parts in configuration" in {
+      FileUploadConnector.baseUrl shouldBe "http://localhost:8898"
     }
   }
 
-  class TestFileUploadConnector(baseUrl:String) extends FileUploadConnector {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    override def validate(envelopeId: String): Boolean = {
-      implicit val hc = HeaderCarrier()
-
-      val http: HttpGet = WSHttp
-
-      http.GET(s"$baseUrl/$envelopeId").map { _.status == 200 }.recoverWith { case _ => false }
-    }
+  class TestFileUploadConnector(url:String) extends FileUploadConnector {
+    override val baseUrl: String = url
+    override val http: HttpGet = WSHttp
   }
 }
-

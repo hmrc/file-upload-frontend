@@ -16,10 +16,28 @@
 
 package uk.gov.hmrc.fileupload.connectors
 
-object FileUploadConnector extends FileUploadConnector
+import uk.gov.hmrc.fileupload.WSHttp
+import uk.gov.hmrc.play.config.ServicesConfig
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpResponse}
+
+import scala.concurrent.Future
+
+object FileUploadConnector extends FileUploadConnector with ServicesConfig {
+  override val http = WSHttp
+  override val baseUrl:String = baseUrl("file-upload")
+}
 
 trait FileUploadConnector extends EnvelopeValidator
 
 trait EnvelopeValidator {
-  def validate(envelopeId: String): Boolean = ???
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  val baseUrl: String
+  val http: HttpGet
+
+  def validate(envelopeId: String)(implicit hc: HeaderCarrier): Future[Boolean] = {
+    http.GET(s"$baseUrl/envelope/$envelopeId").map { statusIsOk }.recover { case _ => false }
+  }
+
+  def statusIsOk(resp:HttpResponse) = resp.status == 200
 }

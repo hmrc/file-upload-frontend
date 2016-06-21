@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/envelopeId"
+    "url": "/envelope/envelopeId"
   },
   "response": {
     "status": 200,
