@@ -39,9 +39,10 @@ trait FileUploadController extends FrontendController {
   def doUpload(request: Request[MultipartFormData[TemporaryFile]]) = {
     UploadParameters(request.body.dataParts, request.body.files) match {
       case params @ UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Seq(filePart)) =>
-        fileUploadConnector.validate(envelopeId) match {
-          case true  => sendRedirect(successRedirect)
-          case false => sendRedirect(failureRedirect + "?invalidParam=envelopeId")
+        if(fileUploadConnector.validate(envelopeId)) {
+          sendRedirect(successRedirect)
+        } else {
+          sendRedirect(failureRedirect + "?invalidParam=envelopeId")
         }
       case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
         sendRedirect(failureRedirect + buildInvalidQueryString(params))

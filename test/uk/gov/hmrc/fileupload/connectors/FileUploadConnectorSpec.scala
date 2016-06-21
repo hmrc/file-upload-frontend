@@ -42,11 +42,7 @@ class FileUploadConnectorSpec extends WireMockSpec {
 
       val http: HttpGet = WSHttp
 
-      http.GET(s"$baseUrl/$envelopeId").map { _.status match {
-          case 200 => true
-          case _ => false
-        }
-      }.recoverWith { case _ => false }
+      http.GET(s"$baseUrl/$envelopeId").map { _.status == 200 }.recoverWith { case _ => false }
     }
   }
 }
