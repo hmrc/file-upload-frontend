@@ -16,7 +16,7 @@
 import sbt.Keys._
 import sbt.Tests.{Group, SubProcess}
 import sbt._
-import scoverage.ScoverageSbtPlugin.ScoverageKeys
+import scoverage.ScoverageKeys
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 
 
@@ -47,6 +47,8 @@ trait MicroService {
     )
   }
 
+  def itFilter(name: String): Boolean = name endsWith "ISpec"
+
   lazy val microservice = Project(appName, file("."))
     .enablePlugins(Seq(play.PlayScala) ++ plugins : _*)
     .settings(playSettings ++ scoverageSettings: _*)
@@ -66,9 +68,10 @@ trait MicroService {
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
     .settings(
       Keys.fork in IntegrationTest := false,
-      unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it")),
+      unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it", base / "test")),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
+      testOptions in IntegrationTest := Seq(Tests.Filter(itFilter)),
       parallelExecution in IntegrationTest := false)
     .settings(resolvers += Resolver.bintrayRepo("hmrc", "releases"))
 }

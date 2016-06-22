@@ -42,9 +42,13 @@ private object AppDependencies {
   private val playAuthorisedFrontendVersion = "5.0.0"
   private val playConfigVersion = "2.0.1"
   private val hmrcTestVersion = "1.6.0"
-  
+  private val playReactivemongoVersion = "4.8.0"
+  private val simpleReactivemongoVersion = "4.8.0"
+
   val compile = Seq(
     ws,
+    "uk.gov.hmrc" %% "play-reactivemongo" % playReactivemongoVersion,
+    "uk.gov.hmrc" %% "simple-reactivemongo" % simpleReactivemongoVersion,
     "uk.gov.hmrc" %% "frontend-bootstrap" % frontendBootstrapVersion,
     "uk.gov.hmrc" %% "play-partials" % playPartialsVersion,
     "uk.gov.hmrc" %% "play-authorised-frontend" % playAuthorisedFrontendVersion,
@@ -70,12 +74,33 @@ private object AppDependencies {
         "org.scalatestplus" %% "play" % "1.2.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
+        "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
       )
     }.test
   }
 
-  def apply() = compile ++ Test()
+
+
+  object IntegrationTest {
+    def apply() = new TestDependencies {
+      override lazy val scope: String = "it"
+
+      override lazy val test = Seq(
+        "uk.gov.hmrc" %% "hmrctest" % hmrcTestVersion % scope,
+        "org.scalatest" %% "scalatest" % "2.2.6" % scope,
+        "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
+        "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
+        "org.scalatestplus" %% "play" % "1.2.0" % scope,
+        "org.pegdown" % "pegdown" % "1.6.0" % scope,
+        "org.jsoup" % "jsoup" % "1.8.3" % scope,
+        "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
+        "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
+      )
+    }.test
+  }
+
+  def apply() = compile ++ Test() ++ IntegrationTest()
 }
 
 

@@ -18,8 +18,12 @@ package uk.gov.hmrc.fileupload.connectors
 
 import com.github.tomakehurst.wiremock.common.SingleRootFileSource
 import com.github.tomakehurst.wiremock.standalone.{JsonFileMappingsLoader, MappingsLoader}
+import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
 import uk.gov.hmrc.fileupload.{WSHttp, WireMockSpec}
+import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
+
+import scala.util.{Failure, Success}
 
 class FileUploadConnectorSpec extends WireMockSpec {
   override lazy val mappings:MappingsLoader = new JsonFileMappingsLoader(new SingleRootFileSource("test/resources/mappings"))
@@ -28,19 +32,20 @@ class FileUploadConnectorSpec extends WireMockSpec {
 
   "The fileUploadConnector" should {
     "result in a ValidEnvelope response for a valid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      await(validate("envelopeId")) shouldBe true
+      await(validate("envelopeId")) shouldBe Success("envelopeId")
     }
 
     "result in an InvalidEnvelope response for an invalid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      await(validate("invalidId")) shouldBe false
+      await(validate("invalidId")) shouldBe Failure(EnvelopeValidationError("invalidId"))
     }
 
     "is populated with a baseURL from constituent parts in configuration" in {
-      FileUploadConnector.baseUrl shouldBe "http://localhost:8898"
+      val connector = new FileUploadConnector with ServicesConfig {}
+      connector.baseUrl shouldBe "http://localhost:8898"
     }
   }
 
-  class TestFileUploadConnector(url:String) extends FileUploadConnector {
+  class TestFileUploadConnector(url:String) extends FileUploadConnector with ServicesConfig {
     override val baseUrl: String = url
     override val http: HttpGet = WSHttp
   }
