@@ -28,11 +28,18 @@ http://localhost:9000/file-upload-frontend/
 
 This endpoint allows the uploading of a file to the tax platform by means of the `file-upload` service.
 
-The microservice *must* have previously created an envelope and defined its contents before this endpoint can be invoked
-as a valid envelope and file identifier *must* be specified within the request.
+The calling service *must* ensure that:
 
-This endpoint *requires* the contentType to be defined as `multipart/form-data` with the below parameters defined alongside
-the actual file content:
+* an envelope was defined via the `file-upload` service and an `envelopeId` and `fileId` are registered for that envelope
+* the request contains the above valid `envelopeId` and `fileId`
+
+i.e. If being invoked from an HTML form - the service generating the form should ensure that these fields are present
+and have valid values assigned by the [`file-upload` (backend) service](https://github.com/hmrc/file-upload).
+
+This endpoint *requires*:
+ 
+* the contentType to be defined as `multipart/form-data` with the below parameters defined alongside the actual file content.
+* a single filePart be present containing the data to be uploaded to the corresponding `fileId` within the envelope.
 
 #### Parameters
 |Parameter|Required?|Example|Description|
@@ -46,7 +53,9 @@ the actual file content:
 |Outcome|Response Code|Definition|Parameters|Description|
 |---|---|---|---|---|
 |Success|303|`SEE OTHER` -> `successRedirect`|`None`|Returned if the file was uploaded successfully to the service|
-|Failure|303|`SEE OTHER` -> `failureRedirect`|`invalidParam` -> `[paramName]` (0-*)|Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters). If the `failureRedirect` is missing, a redirect will be made back to the original page|
+|Failure|303|`SEE OTHER` -> `failureRedirect`|`invalidParam` -> `[paramName]` (0-*)|Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
+|Failure|303|`SEE OTHER` -> `REFERER`|`invalidParam` -> `[paramName]` (0-*)|If `failureRedirect` is absent. Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
+|Failure|400|`BAD REQUEST`|`None`|If both `failureRedirect` and `Referer` header are not present|
 
 ### License
 

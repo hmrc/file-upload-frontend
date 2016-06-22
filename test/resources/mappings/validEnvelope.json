@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/file-upload/envelope/envelopeId"
+  },
+  "response": {
+    "status": 200,
+    "body": "",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
