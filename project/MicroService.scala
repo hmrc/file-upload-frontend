@@ -16,7 +16,7 @@
 import sbt.Keys._
 import sbt.Tests.{Group, SubProcess}
 import sbt._
-import scoverage.ScoverageSbtPlugin.ScoverageKeys
+import scoverage.ScoverageKeys
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 
 
