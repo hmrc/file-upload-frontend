@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/envelope/envelopeId"
+    "url": "/file-upload/envelope/envelopeId"
   },
   "response": {
     "status": 200,
