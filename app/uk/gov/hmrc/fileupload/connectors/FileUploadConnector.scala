@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.connectors
 
+import play.api.Logger
 import uk.gov.hmrc.fileupload.WSHttp
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpResponse}
@@ -36,7 +37,7 @@ trait EnvelopeValidator {
   val http: HttpGet
 
   def validate(envelopeId: String)(implicit hc: HeaderCarrier): Future[Boolean] = {
-    http.GET(s"$baseUrl/envelope/$envelopeId").map { statusIsOk }.recover { case _ => false }
+    http.GET(s"$baseUrl/file-upload/envelope/$envelopeId").map { statusIsOk }.recover { case _ => false }
   }
 
   def statusIsOk(resp:HttpResponse) = resp.status == 200
