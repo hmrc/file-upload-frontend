@@ -16,61 +16,87 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import play.api.libs.Files.TemporaryFile
+import play.api.libs.iteratee.{Concurrent, Enumerator, Iteratee}
+import play.api.mvc.BodyParsers.parse.{Multipart, _}
 import play.api.mvc._
-import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
+import play.modules.reactivemongo.MongoDbConnection
+import uk.gov.hmrc.fileupload.connectors.{FileUploadConnector, _}
 import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryString
+import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.Future
+import scala.util.Failure
 
-object FileUploadController extends FileUploadController {
-  override val fileUploadConnector = FileUploadConnector
-}
+object FileUploadController extends FileUploadController with MongoQuarantineStoreConnector with FileUploadConnector
+  with ServicesConfig with MongoDbConnection
 
 trait FileUploadController extends FrontendController {
-  val fileUploadConnector:FileUploadConnector
+  self: QuarantineStoreConnector with FileUploadConnector =>
 
-  def upload() = Action.async(parse.multipartFormData) { implicit request =>
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  val invalidEnvelope = "invalidParam=envelopeId"
+  val persistenceFailure = "persistenceFailure=true"
+
+  def sendRedirect(destination: String) = Future.successful(SeeOther(destination))
+
+  def enumeratorBodyParser = multipartFormData(Multipart.handleFilePart {
+    case Multipart.FileInfo(partName, filename, contentType) =>
+      val (enum, channel) = Concurrent.broadcast[Array[Byte]]
+
+      Iteratee.foreach[Array[Byte]] { channel.push }.map { _ =>
+        channel.eofAndEnd()
+        enum
+      }
+  })
+
+  def upload() = Action.async(enumeratorBodyParser) { implicit request =>
     doUpload(request)
   }
 
-  def doUpload(request: Request[MultipartFormData[TemporaryFile]])(implicit hc:HeaderCarrier) = {
+  def doUpload(request: Request[MultipartFormData[Enumerator[Array[Byte]]]])(implicit hc: HeaderCarrier) = {
     UploadParameters(request.body.dataParts, request.body.files) match {
-      case params @ UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Seq(filePart)) =>
-        fileUploadConnector.validate(envelopeId).flatMap {
-          case true => sendRedirect(successRedirect)
-          case false => sendRedirect(failureRedirect + "?invalidParam=envelopeId")
-        }
-      case params @ UploadParameters(_, Some(failureRedirect), _, _) =>
+      case params@UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Seq(filePart)) =>
+        (for {
+          validated <- validate(envelopeId)
+          persisted <- persistFile(filePart)
+        } yield {
+          (validated, persisted) match {
+            case (Failure(_), _) => s"$failureRedirect?$invalidEnvelope"
+            case (_, Failure(_)) => s"$failureRedirect?$persistenceFailure"
+            case _ => successRedirect
+          }
+        }).flatMap(sendRedirect)
+      case params@UploadParameters(_, Some(failureRedirect), _, _) =>
         sendRedirect(failureRedirect + buildInvalidQueryString(params))
-      case params @ UploadParameters(_, None, _, _) =>
+      case params@UploadParameters(_, None, _, _) =>
         request.headers.get("Referer") match {
           case Some(referer) => sendRedirect(referer + buildInvalidQueryString(params))
           case None => Future.successful(BadRequest)
         }
     }
   }
-  
-  def sendRedirect(destination:String) = {
-    Future.successful(SeeOther(destination))
-  }
 }
 
-sealed case class UploadParameters(successRedirect:Option[String],
-                                   failureRedirect:Option[String],
-                                   envelopeId:Option[String],
-                                   files:Seq[MultipartFormData.FilePart[TemporaryFile]])
+sealed case class UploadParameters(successRedirect: Option[String],
+                                   failureRedirect: Option[String],
+                                   envelopeId: Option[String],
+                                   files: Seq[FileData])
 
 object UploadParameters {
-  def apply(dataParts:Map[String, Seq[String]], fileParts:Seq[MultipartFormData.FilePart[TemporaryFile]]): UploadParameters = {
+  def apply(dataParts: Map[String, Seq[String]], fileParts: Seq[MultipartFormData.FilePart[Enumerator[Array[Byte]]]]): UploadParameters = {
     implicit val filteredParams = dataParts.mapValues(toFirstValue).filter(removeEntriesWithNoValue)
 
+    val files = fileParts.map { f =>
+      FileData(f.ref, f.filename, f.contentType.getOrElse(""), getOptionValue("envelopeId").getOrElse(""), f.key)
+    }
+
     UploadParameters(getOptionValue("successRedirect"),
-                     getOptionValue("failureRedirect"),
-                     getOptionValue("envelopeId"),
-                     fileParts)
+      getOptionValue("failureRedirect"),
+      getOptionValue("envelopeId"),
+      files)
   }
 
   def buildInvalidQueryString(uploadParameters: UploadParameters): String = {
@@ -84,17 +110,17 @@ object UploadParameters {
     }
 
     Map("successRedirect" -> params.successRedirect,
-        "failureRedirect" -> params.failureRedirect,
-        "envelopeId"      -> params.envelopeId,
-        "file"            -> fileMatch)
+      "failureRedirect" -> params.failureRedirect,
+      "envelopeId" -> params.envelopeId,
+      "file" -> fileMatch)
   }
 
-  private def getOptionValue(key:String)(implicit map:Map[String, Option[String]]): Option[String] = {
+  private def getOptionValue(key: String)(implicit map: Map[String, Option[String]]): Option[String] = {
     map.getOrElse(key, None)
   }
 
   private def toFirstValue(vals: Seq[String]): Option[String] = vals.headOption match {
-    case some @ Some(v) if v.trim.length > 0 => some
+    case some@Some(v) if v.trim.length > 0 => some
     case _ => None
   }
 

@@ -30,7 +30,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration.FiniteDuration
 
-trait WireMockSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with ScalaFutures with OneServerPerSuite  {
+trait WireMockSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with ScalaFutures with OneServerPerSuite {
   override implicit val defaultTimeout = FiniteDuration(100, TimeUnit.SECONDS)
 
   private val WIREMOCK_PORT = 21212

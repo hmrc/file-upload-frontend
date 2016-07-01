@@ -16,60 +16,25 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import java.io.File
+
 import play.api.http.Status
-import play.api.libs.Files
-import play.api.mvc.MultipartFormData.{BadPart, MissingFilePart}
-import play.api.mvc.{MultipartFormData, Result}
+import play.api.mvc.Result
 import play.api.test.Helpers._
-import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.fileupload.connectors.FileUploadConnector
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
+import scala.io.Source.fromFile
 
 class FileUploadControllerSpec extends UnitSpec {
-
-  val validEnvelopeId = "1234567890"
-  val validFileId = "0987654321"
-
-  val controller = new FileUploadController {
-    override val fileUploadConnector = new FileUploadConnector {
-      override def validate(envelopeId: String)(implicit hc:HeaderCarrier): Future[Boolean] = Future.successful(envelopeId != "INVALID")
-      override val baseUrl: String = null
-      override val http: HttpGet = null
-    }
-  }
-
-  def filePart(name:String) = MultipartFormData.FilePart(key         = name,
-                                                         filename    = name,
-                                                         contentType = Some("text/plain"),
-                                                         ref         = Files.TemporaryFile("pre_", "txt"))
-
-  def createUploadRequest(successRedirectURL:Option[String] = Some("http://somewhere.com/success"),
-                          failureRedirectURL:Option[String] = Some("http://somewhere.com/failure"),
-                          envelopeId:Option[String] = Some(validEnvelopeId),
-                          fileIds:Seq[String] = Seq("12345"),
-                          headers:Seq[(String, Seq[String])] = Seq()) = {
-    var params = Map[String, Seq[String]]()
-
-    if (successRedirectURL.isDefined) params = params + ("successRedirect" -> Seq(successRedirectURL.get))
-    if (failureRedirectURL.isDefined) params = params + ("failureRedirect" -> Seq(failureRedirectURL.get))
-    if (envelopeId.isDefined) params = params + ("envelopeId" -> Seq(envelopeId.get))
-
-    val files = fileIds.map { filePart }
-
-    val multipartBody = MultipartFormData[Files.TemporaryFile](params, files, Seq[BadPart](), Seq[MissingFilePart]())
-
-    FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(headers), body = multipartBody)
-  }
+  import uk.gov.hmrc.fileupload.UploadFixtures._
 
   "validation - POST /upload" should {
     "return 303 (redirect) to the `successRedirect` parameter if a valid request is received" in {
       val successRedirectURL = "http://somewhere.com/success"
       val fakeRequest = createUploadRequest(successRedirectURL = Some(successRedirectURL))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(successRedirectURL)
     }
@@ -78,7 +43,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(successRedirectURL = Some(""), failureRedirectURL = Some(failureRedirectURL))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=successRedirect")
     }
@@ -87,7 +52,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val originalURL = "http://somewhere.com/origin"
       val fakeRequest = createUploadRequest(failureRedirectURL = Some(""), headers = Seq("Referer" -> Seq(originalURL)))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(originalURL + "?invalidParam=failureRedirect")
     }
@@ -96,7 +61,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(envelopeId = Some(""), failureRedirectURL = Some(failureRedirectURL))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=envelopeId")
     }
@@ -105,7 +70,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(successRedirectURL = None, failureRedirectURL = Some(failureRedirectURL))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=successRedirect")
     }
@@ -114,7 +79,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val originalURL = "http://somewhere.com/origin"
       val fakeRequest = createUploadRequest(failureRedirectURL = None, headers = Seq("Referer" -> Seq(originalURL)))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(originalURL + "?invalidParam=failureRedirect")
     }
@@ -123,7 +88,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(envelopeId = None, failureRedirectURL = Some(failureRedirectURL))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=envelopeId")
     }
@@ -132,7 +97,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(fileIds = Seq(), failureRedirectURL = Some(failureRedirectURL))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=file")
     }
@@ -141,7 +106,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(fileIds = Seq(), failureRedirectURL = Some(failureRedirectURL), successRedirectURL = None, envelopeId = None)
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
 
       val loc = redirectLocation(result).get.split("[?&]")
@@ -152,7 +117,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val originalURL = "http://somewhere.com/origin"
       val fakeRequest = createUploadRequest(fileIds = Seq(), successRedirectURL = None, envelopeId = None, failureRedirectURL = None, headers = Seq("Referer" -> Seq(originalURL)))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
 
       val loc = redirectLocation(result).get.split("[?&]")
@@ -162,7 +127,7 @@ class FileUploadControllerSpec extends UnitSpec {
     "return 400 (BadRequest) if no parameters are present and referer cannot be established" in {
       val fakeRequest = createUploadRequest(fileIds = Seq(), successRedirectURL = None, envelopeId = None, failureRedirectURL = None)
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.BAD_REQUEST
     }
 
@@ -170,7 +135,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(failureRedirectURL = Some(failureRedirectURL), envelopeId = Some("INVALID"))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=envelopeId")
     }
@@ -179,7 +144,7 @@ class FileUploadControllerSpec extends UnitSpec {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(failureRedirectURL = Some(failureRedirectURL), fileIds = Seq())
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=file")
     }
@@ -188,20 +153,40 @@ class FileUploadControllerSpec extends UnitSpec {
       val originalURL = "http://somewhere.com/origin"
       val fakeRequest = createUploadRequest(failureRedirectURL = None, headers = Seq("Referer" -> Seq(originalURL)), fileIds = Seq())
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
 
       val loc = redirectLocation(result).get.split("[?&]")
       loc should contain allOf (originalURL, "invalidParam=failureRedirect", "invalidParam=file")
     }
 
-    "return 303 (redirect) to the `failureRedirect` if MULTIPLE file entries areattached to the request" in {
+    "return 303 (redirect) to the `failureRedirect` if MULTIPLE file entries are attached to the request" in {
       val failureRedirectURL = "http://somewhere.com/failure"
       val fakeRequest = createUploadRequest(failureRedirectURL = Some(failureRedirectURL), fileIds = Seq("1", "2"))
 
-      val result: Future[Result] = controller.upload().apply(fakeRequest)
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) shouldBe Status.SEE_OTHER
       redirectLocation(result) shouldBe Some(failureRedirectURL + "?invalidParam=file")
+    }
+  }
+
+  "upload - POST /upload with a valid request" should {
+    "ensure that file data is stored" in  {
+      val fakeRequest = createUploadRequest()
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
+
+      status(result) shouldBe Status.SEE_OTHER
+
+      new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned") should exist
+    }
+
+    "ensure that file data matches the original data" in  {
+      val fakeRequest = createUploadRequest()
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
+
+      status(result) shouldBe Status.SEE_OTHER
+
+      fromFile(new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned")).mkString === fromFile(new File("test/resources/testUpload.txt")).mkString
     }
   }
 }

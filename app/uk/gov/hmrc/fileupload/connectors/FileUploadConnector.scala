@@ -16,29 +16,28 @@
 
 package uk.gov.hmrc.fileupload.connectors
 
-import play.api.Logger
+import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
 import uk.gov.hmrc.fileupload.WSHttp
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpResponse}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
 
 import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
-object FileUploadConnector extends FileUploadConnector with ServicesConfig {
-  override val http = WSHttp
-  override val baseUrl:String = baseUrl("file-upload")
-}
+trait FileUploadConnector {
+  self: ServicesConfig =>
 
-trait FileUploadConnector extends EnvelopeValidator
-
-trait EnvelopeValidator {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val baseUrl: String
-  val http: HttpGet
+  val http: HttpGet = WSHttp
+  val baseUrl: String = baseUrl("file-upload")
 
-  def validate(envelopeId: String)(implicit hc: HeaderCarrier): Future[Boolean] = {
-    http.GET(s"$baseUrl/file-upload/envelope/$envelopeId").map { statusIsOk }.recover { case _ => false }
+  def validate(envelopeId: String)(implicit hc: HeaderCarrier): Future[Try[String]] = {
+    http.GET(s"$baseUrl/file-upload/envelope/$envelopeId").map {
+      _.status match {
+        case 200 => Success(envelopeId)
+        case status => Failure(EnvelopeValidationError(envelopeId))
+      }
+    }.recover { case _ => Failure(EnvelopeValidationError(envelopeId)) }
   }
-
-  def statusIsOk(resp:HttpResponse) = resp.status == 200
 }
