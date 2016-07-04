@@ -39,6 +39,7 @@ trait MicroService {
     Seq(
       // Semicolon-separated list of regexs matching classes to exclude
       ScoverageKeys.coverageExcludedPackages := "<empty>;Reverse.*;.*AuthService.*;models/.data/..*;view.*",
+      ScoverageKeys.coverageExcludedFiles := ".*/frontendGlobal.*;.*/frontendAppConfig.*;.*/frontendWiring.*;.*/views/.*_template.*;.*/govuk_wrapper.*;.*/routes_routing.*;.*/BuildInfo.*",
       // Minimum is deliberately low to avoid failures initially - please increase as we add more coverage
       ScoverageKeys.coverageMinimum := 25,
       ScoverageKeys.coverageFailOnMinimum := false,
