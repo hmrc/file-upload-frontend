@@ -21,7 +21,6 @@ import play.api.mvc.BodyParsers.parse.{Multipart, _}
 import play.api.mvc._
 import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.fileupload.connectors.{FileUploadConnector, _}
-import uk.gov.hmrc.fileupload.controllers.UploadParameters.buildInvalidQueryString
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -36,6 +35,7 @@ trait FileUploadController extends FrontendController {
   self: QuarantineStoreConnector with FileUploadConnector =>
 
   import scala.concurrent.ExecutionContext.Implicits.global
+  import UploadParameters._
 
   val invalidEnvelope = "invalidParam=envelopeId"
   val persistenceFailure = "persistenceFailure=true"
@@ -78,51 +78,51 @@ trait FileUploadController extends FrontendController {
         }
     }
   }
-}
 
-sealed case class UploadParameters(successRedirect: Option[String],
-                                   failureRedirect: Option[String],
-                                   envelopeId: Option[String],
-                                   files: Seq[FileData])
+  sealed case class UploadParameters(successRedirect: Option[String],
+                                     failureRedirect: Option[String],
+                                     envelopeId: Option[String],
+                                     files: Seq[FileData])
 
-object UploadParameters {
-  def apply(dataParts: Map[String, Seq[String]], fileParts: Seq[MultipartFormData.FilePart[Enumerator[Array[Byte]]]]): UploadParameters = {
-    implicit val filteredParams = dataParts.mapValues(toFirstValue).filter(removeEntriesWithNoValue)
+  object UploadParameters {
+    def apply(dataParts: Map[String, Seq[String]], fileParts: Seq[MultipartFormData.FilePart[Enumerator[Array[Byte]]]]): UploadParameters = {
+      implicit val filteredParams = dataParts.mapValues(toFirstValue).filter(removeEntriesWithNoValue)
 
-    val files = fileParts.map { f =>
-      FileData(f.ref, f.filename, f.contentType.getOrElse(""), getOptionValue("envelopeId").getOrElse(""), f.key)
+      val files = fileParts.map { f =>
+        FileData(f.ref, f.filename, f.contentType.getOrElse(""), getOptionValue("envelopeId").getOrElse(""), f.key)
+      }
+
+      UploadParameters(getOptionValue("successRedirect"),
+        getOptionValue("failureRedirect"),
+        getOptionValue("envelopeId"),
+        files)
     }
 
-    UploadParameters(getOptionValue("successRedirect"),
-      getOptionValue("failureRedirect"),
-      getOptionValue("envelopeId"),
-      files)
-  }
+    def buildInvalidQueryString(uploadParameters: UploadParameters): String = {
+      asMap(uploadParameters).filter(_._2.isEmpty).map { entry => s"invalidParam=${entry._1}" }.mkString("?", "&", "")
+    }
 
-  def buildInvalidQueryString(uploadParameters: UploadParameters): String = {
-    asMap(uploadParameters).filter(_._2.isEmpty).map { entry => s"invalidParam=${entry._1}" }.mkString("?", "&", "")
-  }
+    private def asMap(params: UploadParameters) = {
+      val fileMatch = params.files match {
+        case Seq(singleFile) => Some("exists")
+        case _ => None
+      }
 
-  private def asMap(params: UploadParameters) = {
-    val fileMatch = params.files match {
-      case Seq(singleFile) => Some("exists")
+      Map("successRedirect" -> params.successRedirect,
+        "failureRedirect" -> params.failureRedirect,
+        "envelopeId" -> params.envelopeId,
+        "file" -> fileMatch)
+    }
+
+    private def getOptionValue(key: String)(implicit map: Map[String, Option[String]]): Option[String] = {
+      map.getOrElse(key, None)
+    }
+
+    private def toFirstValue(vals: Seq[String]): Option[String] = vals.headOption match {
+      case some@Some(v) if v.trim.length > 0 => some
       case _ => None
     }
 
-    Map("successRedirect" -> params.successRedirect,
-      "failureRedirect" -> params.failureRedirect,
-      "envelopeId" -> params.envelopeId,
-      "file" -> fileMatch)
+    private def removeEntriesWithNoValue(t: (String, Option[String])): Boolean = t._2.isDefined
   }
-
-  private def getOptionValue(key: String)(implicit map: Map[String, Option[String]]): Option[String] = {
-    map.getOrElse(key, None)
-  }
-
-  private def toFirstValue(vals: Seq[String]): Option[String] = vals.headOption match {
-    case some@Some(v) if v.trim.length > 0 => some
-    case _ => None
-  }
-
-  private def removeEntriesWithNoValue(t: (String, Option[String])): Boolean = t._2.isDefined
 }

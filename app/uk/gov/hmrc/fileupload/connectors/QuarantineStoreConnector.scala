@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload.connectors
 
-import com.fasterxml.jackson.annotation.JsonValue
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsString, JsUndefined, JsValue, Json}
 import play.modules.reactivemongo.{JSONFileToSave, MongoDbConnection}
