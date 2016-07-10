@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import sbt._
 import uk.gov.hmrc.SbtAutoBuildPlugin
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
@@ -30,11 +31,12 @@ object FrontendBuild extends Build with MicroService {
 }
 
 private object AppDependencies {
+
   import play.PlayImport._
   import play.core.PlayVersion
 
-  private val playHealthVersion = "1.1.0"    
-  private val playJsonLoggerVersion = "2.1.1"      
+  private val playHealthVersion = "1.1.0"
+  private val playJsonLoggerVersion = "2.1.1"
   private val frontendBootstrapVersion = "6.5.0"
   private val govukTemplateVersion = "4.0.0"
   private val playUiVersion = "4.14.0"
@@ -44,7 +46,7 @@ private object AppDependencies {
   private val hmrcTestVersion = "1.6.0"
   private val playReactivemongoVersion = "4.8.0"
   private val simpleReactivemongoVersion = "4.8.0"
-  private val clamAvClientVersion = "1.4.0"
+  private val clamAvClientVersion = "2.2.0"
 
   val compile = Seq(
     ws,
@@ -63,7 +65,7 @@ private object AppDependencies {
 
   trait TestDependencies {
     lazy val scope: String = "test"
-    lazy val test : Seq[ModuleID] = ???
+    lazy val test: Seq[ModuleID] = ???
   }
 
   object Test {
@@ -81,7 +83,6 @@ private object AppDependencies {
       )
     }.test
   }
-
 
 
   object IntegrationTest {

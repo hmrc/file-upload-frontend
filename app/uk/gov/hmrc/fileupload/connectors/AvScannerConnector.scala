@@ -20,29 +20,20 @@ import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.clamav.VirusChecker
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 trait AvScannerConnector {
-  self: VirusChecker =>
-
-  type ByteIteratee = Iteratee[Array[Byte], Future[Unit]]
-  type ByteEnumerator = Enumerator[Array[Byte]]
-
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def iteratee = Iteratee.fold(Future(())) { (state, bytes: Array[Byte]) => state flatMap { _ => send(bytes) } }
+  def virusChecker: VirusChecker
 
-  def ok(x: Unit) = Success(true)
-  def failure: PartialFunction[Throwable, Failure[Boolean]] = { case e => Failure(e) }
-
-  def scan(enumerator: ByteEnumerator) = {
-    for {
-      unit <- sendData(enumerator, iteratee)
-      result <- checkResponse()
-    } yield result
+  def iteratee = Iteratee.fold(Future(virusChecker)) { (state, bytes: Array[Byte]) =>
+    state flatMap { scanner => scanner.send(bytes) map { _ => scanner } }
   }
 
-  def sendData(enumerator: ByteEnumerator, iteratee: ByteIteratee) = (enumerator |>>> iteratee) flatMap identity
-
-  def checkResponse() = checkForVirus() map ok recover failure
+  def scan(enumerator: Enumerator[Array[Byte]]) = {
+    for {
+      scanner <- (enumerator |>>> iteratee) flatMap identity
+      result <- scanner.checkForVirus()
+    } yield result
+  }
 }

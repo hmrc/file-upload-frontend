@@ -69,17 +69,15 @@ trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
   override def writeFile(file: FileData) = {
     val fileToSave = JSONFileToSave(filename = Option(file.name), contentType = Some(file.contentType), metadata = metadata(file.envelopeId))
 
-    val result = for {
-      eventualReadFile <- file.data |>>> gfs.iteratee(fileToSave)
-      readFile <- eventualReadFile
-    } yield readFile
+    for {
+      readFile <- file.data |>>> gfs.iteratee(fileToSave) map identity
+      result <- readFile map getTryEnvelopeId(file)
+    } yield result
+  }
 
-    result.map {
-      _.id match {
-        case _: JsUndefined => Failure(FilePersisterError(file.fileId, file.envelopeId))
-        case _ => Success(file.envelopeId)
-      }
-    }
+  def getTryEnvelopeId(file: FileData): PartialFunction[ReadFile[JSONSerializationPack.type, JsValue], Try[String]] = {
+    case x if x.id.isInstanceOf[JsUndefined] => Failure(FilePersisterError(file.fileId, file.envelopeId))
+    case _ => Success(file.envelopeId)
   }
 
   override def list(state: FileState): Future[Seq[FileData]] = {

@@ -188,5 +188,13 @@ class FileUploadControllerSpec extends UnitSpec {
 
       fromFile(new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned")).mkString === fromFile(new File("test/resources/testUpload.txt")).mkString
     }
+
+    "ensure that a virus scan is triggered" in {
+      val fakeRequest = createUploadRequest()
+      val result: Future[Result] = fileController.upload().apply(fakeRequest)
+
+      status(result) shouldBe Status.SEE_OTHER
+
+    }
   }
 }

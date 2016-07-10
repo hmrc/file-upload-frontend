@@ -7,7 +7,7 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.Play
 import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
-import uk.gov.hmrc.clamav.config.{ClamAvConfig, LoadClamAvConfig}
+import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.fileupload.connectors.AvScannerConnector
 import uk.gov.hmrc.play.config.RunMode
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
@@ -17,9 +17,13 @@ import scala.util.{Failure, Success}
 class AvScannerConnectorISpec extends UnitSpec with WithFakeApplication with BeforeAndAfterEach with OneServerPerSuite with RunMode {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit lazy val clamAvConfig = LoadClamAvConfig(Play.current.configuration.getConfig(s"$env.clam.antivirus"))
+  implicit lazy val clamAvConfig = ClamAvConfig(Play.current.configuration.getConfig(s"$env.clam.antivirus"))
 
-  class TestAvScannerConnector extends ClamAntiVirus()(clamAvConfig) with AvScannerConnector
+  class TestAvScannerConnector extends AvScannerConnector {
+    override def virusChecker = {
+      ClamAntiVirus(clamAvConfig)
+    }
+  }
 
   "A clam connector" should {
     "Return a success response for a clean file" in new TestAvScannerConnector {

@@ -16,29 +16,19 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.io.{File, FileOutputStream, FilenameFilter}
-import java.nio.file.Files._
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption._
+import java.io.{File, FileOutputStream}
 
-import play.api.libs.Files
-import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.mvc.MultipartFormData
 import play.api.mvc.MultipartFormData.{BadPart, MissingFilePart}
-import play.api.test.{FakeApplication, FakeHeaders, FakeRequest}
-import play.modules.reactivemongo.MongoDbConnection
-import reactivemongo.api.DefaultDB
+import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
 import uk.gov.hmrc.fileupload.connectors._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
-import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
-import uk.gov.hmrc.play.test.WithFakeApplication
 
 import scala.concurrent.Future
-import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 object UploadFixtures {

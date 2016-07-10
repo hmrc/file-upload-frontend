@@ -27,21 +27,23 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source._
 import scala.util.{Failure, Success}
 
-trait TestAvScannerConnector extends AvScannerConnector with VirusChecker {
+trait TestAvScannerConnector extends AvScannerConnector {
   val fail: Option[Exception] = None
   var sentData: Array[Byte] = Array()
 
-  override def send(bytes: Array[Byte])(implicit ec : ExecutionContext) = {
-    Future {
-      sentData = sentData ++ bytes
+  val virusChecker: VirusChecker = new VirusChecker {
+    override def send(bytes: Array[Byte])(implicit ec : ExecutionContext) = {
+      Future {
+        sentData = sentData ++ bytes
+      }
     }
-  }
 
-  override def finish()(implicit ec : ExecutionContext) = {
-    Future {
-      fail match {
-        case None => ()
-        case Some(exception) => throw exception
+    override def finish()(implicit ec : ExecutionContext) = {
+      Future {
+        fail match {
+          case None => Success(true)
+          case Some(exception) => Failure(exception)
+        }
       }
     }
   }
