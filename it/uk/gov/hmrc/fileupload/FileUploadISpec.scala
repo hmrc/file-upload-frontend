@@ -53,7 +53,7 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
       chunkCount <- gfs.chunks.count()
     } yield fileCount + chunkCount == 0
 
-    await(isClean) shouldBe true
+    await(isClean) should be (true)
   }
 
   override protected def afterEach() = {
@@ -62,7 +62,7 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
       dropChunks <- gfs.chunks.drop()
     } yield true
 
-    await(done) shouldBe true
+    await(done) should be (true)
   }
 
   trait TestMongoDbConnection extends MongoDbConnection {
@@ -75,47 +75,47 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
       val fakeRequest = createUploadRequest(successRedirectURL = Some(success))
       val result: Future[Result] = mongoController.upload().apply(fakeRequest)
 
-      status(result) shouldBe Status.SEE_OTHER
-      redirectLocation(result) shouldBe Some(success)
+      status(result) should be (Status.SEE_OTHER)
+      redirectLocation(result) should be (Some(success))
     }
 
     "result in an entry being stored in mongo" in {
       val fakeRequest = createUploadRequest()
       val result: Future[Result] = mongoController.upload().apply(fakeRequest)
 
-      status(result) shouldBe Status.SEE_OTHER
+      status(result) should be (Status.SEE_OTHER)
 
-      await(gfs.files.count()) shouldBe 1
+      await(gfs.files.count()) should be (1)
     }
 
     "result in an file data being stored in mongo" in {
       val fakeRequest = createUploadRequest()
       val result: Future[Result] = mongoController.upload().apply(fakeRequest)
 
-      status(result) shouldBe Status.SEE_OTHER
+      status(result) should be (Status.SEE_OTHER)
 
-      await(gfs.files.count()) shouldBe 1
-      await(gfs.chunks.count()) shouldBe 1
+      await(gfs.files.count()) should be (1)
+      await(gfs.chunks.count()) should be (1)
     }
 
     "result in chunking in mongo" in {
       val fakeRequest = createUploadRequest(fileIds = Seq("767KBFile.txt"))
       val result: Future[Result] = mongoController.upload().apply(fakeRequest)
 
-      status(result) shouldBe Status.SEE_OTHER
+      status(result) should be (Status.SEE_OTHER)
 
-      await(gfs.files.count()) shouldBe 1
-      await(gfs.chunks.count()) shouldBe 3
+      await(gfs.files.count()) should be (1)
+      await(gfs.chunks.count()) should be (3)
     }
 
     "result in chunking in mongo - confirm boundary" in {
       val fakeRequest = createUploadRequest(fileIds = Seq("768KBFile.txt"))
       val result: Future[Result] = mongoController.upload().apply(fakeRequest)
 
-      status(result) shouldBe Status.SEE_OTHER
+      status(result) should be (Status.SEE_OTHER)
 
-      await(gfs.files.count()) shouldBe 1
-      await(gfs.chunks.count()) shouldBe 4
+      await(gfs.files.count()) should be (1)
+      await(gfs.chunks.count()) should be (4)
     }
 
     "result in an overwrite when the same file is uploaded multiple times" in {
@@ -123,12 +123,12 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
         val success = "http://some.success"
         val fakeRequest = createUploadRequest(successRedirectURL = Some(success), fileIds = Seq("768KBFile.txt"))
         val result = mongoController.upload().apply(fakeRequest)
-        status(result) shouldBe Status.SEE_OTHER
-        redirectLocation(result) shouldBe Some(success)
+        status(result) should be (Status.SEE_OTHER)
+        redirectLocation(result) should be (Some(success))
       }
 
-      await(gfs.files.count()) shouldBe 1
-      await(gfs.chunks.count()) shouldBe 4
+      await(gfs.files.count()) should be (1)
+      await(gfs.chunks.count()) should be (4)
     }
 
     "NOT results in an overwrite when the same filename is uploaded in differing envelopes" in {
@@ -136,12 +136,12 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
         val success = "http://some.success"
         val fakeRequest = createUploadRequest(successRedirectURL = Some(success), fileIds = Seq("768KBFile.txt"), envelopeId = Some(eId))
         val result = mongoController.upload().apply(fakeRequest)
-        status(result) shouldBe Status.SEE_OTHER
-        redirectLocation(result) shouldBe Some(success)
+        status(result) should be (Status.SEE_OTHER)
+        redirectLocation(result) should be (Some(success))
       }
 
-      await(gfs.files.count()) shouldBe 2
-      await(gfs.chunks.count()) shouldBe 8
+      await(gfs.files.count()) should be (2)
+      await(gfs.chunks.count()) should be (8)
     }
   }
 }

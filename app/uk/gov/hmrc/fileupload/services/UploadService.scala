@@ -16,6 +16,33 @@
 
 package uk.gov.hmrc.fileupload.services
 
-class UploadService {
+import play.api.libs.iteratee.Enumerator
+import uk.gov.hmrc.fileupload.connectors._
+import uk.gov.hmrc.play.config.ServicesConfig
+import uk.gov.hmrc.play.http.HeaderCarrier
 
+import scala.util.Success
+
+trait UploadService extends FileUploadConnector with ServicesConfig {
+  self: QuarantineStoreConnector with AvScannerConnector =>
+
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  def fileData: PartialFunction[FileData, Enumerator[Array[Byte]]] = { case f => f.data }
+
+  def scanUnscannedFiles() = {
+    list(Unscanned) map { files => files map fileData foreach scan }
+  }
+
+  def validateAndPersist(fileData: FileData)(implicit hc: HeaderCarrier) = {
+    (for {
+      validated <- validate(fileData.envelopeId)
+      persisted <- persistFile(fileData)
+    } yield {
+      (validated, persisted)
+    }) map {
+      case result@(Success(_), Success(_)) => scanUnscannedFiles(); result
+      case result => result
+    }
+  }
 }

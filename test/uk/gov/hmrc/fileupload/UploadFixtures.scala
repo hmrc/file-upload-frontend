@@ -41,13 +41,19 @@ object UploadFixtures {
   val fileController = new FileUploadController with TestFileUploadConnector with TmpFileQuarantineStoreConnector with DummyAvScannerConnector
 
   trait DummyAvScannerConnector extends AvScannerConnector {
-    override def virusChecker: VirusChecker = dummyVirusScanner
+    override val virusChecker: VirusChecker = new DummyVirusScanner {}
   }
 
-  val dummyVirusScanner = new VirusChecker {
+  trait DummyVirusScanner extends VirusChecker {
     var scanInitiated: Boolean = false
-    override def send(bytes: Array[Byte])(implicit ec: ExecutionContext): Future[Unit] = Future(())
-    override def finish()(implicit ec: ExecutionContext): Future[Try[Boolean]] = Future(Success { scanInitiated = true; true })
+    var scanCompleted: Boolean = false
+    var delay: Int = 3000
+
+    override def send(bytes: Array[Byte])(implicit ec: ExecutionContext): Future[Unit] = Future { scanInitiated = true; () }
+    override def finish()(implicit ec: ExecutionContext): Future[Try[Boolean]] = Future {
+      Thread.sleep(delay)
+      Success { scanCompleted = true; true }
+    }
   }
 
   trait TestServicesConfig extends ServicesConfig {
@@ -71,14 +77,7 @@ object UploadFixtures {
   def toFileIteratee(filename: String) = {
     val fos: FileOutputStream = new FileOutputStream(new File(filename))
 
-    val it = Iteratee.fold[Array[Byte], FileOutputStream](fos) { (f, d) =>
-      f.write(d)
-      f
-    }.map { fos =>
-      fos.close()
-    }
-
-    it
+    Iteratee.fold[Array[Byte], FileOutputStream](fos) { (f, d) => f.write(d); f } map { fos => fos.close() }
   }
 
   trait TmpFileQuarantineStoreConnector extends QuarantineStoreConnector {
@@ -87,9 +86,7 @@ object UploadFixtures {
     override def writeFile(file: FileData) = {
       val fos: FileOutputStream = new FileOutputStream(new File(s"$tmpDir/${file.envelopeId}-${file.fileId}.Unscanned"))
 
-      val it = toFileIteratee(s"$tmpDir/${file.envelopeId}-${file.fileId}.Unscanned").map[Try[String]] { _ =>
-        Success(file.envelopeId)
-      }
+      val it = toFileIteratee(s"$tmpDir/${file.envelopeId}-${file.fileId}.Unscanned") map { _ => Success(file.envelopeId) }
 
       file.data |>>> it
     }

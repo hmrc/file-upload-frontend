@@ -32,16 +32,16 @@ class FileUploadConnectorSpec extends WireMockSpec {
 
   "The fileUploadConnector" should {
     "result in a ValidEnvelope response for a valid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      await(validate("envelopeId")) shouldBe Success("envelopeId")
+      await(validate("envelopeId")) should be (Success("envelopeId"))
     }
 
     "result in an InvalidEnvelope response for an invalid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      await(validate("invalidId")) shouldBe Failure(EnvelopeValidationError("invalidId"))
+      await(validate("invalidId")) should be (Failure(EnvelopeValidationError("invalidId")))
     }
 
     "is populated with a baseURL from constituent parts in configuration" in {
       val connector = new FileUploadConnector with ServicesConfig {}
-      connector.baseUrl shouldBe "http://localhost:8898"
+      connector.baseUrl should be ("http://localhost:8898")
     }
   }
 

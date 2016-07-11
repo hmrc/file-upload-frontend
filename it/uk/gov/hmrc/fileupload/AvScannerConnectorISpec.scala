@@ -15,7 +15,7 @@ class AvScannerConnectorISpec extends UnitSpec with WithFakeApplication with One
 
   "A clam connector" should {
     "Return a success response for a clean file" in new ClamAvScannerConnector {
-      await(scan(Enumerator.fromFile(new File("test/resources/testUpload.txt")))) shouldBe Success(true)
+      await(scan(Enumerator.fromFile(new File("test/resources/testUpload.txt")))) should be (Success(true))
     }
 
     "Return a fail response for an infected file" in new ClamAvScannerConnector {
@@ -23,7 +23,7 @@ class AvScannerConnectorISpec extends UnitSpec with WithFakeApplication with One
     }
 
     "Return a success response for a longer file" in new ClamAvScannerConnector {
-      await(scan(Enumerator.fromFile(new File("test/resources/768KBFile.txt")))) shouldBe Success(true)
+      await(scan(Enumerator.fromFile(new File("test/resources/768KBFile.txt")))) should be (Success(true))
     }
   }
 }

@@ -67,7 +67,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
       await(mongoConnector.persistFile(data))
 
       await(gfs.files.find(Json.obj("filename" -> "TEST.out", "$where" -> s"this.metadata.envelopeId == '$envId'")).one[JsValue]) should not be empty
-      await(gfs.files.find(Json.obj("filename" -> "TEST.out", "$where" -> s"this.metadata.envelopeId == 'x$envId'")).one[JsValue]) shouldBe empty
+      await(gfs.files.find(Json.obj("filename" -> "TEST.out", "$where" -> s"this.metadata.envelopeId == 'x$envId'")).one[JsValue]) should be (empty)
     }
 
     "Have a mechanism that can successfully persist same files with different envelopes" in {
@@ -83,7 +83,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
         val data = FileData(data = testFile, name = "TEST.out", contentType = "text/plain", envelopeId = s"envelope$id", fileId = "1")
         await(mongoConnector.persistFile(data))
         await(gfs.files.find(Json.obj("filename" -> "TEST.out", "$where" -> s"this.metadata.envelopeId == 'envelope$id'")).one[JsValue]) should not be empty
-        await(gfs.files.find(Json.obj("filename" -> "TEST2.out", "$where" -> s"this.metadata.envelopeId == 'envelope$id'")).one[JsValue]) shouldBe empty
+        await(gfs.files.find(Json.obj("filename" -> "TEST2.out", "$where" -> s"this.metadata.envelopeId == 'envelope$id'")).one[JsValue]) should be (empty)
       }
     }
 
@@ -93,7 +93,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
         await(fileSystemConnector.persistFile(data))
       }
 
-      await(fileSystemConnector.list(Unscanned)).length shouldBe 2
+      await(fileSystemConnector.list(Unscanned)).length should be (2)
     }
 
     "Have a mechanism to list files based on their 'state' being 'unscanned' in Mongo" in {
@@ -102,7 +102,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
         await(mongoConnector.persistFile(data))
       }
 
-      await(mongoConnector.list(Unscanned)).length shouldBe 2
+      await(mongoConnector.list(Unscanned)).length should be (2)
     }
 
     "Have a mechanism to successfully retrieve a persisted file from the list" in {
@@ -116,7 +116,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
 
       val fileSeq = await(fileSystemConnector.list(Unscanned))
 
-      fileSeq.length shouldBe 10
+      fileSeq.length should be (10)
 
       fileSeq.foreach { fileData =>
         await(fileData.data |>>> toStringIteratee) === fromFile(new File("test/resources/testUpload.txt")).mkString
@@ -134,7 +134,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
 
       val fileSeq = await(mongoConnector.list(Unscanned))
 
-      fileSeq.length shouldBe 10
+      fileSeq.length should be (10)
 
       fileSeq.foreach { fileData =>
         await(fileData.data |>>> toStringIteratee) === fromFile(new File("test/resources/testUpload.txt")).mkString
@@ -150,7 +150,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
       chunkCount <- gfs.chunks.count()
     } yield fileCount + chunkCount == 0
 
-    await(isClean) shouldBe true
+    await(isClean) should be (true)
   }
 
   override protected def afterEach() = {
@@ -160,6 +160,6 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
       dropChunks <- gfs.chunks.drop()
     } yield true
 
-    await(done) shouldBe true
+    await(done) should be (true)
   }
 }

@@ -21,18 +21,18 @@ import play.api.mvc.BodyParsers.parse.{Multipart, _}
 import play.api.mvc._
 import play.modules.reactivemongo.MongoDbConnection
 import uk.gov.hmrc.fileupload.connectors.{FileUploadConnector, _}
+import uk.gov.hmrc.fileupload.services.UploadService
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.Future
-import scala.util.Failure
+import scala.util.{Failure, Success, Try}
 
 object FileUploadController extends FileUploadController with MongoQuarantineStoreConnector with FileUploadConnector
   with ServicesConfig with MongoDbConnection with ClamAvScannerConnector
 
-trait FileUploadController extends FrontendController {
-  self: QuarantineStoreConnector with FileUploadConnector with AvScannerConnector =>
+trait FileUploadController extends FrontendController with UploadService with QuarantineStoreConnector with AvScannerConnector {
 
   import scala.concurrent.ExecutionContext.Implicits.global
   import UploadParameters._
@@ -42,6 +42,12 @@ trait FileUploadController extends FrontendController {
   val persistenceFailure = "persistenceFailure=true"
 
   def sendRedirect(destination: String) = Future.successful(SeeOther(destination))
+
+  def postValidationRouting(fail: String, success: String): PartialFunction[(Try[String], Try[String]), String] = {
+    case (Failure(_), _) => s"$fail?$invalidEnvelope"
+    case (_, (Failure(_))) => s"$fail?$persistenceFailure"
+    case _ => success
+  }
 
   def enumeratorBodyParser = multipartFormData(Multipart.handleFilePart {
     case Multipart.FileInfo(partName, filename, contentType) =>
@@ -60,20 +66,10 @@ trait FileUploadController extends FrontendController {
   def doUpload(request: Request[MultipartFormData[Enumerator[Array[Byte]]]])(implicit hc: HeaderCarrier) = {
     UploadParameters(request.body.dataParts, request.body.files) match {
       case params@UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Seq(filePart)) =>
-        (for {
-          validated <- validate(envelopeId)
-          persisted <- persistFile(filePart)
-        } yield {
-          (validated, persisted) match {
-            case (Failure(_), _) => s"$failureRedirect?$invalidEnvelope"
-            case (_, Failure(_)) => s"$failureRedirect?$persistenceFailure"
-            case _ =>
-              list(Unscanned) map { files =>
-                files map { f => f.data } foreach { scan }
-              }
-              successRedirect
-          }
-        }) flatMap sendRedirect
+        for {
+          redirectTo <- validateAndPersist(filePart) map postValidationRouting(failureRedirect, successRedirect)
+          eventualUrl <- sendRedirect(redirectTo)
+        } yield eventualUrl
       case params@UploadParameters(_, Some(failureRedirect), _, _) =>
         sendRedirect(failureRedirect + buildInvalidQueryString(params))
       case params@UploadParameters(_, None, _, _) =>

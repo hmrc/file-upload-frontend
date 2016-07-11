@@ -58,7 +58,7 @@ class AVScannerConnectorSpec extends UnitSpec with BeforeAndAfterEach {
 
       await(scan(enumerator))
 
-      sentData shouldBe "test".getBytes
+      sentData should be ("test".getBytes)
     }
 
     "be able to cope with a large quantity of data" in new TestAvScannerConnector {
@@ -66,13 +66,13 @@ class AVScannerConnectorSpec extends UnitSpec with BeforeAndAfterEach {
 
       await(scan(enumerator))
 
-      sentData shouldBe fromFile(new File("test/resources/768KBFile.txt")).mkString.getBytes
+      sentData should be (fromFile(new File("test/resources/768KBFile.txt")).mkString.getBytes)
     }
 
     "on processing clean data, return a Success(true) response" in new TestAvScannerConnector {
       val enumerator = Enumerator.fromFile(new File("test/resources/768KBFile.txt"))
 
-      await(scan(enumerator)) shouldBe Success(true)
+      await(scan(enumerator)) should be (Success(true))
     }
 
     "on processing dirty data, return a Failure(_:VirusDetectedException) response" in new TestAvScannerConnector {
@@ -81,8 +81,8 @@ class AVScannerConnectorSpec extends UnitSpec with BeforeAndAfterEach {
 
       val result = await(scan(enumerator))
 
-      result.isFailure shouldBe true
-      result shouldBe Failure(fail.get)
+      result.isFailure should be (true)
+      result should be (Failure(fail.get))
     }
 
     "on failure to communicate, return a Failure(_:VirusScannerFailureException) response" in new TestAvScannerConnector {
@@ -91,8 +91,8 @@ class AVScannerConnectorSpec extends UnitSpec with BeforeAndAfterEach {
 
       val result = await(scan(enumerator))
 
-      result.isFailure shouldBe true
-      result shouldBe Failure(fail.get)
+      result.isFailure should be (true)
+      result should be (Failure(fail.get))
     }
   }
 }
