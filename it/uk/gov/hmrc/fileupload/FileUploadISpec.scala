@@ -24,7 +24,7 @@ import play.modules.reactivemongo.MongoDbConnection
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.gridfs.GridFS
 import reactivemongo.json.JSONSerializationPack
-import uk.gov.hmrc.fileupload.connectors.MongoQuarantineStoreConnector
+import uk.gov.hmrc.fileupload.connectors.{ClamAvScannerConnector, MongoQuarantineStoreConnector}
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -40,7 +40,7 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
   val testCollectionName: String = "testFileUploadCollection"
   val gfs = GridFS[JSONSerializationPack.type](mongo(), testCollectionName)
 
-  lazy val mongoController = new FileUploadController with TestFileUploadConnector with MongoQuarantineStoreConnector
+  lazy val mongoController = new FileUploadController with TestFileUploadConnector with MongoQuarantineStoreConnector with ClamAvScannerConnector
     with TestMongoDbConnection with ServicesConfig {
     override val collectionName = testCollectionName
   }

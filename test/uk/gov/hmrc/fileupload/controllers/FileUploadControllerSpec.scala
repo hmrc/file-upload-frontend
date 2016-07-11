@@ -26,6 +26,8 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.Future
 import scala.io.Source.fromFile
 
+import org.scalatest.concurrent.Eventually._
+
 class FileUploadControllerSpec extends UnitSpec {
   import uk.gov.hmrc.fileupload.UploadFixtures._
 
@@ -195,6 +197,7 @@ class FileUploadControllerSpec extends UnitSpec {
 
       status(result) shouldBe Status.SEE_OTHER
 
+      eventually { dummyVirusScanner.scanInitiated shouldBe true }
     }
   }
 }

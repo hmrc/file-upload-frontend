@@ -31,9 +31,7 @@ import scala.util.{Failure, Success, Try}
 sealed trait FileState
 
 case object Unscanned extends FileState
-
 case object Clean extends FileState
-
 case object VirusDetected extends FileState
 
 sealed case class FileData(data: Enumerator[Array[Byte]], name: String, contentType: String, envelopeId: String, fileId: String)

@@ -16,10 +16,21 @@
 
 package uk.gov.hmrc.fileupload.connectors
 
+import play.api.Play
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import uk.gov.hmrc.clamav.VirusChecker
+import uk.gov.hmrc.clamav.config.ClamAvConfig
+import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusChecker}
+import uk.gov.hmrc.play.config.RunMode
 
 import scala.concurrent.Future
+
+trait ClamAvScannerConnector extends AvScannerConnector with RunMode {
+  implicit lazy val clamAvConfig = ClamAvConfig(Play.current.configuration.getConfig(s"$env.clam.antivirus"))
+
+  override def virusChecker = {
+    ClamAntiVirus(clamAvConfig)
+  }
+}
 
 trait AvScannerConnector {
   import scala.concurrent.ExecutionContext.Implicits.global

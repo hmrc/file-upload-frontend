@@ -29,13 +29,14 @@ import scala.concurrent.Future
 import scala.util.Failure
 
 object FileUploadController extends FileUploadController with MongoQuarantineStoreConnector with FileUploadConnector
-  with ServicesConfig with MongoDbConnection
+  with ServicesConfig with MongoDbConnection with ClamAvScannerConnector
 
 trait FileUploadController extends FrontendController {
-  self: QuarantineStoreConnector with FileUploadConnector =>
+  self: QuarantineStoreConnector with FileUploadConnector with AvScannerConnector =>
 
   import scala.concurrent.ExecutionContext.Implicits.global
   import UploadParameters._
+  import uk.gov.hmrc.fileupload.connectors._
 
   val invalidEnvelope = "invalidParam=envelopeId"
   val persistenceFailure = "persistenceFailure=true"
@@ -66,9 +67,13 @@ trait FileUploadController extends FrontendController {
           (validated, persisted) match {
             case (Failure(_), _) => s"$failureRedirect?$invalidEnvelope"
             case (_, Failure(_)) => s"$failureRedirect?$persistenceFailure"
-            case _ => successRedirect
+            case _ =>
+              list(Unscanned) map { files =>
+                files map { f => f.data } foreach { scan }
+              }
+              successRedirect
           }
-        }).flatMap(sendRedirect)
+        }) flatMap sendRedirect
       case params@UploadParameters(_, Some(failureRedirect), _, _) =>
         sendRedirect(failureRedirect + buildInvalidQueryString(params))
       case params@UploadParameters(_, None, _, _) =>

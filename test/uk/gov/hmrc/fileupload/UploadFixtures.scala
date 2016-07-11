@@ -22,13 +22,14 @@ import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.mvc.MultipartFormData
 import play.api.mvc.MultipartFormData.{BadPart, MissingFilePart}
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.clamav.VirusChecker
 import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
 import uk.gov.hmrc.fileupload.connectors._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 object UploadFixtures {
@@ -37,7 +38,17 @@ object UploadFixtures {
   val tmpDir = System.getProperty("java.io.tmpdir")
   val validEnvelopeId = "1234567890"
   val validFileId = "0987654321"
-  val fileController = new FileUploadController with TestFileUploadConnector with TmpFileQuarantineStoreConnector
+  val fileController = new FileUploadController with TestFileUploadConnector with TmpFileQuarantineStoreConnector with DummyAvScannerConnector
+
+  trait DummyAvScannerConnector extends AvScannerConnector {
+    override def virusChecker: VirusChecker = dummyVirusScanner
+  }
+
+  val dummyVirusScanner = new VirusChecker {
+    var scanInitiated: Boolean = false
+    override def send(bytes: Array[Byte])(implicit ec: ExecutionContext): Future[Unit] = Future(())
+    override def finish()(implicit ec: ExecutionContext): Future[Try[Boolean]] = Future(Success { scanInitiated = true; true })
+  }
 
   trait TestServicesConfig extends ServicesConfig {
     override def baseUrl(serviceName: String): String = null
