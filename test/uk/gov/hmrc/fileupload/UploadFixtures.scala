@@ -52,8 +52,11 @@ object UploadFixtures {
 
     override def send(bytes: Array[Byte])(implicit ec: ExecutionContext): Future[Unit] = Future { scanInitiated = true; () }
     override def finish()(implicit ec: ExecutionContext): Future[Try[Boolean]] = Future {
-      Thread.sleep((3 seconds).millisPart)
-      Success { scanCompleted = true; true }
+      Success {
+        Thread.sleep((3 seconds).millisPart)
+        scanCompleted = true
+        true
+      }
     }
   }
 

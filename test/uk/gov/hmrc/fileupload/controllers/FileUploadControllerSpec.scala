@@ -203,7 +203,7 @@ class FileUploadControllerSpec extends UnitSpec {
 
     "ensure that a response [can be|is] returned before virus scanning completes" in {
       val fakeRequest = createUploadRequest()
-      await(fileController.upload().apply(fakeRequest))(3 seconds)
+      await(fileController.upload().apply(fakeRequest))(2 seconds)
 
       // Assert that the scan hasn't been completed AFTER the return to the client
       fileController.virusChecker.asInstanceOf[DummyVirusScanner].scanCompleted should be (false)
