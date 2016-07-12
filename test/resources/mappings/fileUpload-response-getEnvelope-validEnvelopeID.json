@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/file-upload/envelope/fea8cc15-f2d1-4eb5-b10e-b892bcbe94f8"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "id": "fea8cc15-f2d1-4eb5-b10e-b892bcbe94f8",
+      "status": "Open"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

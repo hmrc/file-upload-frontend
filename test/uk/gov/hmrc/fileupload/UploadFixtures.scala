@@ -37,7 +37,7 @@ object UploadFixtures {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val tmpDir = System.getProperty("java.io.tmpdir")
-  val validEnvelopeId = "1234567890"
+  val validEnvelopeId = "fea8cc15-f2d1-4eb5-b10e-b892bcbe94f8"
   val validFileId = "0987654321"
   val fileController = new TestFileUploadController {}
 

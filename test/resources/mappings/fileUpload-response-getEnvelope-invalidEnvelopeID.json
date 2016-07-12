@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/file-upload/envelope/invalidId"
+  },
+  "response": {
+    "status": 404,
+    "jsonBody": {
+      "error": {
+        "msg": "Envelope invalidId not found"
+      }
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

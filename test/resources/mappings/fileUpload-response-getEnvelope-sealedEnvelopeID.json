@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/file-upload/envelope/2f816e24-1316-408d-aa2c-ba188c2090d9"
+  },
+  "response": {
+    "status": 400,
+    "jsonBody": {
+      "error": {
+        "msg": "The envelope 2f816e24-1316-408d-aa2c-ba188c2090d9 is sealed"
+      }
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

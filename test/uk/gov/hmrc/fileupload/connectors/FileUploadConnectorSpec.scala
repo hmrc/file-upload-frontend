@@ -22,6 +22,7 @@ import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
 import uk.gov.hmrc.fileupload.{WSHttp, WireMockSpec}
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
+import uk.gov.hmrc.fileupload.UploadFixtures._
 
 import scala.util.{Failure, Success}
 
@@ -32,11 +33,15 @@ class FileUploadConnectorSpec extends WireMockSpec {
 
   "The fileUploadConnector" should {
     "result in a ValidEnvelope response for a valid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
-      await(validate("envelopeId")) should be (Success("envelopeId"))
+      await(validate(validEnvelopeId)) should be (Success(validEnvelopeId))
     }
 
     "result in an InvalidEnvelope response for an invalid envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
       await(validate("invalidId")) should be (Failure(EnvelopeValidationError("invalidId")))
+    }
+
+    "result in an InvalidEnvelope response for a sealed envelopeId" in new TestFileUploadConnector(wiremockBaseUrl) {
+      await(validate("2f816e24-1316-408d-aa2c-ba188c2090d9")) should be (Failure(EnvelopeValidationError("2f816e24-1316-408d-aa2c-ba188c2090d9")))
     }
 
     "is populated with a baseURL from constituent parts in configuration" in {
