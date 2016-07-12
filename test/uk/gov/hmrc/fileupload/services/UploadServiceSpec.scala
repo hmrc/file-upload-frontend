@@ -16,13 +16,16 @@
 
 package uk.gov.hmrc.fileupload.services
 
+import org.scalatestplus.play.OneAppPerSuite
 import uk.gov.hmrc.play.test.UnitSpec
 
-class UploadServiceSpec  extends UnitSpec {
+class UploadServiceSpec extends UnitSpec with OneAppPerSuite {
   import uk.gov.hmrc.fileupload.UploadFixtures._
 
+  trait TestUploadService extends UploadService with TmpFileQuarantineStoreConnector with TestAvScannerConnector
+
   "An upload service" should {
-    "Flag files as 'Scanning' when they have been passed to the AV scanner" in {
+    "Flag files as 'Scanning' when they have been passed to the AV scanner" in new TestUploadService {
 
     }
   }

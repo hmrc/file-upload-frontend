@@ -198,18 +198,21 @@ class FileUploadControllerSpec extends UnitSpec {
 
       status(result) should be (Status.SEE_OTHER)
 
-      eventually { fileController.virusChecker.asInstanceOf[DummyVirusScanner].scanInitiated should be (true) }
+      eventually { fileController.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanInitiated should be (true) }
     }
 
-    "ensure that a response [can be|is] returned before virus scanning completes" in {
+    "ensure that a response [can be|is] returned before virus scanning completes" in new TestFileUploadController {
+      override val pause = (3 seconds) toMillis
+
       val fakeRequest = createUploadRequest()
-      await(fileController.upload().apply(fakeRequest))(2 seconds)
+
+      await(upload().apply(fakeRequest))
 
       // Assert that the scan hasn't been completed AFTER the return to the client
-      fileController.virusChecker.asInstanceOf[DummyVirusScanner].scanCompleted should be (false)
+      virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (false)
 
       // Assert that the scan DOES eventually complete AFTER the return to the client
-      eventually(timeout(3 seconds)) { fileController.virusChecker.asInstanceOf[DummyVirusScanner].scanCompleted should be (true) }
+      eventually(timeout(3 seconds)) { virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (true) }
     }
   }
 }

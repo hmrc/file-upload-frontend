@@ -20,34 +20,12 @@ import java.io.{ByteArrayInputStream, File}
 
 import org.scalatest.BeforeAndAfterEach
 import play.api.libs.iteratee.Enumerator
-import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusChecker, VirusDetectedException, VirusScannerFailureException}
+import uk.gov.hmrc.clamav.{VirusDetectedException, VirusScannerFailureException}
+import uk.gov.hmrc.fileupload.UploadFixtures._
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source._
 import scala.util.{Failure, Success}
-
-trait TestAvScannerConnector extends AvScannerConnector {
-  val fail: Option[Exception] = None
-  var sentData: Array[Byte] = Array()
-
-  val virusChecker: VirusChecker = new VirusChecker {
-    override def send(bytes: Array[Byte])(implicit ec : ExecutionContext) = {
-      Future {
-        sentData = sentData ++ bytes
-      }
-    }
-
-    override def finish()(implicit ec : ExecutionContext) = {
-      Future {
-        fail match {
-          case None => Success(true)
-          case Some(exception) => Failure(exception)
-        }
-      }
-    }
-  }
-}
 
 class AVScannerConnectorSpec extends UnitSpec with BeforeAndAfterEach {
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -76,23 +54,23 @@ class AVScannerConnectorSpec extends UnitSpec with BeforeAndAfterEach {
     }
 
     "on processing dirty data, return a Failure(_:VirusDetectedException) response" in new TestAvScannerConnector {
-      override val fail = Some(new VirusDetectedException("TEST"))
+      override val fail = Failure(new VirusDetectedException("TEST"))
       val enumerator = Enumerator.fromFile(new File("test/resources/eicar-standard-av-test-file.txt"))
 
       val result = await(scan(enumerator))
 
       result.isFailure should be (true)
-      result should be (Failure(fail.get))
+      result should be (fail)
     }
 
     "on failure to communicate, return a Failure(_:VirusScannerFailureException) response" in new TestAvScannerConnector {
-      override val fail = Some(new VirusScannerFailureException("TEST"))
+      override val fail = Failure(new VirusScannerFailureException("TEST"))
       val enumerator = Enumerator.fromFile(new File("test/resources/768KBFile.txt"))
 
       val result = await(scan(enumerator))
 
       result.isFailure should be (true)
-      result should be (Failure(fail.get))
+      result should be (fail)
     }
   }
 }

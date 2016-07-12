@@ -39,23 +39,43 @@ object UploadFixtures {
   val tmpDir = System.getProperty("java.io.tmpdir")
   val validEnvelopeId = "1234567890"
   val validFileId = "0987654321"
-  val fileController = new FileUploadController with TestFileUploadConnector with TmpFileQuarantineStoreConnector with DummyAvScannerConnector
+  val fileController = new TestFileUploadController {}
 
-  trait DummyAvScannerConnector extends AvScannerConnector {
-    override val virusChecker: VirusChecker = new DummyVirusScanner {}
+  trait TestFileUploadController extends FileUploadController with TestFileUploadConnector with TmpFileQuarantineStoreConnector with TestAvScannerConnector
+
+  trait TestAvScannerConnector extends AvScannerConnector {
+    val fail: Try[Boolean] = Success(true)
+    val pause = (0 seconds) toMillis
+    def sentData = virusChecker.asInstanceOf[DelayCheckingVirusChecker].sentData
+
+    lazy val virusChecker: VirusChecker = new DelayCheckingVirusChecker {
+      override val response = fail
+      override val delay = pause
+    }
   }
 
-  trait DummyVirusScanner extends VirusChecker {
-    var scanInitiated: Boolean = false
-    var scanCompleted: Boolean = false
-    var delay: Int = 3000
+  trait DelayCheckingVirusChecker extends VirusChecker {
+    var sentData: Array[Byte] = Array()
+    val response: Try[Boolean] = Success(true)
+    val delay = (0 seconds) toMillis
 
-    override def send(bytes: Array[Byte])(implicit ec: ExecutionContext): Future[Unit] = Future { scanInitiated = true; () }
-    override def finish()(implicit ec: ExecutionContext): Future[Try[Boolean]] = Future {
-      Success {
-        Thread.sleep((3 seconds).millisPart)
+    var scanInitiated = false
+    var scanCompleted = false
+
+    override def send(bytes: Array[Byte])(implicit ec: ExecutionContext) = {
+      Future {
+        scanInitiated = true
+        sentData = sentData ++ bytes
+      }
+    }
+
+    override def finish()(implicit ec : ExecutionContext) = {
+      Future {
+        Thread.sleep(delay)
+        response
+      }.map { r =>
         scanCompleted = true
-        true
+        r
       }
     }
   }
@@ -88,10 +108,7 @@ object UploadFixtures {
     def deleteFileBeforeWrite(file: FileData) = Future.successful(())
 
     override def writeFile(file: FileData) = {
-      val fos: FileOutputStream = new FileOutputStream(new File(s"$tmpDir/${file.envelopeId}-${file.fileId}.Unscanned"))
-
       val it = toFileIteratee(s"$tmpDir/${file.envelopeId}-${file.fileId}.Unscanned") map { _ => Success(file.envelopeId) }
-
       file.data |>>> it
     }
 

@@ -27,16 +27,17 @@ import uk.gov.hmrc.play.frontend.controller.FrontendController
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 
 object FileUploadController extends FileUploadController with MongoQuarantineStoreConnector with FileUploadConnector
   with ServicesConfig with MongoDbConnection with ClamAvScannerConnector
 
 trait FileUploadController extends FrontendController with UploadService with QuarantineStoreConnector with AvScannerConnector {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
   import UploadParameters._
   import uk.gov.hmrc.fileupload.connectors._
+
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   val invalidEnvelope = "invalidParam=envelopeId"
   val persistenceFailure = "persistenceFailure=true"
