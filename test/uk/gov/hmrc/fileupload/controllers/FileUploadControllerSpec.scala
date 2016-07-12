@@ -117,7 +117,8 @@ class FileUploadControllerSpec extends UnitSpec {
 
     "return 303 (redirect) back to the requesting page if no parameters (and no file) are present" in {
       val originalURL = "http://somewhere.com/origin"
-      val fakeRequest = createUploadRequest(fileIds = Seq(), successRedirectURL = None, envelopeId = None, failureRedirectURL = None, headers = Seq("Referer" -> Seq(originalURL)))
+      val fakeRequest = createUploadRequest(fileIds = Seq(), successRedirectURL = None, envelopeId = None,
+                                            failureRedirectURL = None, headers = Seq("Referer" -> Seq(originalURL)))
 
       val result: Future[Result] = fileController.upload().apply(fakeRequest)
       status(result) should be (Status.SEE_OTHER)
@@ -202,9 +203,7 @@ class FileUploadControllerSpec extends UnitSpec {
 
     "ensure that a response [can be|is] returned before virus scanning completes" in {
       val fakeRequest = createUploadRequest()
-      val result: Future[Result] = fileController.upload().apply(fakeRequest)
-
-      status(result) should be (Status.SEE_OTHER)
+      await(fileController.upload().apply(fakeRequest))(3 seconds)
 
       // Assert that the scan hasn't been completed AFTER the return to the client
       fileController.virusChecker.asInstanceOf[DummyVirusScanner].scanCompleted should be (false)
