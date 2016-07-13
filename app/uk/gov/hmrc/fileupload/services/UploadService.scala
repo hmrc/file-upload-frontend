@@ -16,20 +16,23 @@
 
 package uk.gov.hmrc.fileupload.services
 
+import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.fileupload.connectors._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.Future
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
-trait UploadService extends FileUploadConnector with ServicesConfig {
-  self: QuarantineStoreConnector with AvScannerConnector =>
+trait UploadService {
+  self: FileUploadConnector with ServicesConfig with QuarantineStoreConnector with AvScannerConnector =>
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def fileData: PartialFunction[FileData, Enumerator[Array[Byte]]] = { case f => f.data }
+  def fileData: PartialFunction[FileData, Enumerator[Array[Byte]]] = {
+    case f => f.data
+  }
 
   def updateStatusAndScan(file: FileData): Future[Try[Boolean]] = {
     for {
@@ -38,7 +41,23 @@ trait UploadService extends FileUploadConnector with ServicesConfig {
     } yield r
   }
 
-  def scanUnscannedFiles() = list(Unscanned) map { _ foreach updateStatusAndScan }
+  def scanUnscannedFiles() = {
+    list(Unscanned).map { result =>
+      result.foreach { file =>
+        for {
+          result <- updateStatusAndScan(file)
+          r <- onScanComplete(file, result)
+        } yield r
+      }
+    }
+  }
+
+  def onScanComplete(file: FileData, result: Try[Boolean]): Future[FileData] = {
+    result match {
+      case Success(_) => updateStatus(file, Clean)
+      case Failure(_) => updateStatus(file, VirusDetected)
+    }
+  }
 
   def validateAndPersist(fileData: FileData)(implicit hc: HeaderCarrier) = {
     (for {

@@ -20,7 +20,7 @@ import play.api.libs.iteratee.{Concurrent, Enumerator, Iteratee}
 import play.api.mvc.BodyParsers.parse.{Multipart, _}
 import play.api.mvc._
 import play.modules.reactivemongo.MongoDbConnection
-import uk.gov.hmrc.fileupload.connectors.{FileUploadConnector, _}
+import uk.gov.hmrc.fileupload.connectors.{AvScannerConnector, FileUploadConnector, QuarantineStoreConnector, _}
 import uk.gov.hmrc.fileupload.services.UploadService
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.frontend.controller.FrontendController
@@ -29,10 +29,11 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
 
-object FileUploadController extends FileUploadController with MongoQuarantineStoreConnector with FileUploadConnector
+object FileUploadController extends FileUploadController with UploadService with MongoQuarantineStoreConnector with FileUploadConnector
   with ServicesConfig with MongoDbConnection with ClamAvScannerConnector
 
-trait FileUploadController extends FrontendController with UploadService with QuarantineStoreConnector with AvScannerConnector {
+trait FileUploadController extends FrontendController {
+  self: UploadService with QuarantineStoreConnector with AvScannerConnector =>
 
   import UploadParameters._
   import uk.gov.hmrc.fileupload.connectors._

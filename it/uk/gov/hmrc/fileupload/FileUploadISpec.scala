@@ -24,7 +24,7 @@ import play.modules.reactivemongo.MongoDbConnection
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.gridfs.GridFS
 import reactivemongo.json.JSONSerializationPack
-import uk.gov.hmrc.fileupload.connectors.{ClamAvScannerConnector, MongoQuarantineStoreConnector}
+import uk.gov.hmrc.fileupload.connectors.{ClamAvScannerConnector, Clean, MongoQuarantineStoreConnector, Scanning}
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.config.ServicesConfig
@@ -32,6 +32,9 @@ import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import org.scalatest.concurrent.Eventually._
+import org.scalatest.time.SpanSugar._
+import uk.gov.hmrc.fileupload.services.UploadService
 
 class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSupport with BeforeAndAfterEach {
   import reactivemongo.json.collection.JSONCollectionProducer
@@ -40,8 +43,9 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
   val testCollectionName: String = "testFileUploadCollection"
   val gfs = GridFS[JSONSerializationPack.type](mongo(), testCollectionName)
 
-  lazy val mongoController = new FileUploadController with TestFileUploadConnector with MongoQuarantineStoreConnector with ClamAvScannerConnector
-    with TestMongoDbConnection with ServicesConfig {
+  lazy val mongoController = new FileUploadController with UploadService with TestFileUploadConnector
+                                                      with MongoQuarantineStoreConnector with ClamAvScannerConnector
+                                                      with TestMongoDbConnection with ServicesConfig {
     override val collectionName = testCollectionName
   }
 
@@ -144,8 +148,12 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
       await(gfs.chunks.count()) should be (8)
     }
 
-    "result in the file progressing to 'SCANNING' state after upload completes" in {
+    "result in the file progressing to 'Clean' state after upload completes" in {
+      val success = "http://some.success"
+      val fakeRequest = createUploadRequest(successRedirectURL = Some(success), fileIds = Seq("768KBFile.txt"))
+      val result = await(mongoController.upload().apply(fakeRequest))
 
+      eventually(timeout(5 seconds)) { await(mongoController.list(Scanning)); await(mongoController.list(Clean)).length should be (1) }
     }
   }
 }

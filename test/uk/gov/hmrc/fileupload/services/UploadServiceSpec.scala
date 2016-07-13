@@ -18,17 +18,20 @@ package uk.gov.hmrc.fileupload.services
 
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.OneAppPerSuite
-import uk.gov.hmrc.fileupload.connectors.{FileData, Scanning, Unscanned}
+import uk.gov.hmrc.fileupload.connectors._
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
-
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.time.SpanSugar._
+import uk.gov.hmrc.clamav.VirusDetectedException
+
+import scala.util.Failure
 
 class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfterEach {
   import uk.gov.hmrc.fileupload.UploadFixtures._
 
   trait TestUploadService extends UploadService with TmpFileQuarantineStoreConnector with TestAvScannerConnector
+                                                with TestServicesConfig with TestFileUploadConnector
 
   implicit val hc = HeaderCarrier()
 
@@ -45,6 +48,35 @@ class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter
       eventually(timeout(4 seconds)) { await(list(Unscanned)).length should be (0) }
 
       await(list(Scanning)).length should be (1)
+    }
+
+    "Flag files as 'Clean' when they have passed AV scanning" in new TestUploadService {
+      val data = FileData(data = testFile, name = "TEST.out", contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
+
+      await(validateAndPersist(data))
+
+      await(list(Unscanned)).length should be (1)
+
+      scanUnscannedFiles()
+
+      eventually(timeout(4 seconds)) { await(list(Unscanned)).length should be (0) }
+
+      eventually(timeout(4 seconds)) { await(list(Clean)).length should be (1) }
+    }
+
+    "Flag files as 'VirusDetected' when they have failed AV scanning" in new TestUploadService {
+      val data = FileData(data = testFile, name = eicarFile, contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
+      override val fail = Failure(new VirusDetectedException("TEST"))
+
+      await(validateAndPersist(data))
+
+      await(list(Unscanned)).length should be (1)
+
+      scanUnscannedFiles()
+
+      eventually(timeout(4 seconds)) { await(list(Unscanned)).length should be (0) }
+
+      eventually(timeout(4 seconds)) { await(list(VirusDetected)).length should be (1) }
     }
   }
 

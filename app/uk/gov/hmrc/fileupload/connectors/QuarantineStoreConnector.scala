@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.connectors
 
+import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsString, JsUndefined, JsValue, Json}
 import play.modules.reactivemongo.{JSONFileToSave, MongoDbConnection}
@@ -54,11 +55,11 @@ trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
 
   private def byNameAndEnvelopeId(name: String, envelopeId: String) = Json.obj("filename" -> name, "metadata" -> metadata(envelopeId))
 
+  private def byNameAndEnvelopeIdOnly(name: String, envelopeId: String) = Json.obj("filename" -> name, "$where" -> s"this.metadata.envelopeId == '$envelopeId'")
+
   private def byState(state: FileState) = Json.obj("$where" -> s"this.metadata.state == '$state'")
 
   private def setState(state: FileState) = Json.obj("$set" -> Json.obj("metadata.state" -> s"$state"))
-
-  private def toUnit: PartialFunction[AnyRef, Unit] = { case _ => () }
 
   private def getTryEnvelopeId(file: FileData): PartialFunction[ReadFile[JSONSerializationPack.type, JsValue], Try[String]] = {
     case x if x.id.isInstanceOf[JsUndefined] => Failure(FilePersisterError(file.fileId, file.envelopeId))
@@ -73,7 +74,9 @@ trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
   }
 
   override def updateStatus(file: FileData): Future[Unit] = {
-    gfs.files.update(byNameAndEnvelopeId(file.name, file.envelopeId), setState(file.status)) map toUnit
+    gfs.files.update(byNameAndEnvelopeIdOnly(file.name, file.envelopeId), setState(file.status)) map { r =>
+      Logger.info(s"Update status to ${file.status} complete: ${r.nModified == 1}")
+    }
   }
 
   override def writeFile(file: FileData) = {
@@ -87,7 +90,7 @@ trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
   }
 
   override def list(state: FileState): Future[Seq[FileData]] = {
-    val futureSeq = gfs.files.find(byState(state)).cursor[ReadFile[JSONSerializationPack.type, JsValue]](readPreference = ReadPreference.nearest).collect[Seq]()
+    val futureSeq = gfs.files.find(byState(state)).cursor[ReadFile[JSONSerializationPack.type, JsValue]](readPreference = ReadPreference.primary).collect[Seq]()
 
     futureSeq.map { readFiles =>
       readFiles.map { file =>

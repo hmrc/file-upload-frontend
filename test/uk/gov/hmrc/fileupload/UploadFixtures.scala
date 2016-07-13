@@ -32,6 +32,7 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import org.scalatest.time.SpanSugar._
+import uk.gov.hmrc.fileupload.services.UploadService
 
 object UploadFixtures {
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -41,12 +42,12 @@ object UploadFixtures {
   val validFileId = "0987654321"
   val fileController = new TestFileUploadController {}
   val testCollectionName: String = "testFileUploadCollection"
-
-  def testFile = Enumerator.fromFile(new File("test/resources/testUpload.txt"))
+  val eicarFile = "eicar-standard-av-test-file.txt"
 
   lazy val fileSystemConnector = new TmpFileQuarantineStoreConnector {}
 
-  trait TestFileUploadController extends FileUploadController with TestFileUploadConnector with TmpFileQuarantineStoreConnector with TestAvScannerConnector
+  trait TestFileUploadController extends FileUploadController with UploadService with TestFileUploadConnector
+                                                              with TmpFileQuarantineStoreConnector with TestAvScannerConnector
 
   trait TestAvScannerConnector extends AvScannerConnector {
     val fail: Try[Boolean] = Success(true)
@@ -101,14 +102,6 @@ object UploadFixtures {
     override val http: HttpGet = null
   }
 
-  def toStringIteratee = Iteratee.fold[Array[Byte], String]("") { (s, d) => s ++ d.toString }
-
-  def toFileIteratee(filename: String) = {
-    val fos: FileOutputStream = new FileOutputStream(new File(filename))
-
-    Iteratee.fold[Array[Byte], FileOutputStream](fos) { (f, d) => f.write(d); f } map { fos => fos.close() }
-  }
-
   trait TmpFileQuarantineStoreConnector extends QuarantineStoreConnector {
     def deleteFileBeforeWrite(file: FileData) = Future.successful(())
 
@@ -119,7 +112,7 @@ object UploadFixtures {
 
     override def updateStatus(file: FileData) = {
       Future {
-        Thread.sleep(1000)
+        Thread.sleep(500)
         new File(tmpDir).listFiles.filter(_.getName.startsWith(s"${file.envelopeId}-${file.fileId}.")).foreach {
           _.renameTo(new File(tmpDir, s"${file.envelopeId}-${file.fileId}.${file.status}"))
         }
@@ -133,6 +126,16 @@ object UploadFixtures {
         }
       }
     }
+  }
+
+  def testFile = Enumerator.fromFile(new File("test/resources/testUpload.txt"))
+
+  def toStringIteratee = Iteratee.fold[Array[Byte], String]("") { (s, d) => s ++ d.toString }
+
+  def toFileIteratee(filename: String) = {
+    val fos: FileOutputStream = new FileOutputStream(new File(filename))
+
+    Iteratee.fold[Array[Byte], FileOutputStream](fos) { (f, d) => f.write(d); f } map { fos => fos.close() }
   }
 
   def cleanTmp() = {
