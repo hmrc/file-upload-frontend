@@ -21,7 +21,8 @@ import uk.gov.hmrc.fileupload.connectors._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 
-import scala.util.Success
+import scala.concurrent.Future
+import scala.util.{Success, Try}
 
 trait UploadService extends FileUploadConnector with ServicesConfig {
   self: QuarantineStoreConnector with AvScannerConnector =>
@@ -30,8 +31,15 @@ trait UploadService extends FileUploadConnector with ServicesConfig {
 
   def fileData: PartialFunction[FileData, Enumerator[Array[Byte]]] = { case f => f.data }
 
+  def updateStatusAndScan(file: FileData): Future[Try[Boolean]] = {
+    for {
+      newState <- updateStatus(file, Scanning)
+      r <- scan(newState.data)
+    } yield r
+  }
+
   def scanUnscannedFiles() = {
-    list(Unscanned) map { files => files map fileData foreach scan }
+    list(Unscanned) map { _ foreach updateStatusAndScan }
   }
 
   def validateAndPersist(fileData: FileData)(implicit hc: HeaderCarrier) = {

@@ -40,6 +40,11 @@ object UploadFixtures {
   val validEnvelopeId = "fea8cc15-f2d1-4eb5-b10e-b892bcbe94f8"
   val validFileId = "0987654321"
   val fileController = new TestFileUploadController {}
+  val testCollectionName: String = "testFileUploadCollection"
+
+  def testFile = Enumerator.fromFile(new File("test/resources/testUpload.txt"))
+
+  lazy val fileSystemConnector = new TmpFileQuarantineStoreConnector {}
 
   trait TestFileUploadController extends FileUploadController with TestFileUploadConnector with TmpFileQuarantineStoreConnector with TestAvScannerConnector
 
@@ -108,16 +113,33 @@ object UploadFixtures {
     def deleteFileBeforeWrite(file: FileData) = Future.successful(())
 
     override def writeFile(file: FileData) = {
-      val it = toFileIteratee(s"$tmpDir/${file.envelopeId}-${file.fileId}.Unscanned") map { _ => Success(file.envelopeId) }
+      val it = toFileIteratee(s"$tmpDir/${file.envelopeId}-${file.fileId}.${file.status}") map { _ => Success(file.envelopeId) }
       file.data |>>> it
+    }
+
+    override def updateStatus(file: FileData) = {
+      Future {
+        Thread.sleep(1000)
+        new File(tmpDir).listFiles.filter(_.getName.startsWith(s"${file.envelopeId}-${file.fileId}.")).foreach {
+          _.renameTo(new File(tmpDir, s"${file.envelopeId}-${file.fileId}.${file.status}"))
+        }
+      }
     }
 
     override def list(state: FileState): Future[Seq[FileData]] = {
       Future.successful {
-        new File(s"$tmpDir").listFiles.filter(_.getName.endsWith(s".$state")).toList.map { f =>
-          FileData(Enumerator.fromFile(f), f.getName, "n/a", f.getName.split("-").head, f.getName.split("-").tail.head)
+        new File(tmpDir).listFiles.filter(_.getName.endsWith(s".$state")).toList.map { f =>
+          FileData(Enumerator.fromFile(f), f.getName, "n/a", f.getName.split("-").init.mkString("-"), f.getName.split("-").last.split("\\.").init.mkString("."))
         }
       }
+    }
+  }
+
+  def cleanTmp() = {
+    val tmpFiles = new File(tmpDir).listFiles()
+
+    Seq(Unscanned, Scanning, Clean, VirusDetected).foreach { state =>
+      tmpFiles.filter(_.getName.endsWith(s".$state")).foreach(_.delete())
     }
   }
 

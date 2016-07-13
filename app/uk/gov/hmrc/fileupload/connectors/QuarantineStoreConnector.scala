@@ -35,9 +35,9 @@ case object Scanning extends FileState
 case object Clean extends FileState
 case object VirusDetected extends FileState
 
-sealed case class FileData(data: Enumerator[Array[Byte]], name: String, contentType: String, envelopeId: String, fileId: String)
+sealed case class FileData(data: Enumerator[Array[Byte]], name: String, contentType: String, envelopeId: String, fileId: String, status: FileState = Unscanned)
 
-trait QuarantineStoreConnector extends FilePersister with FileRetriever
+trait QuarantineStoreConnector extends FilePersister with FileRetriever with FileUpdater
 
 trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
   self: MongoDbConnection =>
@@ -65,8 +65,13 @@ trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
     }
   }
 
+  override def updateStatus(file: FileData): Future[Unit] = {
+    Future(())
+  }
+
   override def writeFile(file: FileData) = {
-    val fileToSave = JSONFileToSave(filename = Option(file.name), contentType = Some(file.contentType), metadata = metadata(file.envelopeId))
+    val fileToSave = JSONFileToSave(filename = Option(file.name), contentType = Some(file.contentType),
+                                    metadata = metadata(file.envelopeId, file.status))
 
     for {
       readFile <- file.data |>>> gfs.iteratee(fileToSave) map identity
@@ -100,6 +105,15 @@ trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
 
 trait FileRetriever {
   def list(status: FileState): Future[Seq[FileData]]
+}
+
+trait FileUpdater {
+  def updateStatus(file: FileData, status: FileState): Future[FileData] = {
+    val newFile = FileData(data = file.data, name = file.name, contentType = file.contentType, envelopeId = file.envelopeId, fileId = file.fileId, status = status)
+    updateStatus(newFile) map { _ => newFile }
+  }
+
+  def updateStatus(file: FileData): Future[Unit]
 }
 
 trait FilePersister {

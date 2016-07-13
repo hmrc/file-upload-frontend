@@ -174,20 +174,20 @@ class FileUploadControllerSpec extends UnitSpec {
   }
 
   "upload - POST /upload with a valid request" should {
-    "ensure that file data is stored" in  {
-      val fakeRequest = createUploadRequest()
-      val result: Future[Result] = fileController.upload().apply(fakeRequest)
+    "ensure that file data is stored" in new TestFileUploadController {
+      override val pause = (3 seconds) toMillis
 
-      status(result) should be (Status.SEE_OTHER)
+      val fakeRequest = createUploadRequest()
+      upload().apply(fakeRequest)
 
       new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned") should exist
     }
 
-    "ensure that file data matches the original data" in  {
-      val fakeRequest = createUploadRequest()
-      val result: Future[Result] = fileController.upload().apply(fakeRequest)
+    "ensure that file data matches the original data" in  new TestFileUploadController {
+      override val pause = (3 seconds) toMillis
 
-      status(result) should be (Status.SEE_OTHER)
+      val fakeRequest = createUploadRequest()
+      upload().apply(fakeRequest)
 
       fromFile(new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned")).mkString === fromFile(new File("test/resources/testUpload.txt")).mkString
     }
@@ -198,7 +198,7 @@ class FileUploadControllerSpec extends UnitSpec {
 
       status(result) should be (Status.SEE_OTHER)
 
-      eventually { fileController.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanInitiated should be (true) }
+      eventually(timeout(4 seconds)) { fileController.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanInitiated should be (true) }
     }
 
     "ensure that a response [can be|is] returned before virus scanning completes" in new TestFileUploadController {
@@ -212,7 +212,7 @@ class FileUploadControllerSpec extends UnitSpec {
       virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (false)
 
       // Assert that the scan DOES eventually complete AFTER the return to the client
-      eventually(timeout(3 seconds)) { virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (true) }
+      eventually(timeout(4 seconds)) { virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (true) }
     }
   }
 }

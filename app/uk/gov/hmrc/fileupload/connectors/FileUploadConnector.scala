@@ -34,10 +34,8 @@ trait FileUploadConnector {
 
   def validate(envelopeId: String)(implicit hc: HeaderCarrier): Future[Try[String]] = {
     http.GET(s"$baseUrl/file-upload/envelope/$envelopeId").map {
-      _.status match {
-        case 200 => Success(envelopeId)
-        case status => Failure(EnvelopeValidationError(envelopeId))
-      }
+      case r if r.status == 200 => Success(envelopeId)
+      case _ => Failure(EnvelopeValidationError(envelopeId))
     }.recover { case _ => Failure(EnvelopeValidationError(envelopeId)) }
   }
 }

@@ -19,7 +19,6 @@ package uk.gov.hmrc.fileupload.connectors
 import java.io.File
 
 import org.scalatest.BeforeAndAfterEach
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsValue, Json}
 import play.modules.reactivemongo.MongoDbConnection
 import reactivemongo.api.DefaultDB
@@ -36,11 +35,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
   import reactivemongo.json.ImplicitBSONHandlers._
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def testFile = Enumerator.fromFile(new File("test/resources/testUpload.txt"))
-  val testCollectionName: String = "testFileUploadCollection"
   val gfs = GridFS[JSONSerializationPack.type](mongo(), testCollectionName)
-
-  lazy val fileSystemConnector = new TmpFileQuarantineStoreConnector {}
 
   lazy val mongoConnector = new MongoQuarantineStoreConnector with TestMongoDbConnection {
     override val collectionName = testCollectionName
@@ -143,6 +138,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
   }
 
   override protected def beforeEach() = {
+    cleanTmp()
     val isClean = for {
       dropFiles <- gfs.files.drop()
       dropChunks <- gfs.chunks.drop()
@@ -154,7 +150,7 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
   }
 
   override protected def afterEach() = {
-    new File(s"$tmpDir").listFiles().filter(_.getName.endsWith(".Unscanned")).foreach(_.delete())
+    cleanTmp()
     val done = for {
       dropFiles <- gfs.files.drop()
       dropChunks <- gfs.chunks.drop()
