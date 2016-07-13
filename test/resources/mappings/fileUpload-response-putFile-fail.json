@@ -1,0 +1,10 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/file-upload/envelope/invalidId/file/1/content"
+  },
+  "response": {
+    "status": 400,
+    "body": ""
+  }
+}
