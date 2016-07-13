@@ -26,10 +26,13 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.Future
 import scala.io.Source.fromFile
 import org.scalatest.concurrent.Eventually._
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 
-class FileUploadControllerSpec extends UnitSpec {
+class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
   import uk.gov.hmrc.fileupload.UploadFixtures._
+
+  implicit val defaultPatience = PatienceConfig(timeout =  5 seconds, interval =  5 milliseconds)
 
   "validation - POST /upload" should {
     "return 303 (redirect) to the `successRedirect` parameter if a valid request is received" in {
@@ -196,9 +199,12 @@ class FileUploadControllerSpec extends UnitSpec {
       val fakeRequest = createUploadRequest()
       val result: Future[Result] = fileController.upload().apply(fakeRequest)
 
-      status(result) should be (Status.SEE_OTHER)
-
-      eventually(timeout(4 seconds)) { fileController.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanInitiated should be (true) }
+      whenReady(result) { r =>
+        r.header.status should be (Status.SEE_OTHER)
+        eventually(timeout(4 seconds)) {
+          fileController.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanInitiated should be (true)
+        }
+      }
     }
 
     "ensure that a response [can be|is] returned before virus scanning completes" in new TestFileUploadController {
