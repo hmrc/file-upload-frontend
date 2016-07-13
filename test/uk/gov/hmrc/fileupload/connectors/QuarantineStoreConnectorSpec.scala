@@ -135,6 +135,26 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
         await(fileData.data |>>> toStringIteratee) === fromFile(new File("test/resources/testUpload.txt")).mkString
       }
     }
+
+    "Move a file between states successfully (fileSystem)" in {
+      val file = FileData(data = testFile, name = "TEST.out", contentType = "text/plain", envelopeId = "1", fileId = "1")
+
+      await(fileSystemConnector.persistFile(file))
+      await(fileSystemConnector.list(Unscanned)).length should be (1)
+      await(fileSystemConnector.updateStatus(file, Scanning))
+      await(fileSystemConnector.list(Unscanned)).length should be (0)
+      await(fileSystemConnector.list(Scanning)).length should be (1)
+    }
+
+    "Move a file between states successfully (mongo)" in {
+      val file = FileData(data = testFile, name = "TEST.out", contentType = "text/plain", envelopeId = "1", fileId = "1")
+
+      await(mongoConnector.persistFile(file))
+      await(mongoConnector.list(Unscanned)).length should be (1)
+      await(mongoConnector.updateStatus(file, Scanning))
+      await(mongoConnector.list(Unscanned)).length should be (0)
+      await(mongoConnector.list(Scanning)).length should be (1)
+    }
   }
 
   override protected def beforeEach() = {

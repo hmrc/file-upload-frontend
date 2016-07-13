@@ -212,7 +212,7 @@ class FileUploadControllerSpec extends UnitSpec {
       virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (false)
 
       // Assert that the scan DOES eventually complete AFTER the return to the client
-      eventually(timeout(4 seconds)) { virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (true) }
+      eventually(timeout(5 seconds)) { virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (true) }
     }
   }
 }

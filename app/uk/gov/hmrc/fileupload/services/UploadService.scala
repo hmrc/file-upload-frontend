@@ -38,9 +38,7 @@ trait UploadService extends FileUploadConnector with ServicesConfig {
     } yield r
   }
 
-  def scanUnscannedFiles() = {
-    list(Unscanned) map { _ foreach updateStatusAndScan }
-  }
+  def scanUnscannedFiles() = list(Unscanned) map { _ foreach updateStatusAndScan }
 
   def validateAndPersist(fileData: FileData)(implicit hc: HeaderCarrier) = {
     (for {

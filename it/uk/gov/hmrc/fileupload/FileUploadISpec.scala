@@ -131,7 +131,7 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
       await(gfs.chunks.count()) should be (4)
     }
 
-    "NOT results in an overwrite when the same filename is uploaded in differing envelopes" in {
+    "NOT result in an overwrite when the same filename is uploaded in differing envelopes" in {
       Seq("envelope1", "envelope2").foreach { eId =>
         val success = "http://some.success"
         val fakeRequest = createUploadRequest(successRedirectURL = Some(success), fileIds = Seq("768KBFile.txt"), envelopeId = Some(eId))
@@ -142,6 +142,10 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
 
       await(gfs.files.count()) should be (2)
       await(gfs.chunks.count()) should be (8)
+    }
+
+    "result in the file progressing to 'SCANNING' state after upload completes" in {
+
     }
   }
 }

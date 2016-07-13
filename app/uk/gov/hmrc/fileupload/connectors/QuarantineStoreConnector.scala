@@ -52,21 +52,28 @@ trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
 
   private def metadata(envelopeId: String, state: FileState = Unscanned) = Json.obj("envelopeId" -> envelopeId, "state" -> s"$state")
 
-  private def byFilenameAndEnvelopeId(filename: String, envelopeId: String) =
-    Json.obj("filename" -> filename, "metadata" -> metadata(envelopeId))
+  private def byNameAndEnvelopeId(name: String, envelopeId: String) = Json.obj("filename" -> name, "metadata" -> metadata(envelopeId))
 
-  private def byState(state: FileState) =
-    Json.obj("$where" -> s"this.metadata.state == '$state'")
+  private def byState(state: FileState) = Json.obj("$where" -> s"this.metadata.state == '$state'")
+
+  private def setState(state: FileState) = Json.obj("$set" -> Json.obj("metadata.state" -> s"$state"))
+
+  private def toUnit: PartialFunction[AnyRef, Unit] = { case _ => () }
+
+  private def getTryEnvelopeId(file: FileData): PartialFunction[ReadFile[JSONSerializationPack.type, JsValue], Try[String]] = {
+    case x if x.id.isInstanceOf[JsUndefined] => Failure(FilePersisterError(file.fileId, file.envelopeId))
+    case _ => Success(file.envelopeId)
+  }
 
   override def deleteFileBeforeWrite(file: FileData) = {
-    gfs.files.find(byFilenameAndEnvelopeId(file.name, file.envelopeId)).one[JsValue].map {
+    gfs.files.find(byNameAndEnvelopeId(file.name, file.envelopeId)).one[JsValue].map {
       case Some(reference) => Some(reference \ "_id").map(gfs.remove(_))
       case _ => ()
     }
   }
 
   override def updateStatus(file: FileData): Future[Unit] = {
-    Future(())
+    gfs.files.update(byNameAndEnvelopeId(file.name, file.envelopeId), setState(file.status)) map toUnit
   }
 
   override def writeFile(file: FileData) = {
@@ -77,11 +84,6 @@ trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
       readFile <- file.data |>>> gfs.iteratee(fileToSave) map identity
       result <- readFile map getTryEnvelopeId(file)
     } yield result
-  }
-
-  def getTryEnvelopeId(file: FileData): PartialFunction[ReadFile[JSONSerializationPack.type, JsValue], Try[String]] = {
-    case x if x.id.isInstanceOf[JsUndefined] => Failure(FilePersisterError(file.fileId, file.envelopeId))
-    case _ => Success(file.envelopeId)
   }
 
   override def list(state: FileState): Future[Seq[FileData]] = {
