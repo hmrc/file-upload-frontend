@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.fileupload.services
 
-import play.api.Logger
-import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.fileupload.connectors._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -29,10 +27,6 @@ trait UploadService {
   self: FileUploadConnector with ServicesConfig with QuarantineStoreConnector with AvScannerConnector =>
 
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  def fileData: PartialFunction[FileData, Enumerator[Array[Byte]]] = {
-    case f => f.data
-  }
 
   def updateStatusAndScan(file: FileData): Future[Try[Boolean]] = {
     for {

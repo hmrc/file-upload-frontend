@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.connectors
 import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
 import uk.gov.hmrc.fileupload.WSHttp
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpResponse}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -32,10 +32,10 @@ trait FileUploadConnector {
   val http: HttpGet = WSHttp
   val baseUrl: String = baseUrl("file-upload")
 
+  def okStatusToSuccess(envelopeId: String): PartialFunction[HttpResponse, Try[String]] = { case r if r.status == 200 => Success(envelopeId) }
+  def envelopeFailure(envelopeId: String): PartialFunction[Throwable, Try[String]] = { case _ => Failure(EnvelopeValidationError(envelopeId)) }
+
   def validate(envelopeId: String)(implicit hc: HeaderCarrier): Future[Try[String]] = {
-    http.GET(s"$baseUrl/file-upload/envelope/$envelopeId").map {
-      case r if r.status == 200 => Success(envelopeId)
-      case _ => Failure(EnvelopeValidationError(envelopeId))
-    }.recover { case _ => Failure(EnvelopeValidationError(envelopeId)) }
+    http.GET(s"$baseUrl/file-upload/envelope/$envelopeId") map okStatusToSuccess(envelopeId) recover envelopeFailure(envelopeId)
   }
 }
