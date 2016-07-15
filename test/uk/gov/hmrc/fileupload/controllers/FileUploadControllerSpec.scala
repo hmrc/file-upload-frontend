@@ -201,7 +201,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
 
       whenReady(result) { r =>
         r.header.status should be (Status.SEE_OTHER)
-        eventually(timeout(4 seconds)) {
+        eventually(timeout(10 seconds)) {
           fileController.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanInitiated should be (true)
         }
       }
