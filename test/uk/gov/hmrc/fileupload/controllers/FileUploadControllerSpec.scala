@@ -188,13 +188,13 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     }
 
     "ensure that file data matches the original data" in  new TestFileUploadController {
-//      override val pause = (3 seconds) toMillis
-//
-//      val fakeRequest = createUploadRequest()
-//      upload().apply(fakeRequest)
-//
-//      fromFile(new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned")).mkString === fromFile(new File("test/resources/testUpload.txt")).mkString
-//    }
+      override val pause = (3 seconds) toMillis
+
+      val fakeRequest = createUploadRequest()
+      upload().apply(fakeRequest)
+
+      fromFile(new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned")).mkString === fromFile(new File("test/resources/testUpload.txt")).mkString
+    }
 
     "ensure that a virus scan is triggered" in {
 //      val fakeRequest = createUploadRequest()
