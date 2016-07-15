@@ -36,7 +36,7 @@ class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter
   implicit val hc = HeaderCarrier()
 
   "An upload service" should {
-    "Flag files as 'Scanning' when they have been passed to the AV scanner" in new TestUploadService {
+    "Flag files as 'Scanning' when they have been passed to the AV scanner" ignore new TestUploadService {
       val data = FileData(data = testFile, name = "TEST.out", contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
 
       await(validateAndPersist(data))
@@ -50,7 +50,7 @@ class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter
       await(list(Scanning)).length should be (1)
     }
 
-    "Flag files as 'Clean' when they have passed AV scanning" in new TestUploadService {
+    "Flag files as 'Clean' when they have passed AV scanning" ignore new TestUploadService {
       val data = FileData(data = testFile, name = "TEST.out", contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
 
       await(validateAndPersist(data))
@@ -64,7 +64,7 @@ class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter
       eventually(timeout(4 seconds)) { await(list(Clean)).length should be (1) }
     }
 
-    "Flag files as 'VirusDetected' when they have failed AV scanning" in new TestUploadService {
+    "Flag files as 'VirusDetected' when they have failed AV scanning" ignore new TestUploadService {
       val data = FileData(data = testFile, name = eicarFile, contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
       override val fail = Failure(new VirusDetectedException("TEST"))
 
