@@ -30,53 +30,60 @@ import scala.util.Failure
 class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfterEach {
   import uk.gov.hmrc.fileupload.UploadFixtures._
 
-  trait TestUploadService extends UploadService with TmpFileQuarantineStoreConnector with TestAvScannerConnector
-                                                with TestServicesConfig with TestFileUploadConnector
+  private val quarantineStoreConnector = TmpFileQuarantineStoreConnector
+
+  def testUploadService(avScannerConnector: AvScannerConnector = new TestAvScannerConnector()) =
+    new UploadService(avScannerConnector, TestFileUploadConnector, quarantineStoreConnector)
 
   implicit val hc = HeaderCarrier()
 
   "An upload service" should {
-    "Flag files as 'Scanning' when they have been passed to the AV scanner" ignore new TestUploadService {
+    "Flag files as 'Scanning' when they have been passed to the AV scanner" ignore {
       val data = FileData(data = testFile, name = "TEST.out", contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
 
-      await(validateAndPersist(data))
+      val uploadService = testUploadService()
 
-      await(list(Unscanned)).length should be (1)
+      await(uploadService.validateAndPersist(data))
 
-      scanUnscannedFiles()
+      await(quarantineStoreConnector.list(Unscanned)).length should be (1)
 
-      eventually(timeout(4 seconds)) { await(list(Unscanned)).length should be (0) }
+      uploadService.scanUnscannedFiles()
 
-      await(list(Scanning)).length should be (1)
+      eventually(timeout(4 seconds)) { await(quarantineStoreConnector.list(Unscanned)).length should be (0) }
+
+      await(quarantineStoreConnector.list(Scanning)).length should be (1)
     }
 
-    "Flag files as 'Clean' when they have passed AV scanning" ignore new TestUploadService {
+    "Flag files as 'Clean' when they have passed AV scanning" ignore {
       val data = FileData(data = testFile, name = "TEST.out", contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
 
-      await(validateAndPersist(data))
+      val uploadService = testUploadService()
 
-      await(list(Unscanned)).length should be (1)
+      await(uploadService.validateAndPersist(data))
 
-      scanUnscannedFiles()
+      await(quarantineStoreConnector.list(Unscanned)).length should be (1)
 
-      eventually(timeout(4 seconds)) { await(list(Unscanned)).length should be (0) }
+      uploadService.scanUnscannedFiles()
 
-      eventually(timeout(4 seconds)) { await(list(Clean)).length should be (1) }
+      eventually(timeout(4 seconds)) { await(quarantineStoreConnector.list(Unscanned)).length should be (0) }
+
+      eventually(timeout(4 seconds)) { await(quarantineStoreConnector.list(Clean)).length should be (1) }
     }
 
-    "Flag files as 'VirusDetected' when they have failed AV scanning" ignore new TestUploadService {
+    "Flag files as 'VirusDetected' when they have failed AV scanning" ignore {
       val data = FileData(data = testFile, name = eicarFile, contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
-      override val fail = Failure(new VirusDetectedException("TEST"))
 
-      await(validateAndPersist(data))
+      val uploadService = testUploadService(new TestAvScannerConnector(Failure(new VirusDetectedException("TEST"))))
 
-      await(list(Unscanned)).length should be (1)
+      await(uploadService.validateAndPersist(data))
 
-      scanUnscannedFiles()
+      await(quarantineStoreConnector.list(Unscanned)).length should be (1)
 
-      eventually(timeout(4 seconds)) { await(list(Unscanned)).length should be (0) }
+      uploadService.scanUnscannedFiles()
 
-      eventually(timeout(4 seconds)) { await(list(VirusDetected)).length should be (1) }
+      eventually(timeout(4 seconds)) { await(quarantineStoreConnector.list(Unscanned)).length should be (0) }
+
+      eventually(timeout(4 seconds)) { await(quarantineStoreConnector.list(VirusDetected)).length should be (1) }
     }
   }
 

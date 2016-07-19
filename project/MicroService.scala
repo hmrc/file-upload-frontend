@@ -46,8 +46,6 @@ trait MicroService {
     )
   }
 
-  def itFilter(name: String): Boolean = name endsWith "ISpec"
-
   lazy val microservice = Project(appName, file("."))
     .enablePlugins(Seq(play.PlayScala) ++ plugins: _*)
     .settings(playSettings ++ scoverageSettings: _*)
@@ -70,7 +68,6 @@ trait MicroService {
       unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest) (base => Seq(base / "it", base / "test")),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
-      testOptions in IntegrationTest := Seq(Tests.Filter(itFilter)),
       parallelExecution in IntegrationTest := false)
     .settings(resolvers += Resolver.bintrayRepo("hmrc", "releases"))
 }

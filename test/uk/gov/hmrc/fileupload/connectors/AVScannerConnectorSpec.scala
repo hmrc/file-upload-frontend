@@ -31,46 +31,54 @@ class AVScannerConnectorSpec extends UnitSpec with BeforeAndAfterEach {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   "An AV scanner connector" should {
-    "take an Array[Byte] enumerator and pass to an external scanner" in new TestAvScannerConnector {
+    "take an Array[Byte] enumerator and pass to an external scanner" in {
+      val scanner = new TestAvScannerConnector()
       val enumerator = Enumerator.fromStream(new ByteArrayInputStream("test".getBytes))
 
-      await(scan(enumerator))
+      await(scanner.scan(enumerator))
 
-      sentData should be ("test".getBytes)
+      scanner.sentData should be ("test".getBytes)
     }
 
-    "be able to cope with a large quantity of data" in new TestAvScannerConnector {
+    "be able to cope with a large quantity of data" in {
+      val scanner = new TestAvScannerConnector()
       val enumerator = Enumerator.fromFile(new File("test/resources/768KBFile.txt"))
 
-      await(scan(enumerator))
+      await(scanner.scan(enumerator))
 
-      sentData should be (fromFile(new File("test/resources/768KBFile.txt")).mkString.getBytes)
+      scanner.sentData should be (fromFile(new File("test/resources/768KBFile.txt")).mkString.getBytes)
     }
 
-    "on processing clean data, return a Success(true) response" in new TestAvScannerConnector {
+    "on processing clean data, return a Success(true) response" in {
+      val scanner = new TestAvScannerConnector()
+
       val enumerator = Enumerator.fromFile(new File("test/resources/768KBFile.txt"))
 
-      await(scan(enumerator)) should be (Success(true))
+      await(scanner.scan(enumerator)) should be (Success(true))
     }
 
-    "on processing dirty data, return a Failure(_:VirusDetectedException) response" in new TestAvScannerConnector {
-      override val fail = Failure(new VirusDetectedException("TEST"))
+    "on processing dirty data, return a Failure(_:VirusDetectedException) response" in {
+      val failure = Failure(new VirusDetectedException("TEST"))
+      val scanner = new TestAvScannerConnector(failure)
+
       val enumerator = Enumerator.fromFile(new File("test/resources/eicar-standard-av-test-file.txt"))
 
-      val result = await(scan(enumerator))
+      val result = await(scanner.scan(enumerator))
 
       result.isFailure should be (true)
-      result should be (fail)
+      result should be (failure)
     }
 
-    "on failure to communicate, return a Failure(_:VirusScannerFailureException) response" in new TestAvScannerConnector {
-      override val fail = Failure(new VirusScannerFailureException("TEST"))
+    "on failure to communicate, return a Failure(_:VirusScannerFailureException) response" in {
+      val failure = Failure(new VirusScannerFailureException("TEST"))
+      val scanner = new TestAvScannerConnector(failure)
+
       val enumerator = Enumerator.fromFile(new File("test/resources/768KBFile.txt"))
 
-      val result = await(scan(enumerator))
+      val result = await(scanner.scan(enumerator))
 
       result.isFailure should be (true)
-      result should be (fail)
+      result should be (failure)
     }
   }
 }

@@ -46,7 +46,8 @@ trait QuarantineStoreConnector {
   def list(status: FileState): Future[Seq[FileData]]
 
   def updateStatus(file: FileData, status: FileState): Future[FileData] = {
-    val newFile = FileData(data = file.data, name = file.name, contentType = file.contentType, envelopeId = file.envelopeId, fileId = file.fileId, status = status)
+    val newFile = FileData(data = file.data, name = file.name, contentType = file.contentType,
+      envelopeId = file.envelopeId, fileId = file.fileId, status = status)
     updateStatus(newFile) map { _ => newFile }
   }
 
@@ -64,14 +65,13 @@ trait QuarantineStoreConnector {
   def writeFile(file: FileData): Future[Try[String]]
 }
 
-trait MongoQuarantineStoreConnector extends QuarantineStoreConnector {
+class MongoQuarantineStoreConnector(collectionName: String) extends QuarantineStoreConnector {
+
   self: MongoDbConnection =>
 
   import play.modules.reactivemongo.GridFSController.readFileReads
   import reactivemongo.json.ImplicitBSONHandlers._
   import reactivemongo.json.collection.JSONCollectionProducer
-
-  val collectionName: String = "quarantine"
 
   lazy val gfs = GridFS[JSONSerializationPack.type](db(), collectionName)
 

@@ -17,6 +17,8 @@
 package uk.gov.hmrc.fileupload
 
 import org.scalatest.BeforeAndAfterEach
+import org.scalatest.concurrent.Eventually._
+import org.scalatest.time.SpanSugar._
 import play.api.http.Status
 import play.api.mvc.Result
 import play.api.test.Helpers._
@@ -26,28 +28,24 @@ import reactivemongo.api.gridfs.GridFS
 import reactivemongo.json.JSONSerializationPack
 import uk.gov.hmrc.fileupload.connectors.{ClamAvScannerConnector, Clean, MongoQuarantineStoreConnector, Scanning}
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
+import uk.gov.hmrc.fileupload.services.UploadService
 import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import org.scalatest.concurrent.Eventually._
-import org.scalatest.time.SpanSugar._
-import uk.gov.hmrc.fileupload.services.UploadService
 
-class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSupport with BeforeAndAfterEach {
-  import reactivemongo.json.collection.JSONCollectionProducer
+class FileUploadSpec extends UnitSpec with WithFakeApplication with MongoSpecSupport with BeforeAndAfterEach {
   import UploadFixtures._
+  import reactivemongo.json.collection.JSONCollectionProducer
 
   val testCollectionName: String = "testFileUploadCollection"
   val gfs = GridFS[JSONSerializationPack.type](mongo(), testCollectionName)
 
-  lazy val mongoController = new FileUploadController with UploadService with TestFileUploadConnector
-                                                      with MongoQuarantineStoreConnector with ClamAvScannerConnector
-                                                      with TestMongoDbConnection with ServicesConfig {
-    override val collectionName = testCollectionName
-  }
+  lazy val mongoQuarantineStoreConnector = new MongoQuarantineStoreConnector(testCollectionName) with TestMongoDbConnection
+
+  lazy val mongoController =  new FileUploadController(new UploadService(ClamAvScannerConnector, TestFileUploadConnector,
+    mongoQuarantineStoreConnector))
 
   override protected def beforeEach() = {
     val isClean = for {
@@ -153,7 +151,7 @@ class FileUploadISpec extends UnitSpec with WithFakeApplication with MongoSpecSu
       val fakeRequest = createUploadRequest(successRedirectURL = Some(success), fileIds = Seq("768KBFile.txt"))
       val result = await(mongoController.upload().apply(fakeRequest))
 
-      eventually(timeout(5 seconds)) { await(mongoController.list(Scanning)); await(mongoController.list(Clean)).length should be (1) }
+      eventually(timeout(5 seconds)) { await(mongoQuarantineStoreConnector.list(Scanning)); await(mongoQuarantineStoreConnector.list(Clean)).length should be (1) }
     }
   }
 }

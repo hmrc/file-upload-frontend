@@ -29,6 +29,7 @@ import org.scalatest.concurrent.Eventually._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.SpanSugar._
 import org.specs2.execute.{Pending, PendingUntilFixed}
+import uk.gov.hmrc.fileupload.UploadFixtures
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
   import uk.gov.hmrc.fileupload.UploadFixtures._
@@ -178,48 +179,52 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
   }
 
   "upload - POST /upload with a valid request" should {
-    "ensure that file data is stored" in new TestFileUploadController {
-      override val pause = (3 seconds) toMillis
+    "ensure that file data is stored" in {
+      val controller = testFileUploadController(new TestAvScannerConnector(pause = 3 seconds))
 
       val fakeRequest = createUploadRequest()
-      upload().apply(fakeRequest)
+      controller.upload().apply(fakeRequest)
 
       new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned") should exist
     }
 
-    "ensure that file data matches the original data" in  new TestFileUploadController {
-      override val pause = (3 seconds) toMillis
+    "ensure that file data matches the original data" in  {
+      val controller = testFileUploadController(new TestAvScannerConnector(pause = 3 seconds))
 
       val fakeRequest = createUploadRequest()
-      upload().apply(fakeRequest)
+      controller.upload().apply(fakeRequest)
 
       fromFile(new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned")).mkString === fromFile(new File("test/resources/testUpload.txt")).mkString
     }
 
     "ensure that a virus scan is triggered" ignore {
+      val avScannerConnector = new TestAvScannerConnector()
+      val controller = testFileUploadController(avScannerConnector)
+
       val fakeRequest = createUploadRequest()
       val result: Future[Result] = fileController.upload().apply(fakeRequest)
 
       whenReady(result) { r =>
         r.header.status should be (Status.SEE_OTHER)
         eventually(timeout(4 seconds)) {
-          fileController.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanInitiated should be (true)
+          avScannerConnector.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanInitiated should be (true)
         }
       }
     }
 
-    "ensure that a response [can be|is] returned before virus scanning completes" ignore new TestFileUploadController {
-      override val pause = (3 seconds) toMillis
+    "ensure that a response [can be|is] returned before virus scanning completes" ignore {
+      val avScannerConnector = new TestAvScannerConnector(pause = 3 seconds)
+      val controller = testFileUploadController(avScannerConnector)
 
       val fakeRequest = createUploadRequest()
 
-      await(upload().apply(fakeRequest))
+      await(controller.upload().apply(fakeRequest))
 
       // Assert that the scan hasn't been completed AFTER the return to the client
-      virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (false)
+      avScannerConnector.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (false)
 
       // Assert that the scan DOES eventually complete AFTER the return to the client
-      eventually(timeout(5 seconds)) { virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (true) }
+      eventually(timeout(5 seconds)) { avScannerConnector.virusChecker.asInstanceOf[DelayCheckingVirusChecker].scanCompleted should be (true) }
     }
   }
 }

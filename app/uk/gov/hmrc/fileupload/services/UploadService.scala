@@ -23,20 +23,20 @@ import uk.gov.hmrc.play.http.HeaderCarrier
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-trait UploadService {
-  self: FileUploadConnector with ServicesConfig with QuarantineStoreConnector with AvScannerConnector =>
+class UploadService(avScannerConnector: AvScannerConnector, fileUploadConnector: FileUploadConnector,
+                    quarantineStoreConnector: QuarantineStoreConnector) extends ServicesConfig {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
   def updateStatusAndScan(file: FileData): Future[Try[Boolean]] = {
     for {
-      newState <- updateStatus(file, Scanning)
-      r <- scan(newState.data)
+      newState <- quarantineStoreConnector.updateStatus(file, Scanning)
+      r <- avScannerConnector.scan(newState.data)
     } yield r
   }
 
   def scanUnscannedFiles() = {
-    list(Unscanned).map { result =>
+    quarantineStoreConnector.list(Unscanned).map { result =>
       result.foreach { file =>
         for {
           result <- updateStatusAndScan(file)
@@ -48,15 +48,15 @@ trait UploadService {
 
   def onScanComplete(file: FileData, result: Try[Boolean]): Future[FileData] = {
     result match {
-      case Success(_) => updateStatus(file, Clean)
-      case Failure(_) => updateStatus(file, VirusDetected)
+      case Success(_) => quarantineStoreConnector.updateStatus(file, Clean)
+      case Failure(_) => quarantineStoreConnector.updateStatus(file, VirusDetected)
     }
   }
 
   def validateAndPersist(fileData: FileData)(implicit hc: HeaderCarrier) = {
     (for {
-      validated <- validate(fileData.envelopeId)
-      persisted <- persistFile(fileData)
+      validated <- fileUploadConnector.validate(fileData.envelopeId)
+      persisted <- quarantineStoreConnector.persistFile(fileData)
     } yield {
       (validated, persisted)
     }) map {

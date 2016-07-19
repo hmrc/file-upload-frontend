@@ -24,7 +24,7 @@ import uk.gov.hmrc.play.config.RunMode
 
 import scala.concurrent.Future
 
-trait ClamAvScannerConnector extends AvScannerConnector with RunMode {
+object ClamAvScannerConnector extends AvScannerConnector with RunMode {
   implicit lazy val clamAvConfig = ClamAvConfig(Play.current.configuration.getConfig(s"$env.clam.antivirus"))
 
   override def virusChecker = {

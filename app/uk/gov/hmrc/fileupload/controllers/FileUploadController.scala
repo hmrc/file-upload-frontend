@@ -20,20 +20,19 @@ import play.api.libs.iteratee.{Concurrent, Enumerator, Iteratee}
 import play.api.mvc.BodyParsers.parse.{Multipart, _}
 import play.api.mvc._
 import play.modules.reactivemongo.MongoDbConnection
-import uk.gov.hmrc.fileupload.connectors.{AvScannerConnector, FileUploadConnector, QuarantineStoreConnector, _}
+import uk.gov.hmrc.fileupload.connectors.{FileUploadConnector, _}
 import uk.gov.hmrc.fileupload.services.UploadService
-import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.frontend.controller.FrontendController
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
 
-object FileUploadController extends FileUploadController with UploadService with MongoQuarantineStoreConnector with FileUploadConnector
-  with ServicesConfig with MongoDbConnection with ClamAvScannerConnector
 
-trait FileUploadController extends FrontendController {
-  self: UploadService with QuarantineStoreConnector with AvScannerConnector =>
+object ProdFileUploadController extends
+  FileUploadController(new UploadService(ClamAvScannerConnector, new FileUploadConnector, new MongoQuarantineStoreConnector("quarantine") with MongoDbConnection))
+
+class FileUploadController(uploadService: UploadService) extends FrontendController {
 
   import UploadParameters._
   import uk.gov.hmrc.fileupload.connectors._
@@ -69,7 +68,7 @@ trait FileUploadController extends FrontendController {
     UploadParameters(request.body.dataParts, request.body.files) match {
       case params@UploadParameters(Some(successRedirect), Some(failureRedirect), Some(envelopeId), Seq(filePart)) =>
         for {
-          redirectTo <- validateAndPersist(filePart) map postValidationRouting(failureRedirect, successRedirect)
+          redirectTo <- uploadService.validateAndPersist(filePart) map postValidationRouting(failureRedirect, successRedirect)
           eventualUrl <- sendRedirect(redirectTo)
         } yield eventualUrl
       case params@UploadParameters(_, Some(failureRedirect), _, _) =>

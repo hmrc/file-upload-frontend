@@ -37,9 +37,9 @@ class QuarantineStoreConnectorSpec extends UnitSpec with WithFakeApplication wit
 
   val gfs = GridFS[JSONSerializationPack.type](mongo(), testCollectionName)
 
-  lazy val mongoConnector = new MongoQuarantineStoreConnector with TestMongoDbConnection {
-    override val collectionName = testCollectionName
-  }
+  val fileSystemConnector = TmpFileQuarantineStoreConnector
+
+  lazy val mongoConnector = new MongoQuarantineStoreConnector(testCollectionName) with TestMongoDbConnection
 
   trait TestMongoDbConnection extends MongoDbConnection {
     override implicit val db: () => DefaultDB = mongoConnectorForTest.db

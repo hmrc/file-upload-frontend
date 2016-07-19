@@ -18,6 +18,7 @@ package uk.gov.hmrc.fileupload
 
 import java.io.{File, FileOutputStream}
 
+import org.scalatest.time.Span
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.mvc.MultipartFormData
 import play.api.mvc.MultipartFormData.{BadPart, MissingFilePart}
@@ -40,23 +41,21 @@ object UploadFixtures {
   val tmpDir = System.getProperty("java.io.tmpdir")
   val validEnvelopeId = "fea8cc15-f2d1-4eb5-b10e-b892bcbe94f8"
   val validFileId = "0987654321"
-  val fileController = new TestFileUploadController {}
+  val fileController = testFileUploadController()
+
+  def testFileUploadController(avScannerConnector: AvScannerConnector = new TestAvScannerConnector()): FileUploadController = {
+    new FileUploadController(new UploadService(avScannerConnector, TestFileUploadConnector, TmpFileQuarantineStoreConnector))
+  }
+
   val testCollectionName: String = "testFileUploadCollection"
   val eicarFile = "eicar-standard-av-test-file.txt"
 
-  lazy val fileSystemConnector = new TmpFileQuarantineStoreConnector {}
-
-  trait TestFileUploadController extends FileUploadController with UploadService with TestFileUploadConnector
-                                                              with TmpFileQuarantineStoreConnector with TestAvScannerConnector
-
-  trait TestAvScannerConnector extends AvScannerConnector {
-    val fail: Try[Boolean] = Success(true)
-    val pause = (0 seconds) toMillis
+  class TestAvScannerConnector(fail: Try[Boolean] = Success(true), pause: Span = 0 seconds) extends AvScannerConnector {
     def sentData = virusChecker.asInstanceOf[DelayCheckingVirusChecker].sentData
 
     lazy val virusChecker: VirusChecker = new DelayCheckingVirusChecker {
       override val response = fail
-      override val delay = pause
+      override val delay = pause toMillis
     }
   }
 
@@ -90,7 +89,7 @@ object UploadFixtures {
     override def baseUrl(serviceName: String): String = null
   }
 
-  trait TestFileUploadConnector extends FileUploadConnector with TestServicesConfig {
+  object TestFileUploadConnector extends FileUploadConnector with TestServicesConfig {
 
     override def validate(envelopeId: String)(implicit hc: HeaderCarrier): Future[Try[String]] = {
       Future.successful(envelopeId match {
@@ -102,7 +101,7 @@ object UploadFixtures {
     override val http: HttpGet = null
   }
 
-  trait TmpFileQuarantineStoreConnector extends QuarantineStoreConnector {
+  object TmpFileQuarantineStoreConnector extends QuarantineStoreConnector {
     def deleteFileBeforeWrite(file: FileData) = Future.successful(())
 
     override def writeFile(file: FileData) = {

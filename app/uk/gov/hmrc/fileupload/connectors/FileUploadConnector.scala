@@ -30,8 +30,7 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpResponse}
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-trait FileUploadConnector {
-  self: ServicesConfig =>
+class FileUploadConnector extends ServicesConfig {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
