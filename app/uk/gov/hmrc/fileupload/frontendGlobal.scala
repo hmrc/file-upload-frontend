@@ -53,10 +53,14 @@ object FrontendGlobal
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
+  import play.api.libs.concurrent.Execution.Implicits._
+
+  val FileUploadControllerClass = classOf[FileUploadController]
+  lazy val fileUploadController = new FileUploadController()
+
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
-    val FileUploadControllerClass = classOf[FileUploadController]
     controllerClass match {
-      case FileUploadControllerClass => new FileUploadController().asInstanceOf[A]
+      case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
       case _ => super.getControllerInstance(controllerClass)
     }
   }

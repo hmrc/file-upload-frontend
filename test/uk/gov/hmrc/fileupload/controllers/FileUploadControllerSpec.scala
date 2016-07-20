@@ -18,19 +18,32 @@ package uk.gov.hmrc.fileupload.controllers
 
 import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
-import play.api.test.FakeRequest
+import play.api.libs.iteratee.Enumerator
+import play.api.mvc.MultipartFormData
+import play.api.test.Helpers._
+import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.play.test.UnitSpec
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
 
+  def createUploadRequest(successRedirectURL:String = "http://somewhere.com/success"): FakeRequest[MultipartFormData[Enumerator[Array[Byte]]]] = {
+    val params = Map("successRedirect" -> Seq(successRedirectURL))
+    val multipartBody = MultipartFormData[Enumerator[Array[Byte]]](params, Seq.empty, Seq.empty, Seq.empty)
+    FakeRequest[MultipartFormData[Enumerator[Array[Byte]]]](method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
+  }
+
   "POST /upload" should{
     "return 200" in {
-      val request = FakeRequest("POST", s"/upload")
+      val redirectURL = "http://success.com"
+      val request = createUploadRequest(successRedirectURL = redirectURL)
 
       val controller = new FileUploadController()
       val result = controller.upload()(request).futureValue
 
-      result.header.status shouldBe Status.OK
+      status(result) shouldBe Status.SEE_OTHER
+      redirectLocation(result) shouldBe Some(redirectURL)
     }
   }
 

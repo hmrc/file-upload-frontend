@@ -29,7 +29,8 @@ import scala.concurrent.Future
 import scala.util.{Failure, Try}
 
 
-object ProdFileUploadController extends
+object
+ProdFileUploadController extends
   FileUploadController(new UploadService(new ClamAvScannerConnector(ClamAvScannerConnector.virusChecker),
     new FileUploadConnector, new MongoQuarantineStoreConnector("quarantine") with MongoDbConnection)) {
 

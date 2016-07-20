@@ -145,7 +145,7 @@ object UploadFixtures {
                           failureRedirectURL:Option[String] = Some("http://somewhere.com/failure"),
                           envelopeId:Option[String] = Some(validEnvelopeId),
                           fileIds:Seq[String] = Seq("testUpload.txt"),
-                          headers:Seq[(String, Seq[String])] = Seq()) = {
+                          headers:Seq[(String, Seq[String])] = Seq()): FakeRequest[MultipartFormData[Enumerator[Array[Byte]]]] = {
     var params = Map[String, Seq[String]]()
 
     def addParam(paramName: String)(value:String) = params = params + (paramName -> Seq(value))
