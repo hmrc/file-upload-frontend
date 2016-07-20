@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.connectors
+package uk.gov.hmrc.fileupload_deprecated.connectors
 
 import java.nio.ByteBuffer
 
@@ -22,8 +22,8 @@ import com.ning.http.client.{AsyncHttpClient, RequestBuilder}
 import com.ning.http.client.providers.netty.FeedableBodyGenerator
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.ws.WS
-import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
-import uk.gov.hmrc.fileupload.WSHttp
+import uk.gov.hmrc.fileupload_deprecated.Errors.EnvelopeValidationError
+import uk.gov.hmrc.fileupload_deprecated.WSHttp
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet, HttpResponse}
 

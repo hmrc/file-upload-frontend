@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.services
+package uk.gov.hmrc.fileupload_deprecated.services
 
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.OneAppPerSuite
-import uk.gov.hmrc.fileupload.connectors._
+import uk.gov.hmrc.fileupload_deprecated.connectors._
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 import org.scalatest.concurrent.Eventually._
@@ -28,7 +28,7 @@ import uk.gov.hmrc.clamav.VirusDetectedException
 import scala.util.Failure
 
 class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfterEach {
-  import uk.gov.hmrc.fileupload.UploadFixtures._
+  import uk.gov.hmrc.fileupload_deprecated.UploadFixtures._
 
   private val quarantineStoreConnector = TmpFileQuarantineStoreConnector
 

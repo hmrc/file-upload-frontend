@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload
+package uk.gov.hmrc.fileupload_deprecated
 
 import java.io.{File, FileOutputStream}
 
@@ -24,16 +24,16 @@ import play.api.mvc.MultipartFormData
 import play.api.mvc.MultipartFormData.{BadPart, MissingFilePart}
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.clamav.VirusChecker
-import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
-import uk.gov.hmrc.fileupload.connectors._
-import uk.gov.hmrc.fileupload.controllers.FileUploadController
+import uk.gov.hmrc.fileupload_deprecated.Errors.EnvelopeValidationError
+import uk.gov.hmrc.fileupload_deprecated.connectors._
+import uk.gov.hmrc.fileupload_deprecated.controllers.FileUploadController
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import org.scalatest.time.SpanSugar._
-import uk.gov.hmrc.fileupload.services.UploadService
+import uk.gov.hmrc.fileupload_deprecated.services.UploadService
 
 object UploadFixtures {
   import scala.concurrent.ExecutionContext.Implicits.global

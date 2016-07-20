@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload
+package uk.gov.hmrc.fileupload_deprecated
 
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually._
@@ -26,9 +26,9 @@ import play.modules.reactivemongo.MongoDbConnection
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.gridfs.GridFS
 import reactivemongo.json.JSONSerializationPack
-import uk.gov.hmrc.fileupload.connectors.{ClamAvScannerConnector, Clean, MongoQuarantineStoreConnector, Scanning}
-import uk.gov.hmrc.fileupload.controllers.FileUploadController
-import uk.gov.hmrc.fileupload.services.UploadService
+import uk.gov.hmrc.fileupload_deprecated.connectors.{ClamAvScannerConnector, Clean, MongoQuarantineStoreConnector, Scanning}
+import uk.gov.hmrc.fileupload_deprecated.controllers.FileUploadController
+import uk.gov.hmrc.fileupload_deprecated.services.UploadService
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 import UploadFixtures._

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.connectors
+package uk.gov.hmrc.fileupload_deprecated.connectors
 
 import play.api.Play
 import play.api.libs.iteratee.{Enumerator, Iteratee}

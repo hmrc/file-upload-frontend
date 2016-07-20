@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.connectors
+package uk.gov.hmrc.fileupload_deprecated.connectors
 
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
@@ -23,7 +23,7 @@ import play.modules.reactivemongo.{JSONFileToSave, MongoDbConnection}
 import reactivemongo.api.ReadPreference
 import reactivemongo.api.gridfs.{GridFS, ReadFile}
 import reactivemongo.json.JSONSerializationPack
-import uk.gov.hmrc.fileupload.Errors.FilePersisterError
+import uk.gov.hmrc.fileupload_deprecated.Errors.FilePersisterError
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

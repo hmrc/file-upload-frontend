@@ -25,6 +25,7 @@ import play.api.mvc.Request
 import play.api.{Application, Configuration, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
+import uk.gov.hmrc.fileupload.controllers.FileUploadController
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
@@ -48,9 +49,17 @@ object FrontendGlobal
   }
 
   override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): Html =
-    uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)
+    uk.gov.hmrc.fileupload_deprecated.views.html.error_template(pageTitle, heading, message)
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
+
+  override def getControllerInstance[A](controllerClass: Class[A]): A = {
+    val FileUploadControllerClass = classOf[FileUploadController]
+    controllerClass match {
+      case FileUploadControllerClass => new FileUploadController().asInstanceOf[A]
+      case _ => super.getControllerInstance(controllerClass)
+    }
+  }
 }
 
 object ControllerConfiguration extends ControllerConfig {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload
+package uk.gov.hmrc.fileupload_deprecated
 
 import java.util.concurrent.TimeUnit
 

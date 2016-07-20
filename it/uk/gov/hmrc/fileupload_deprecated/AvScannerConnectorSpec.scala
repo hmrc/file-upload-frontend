@@ -1,11 +1,11 @@
-package uk.gov.hmrc.fileupload
+package uk.gov.hmrc.fileupload_deprecated
 
 import java.io.File
 
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.clamav.VirusDetectedException
-import uk.gov.hmrc.fileupload.connectors.ClamAvScannerConnector
+import uk.gov.hmrc.fileupload_deprecated.connectors.ClamAvScannerConnector
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.util.{Failure, Success}

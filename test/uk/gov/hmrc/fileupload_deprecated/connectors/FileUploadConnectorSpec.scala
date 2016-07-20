@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.connectors
+package uk.gov.hmrc.fileupload_deprecated.connectors
 
 import com.github.tomakehurst.wiremock.common.SingleRootFileSource
 import com.github.tomakehurst.wiremock.standalone.{JsonFileMappingsLoader, MappingsLoader}
-import uk.gov.hmrc.fileupload.Errors.EnvelopeValidationError
-import uk.gov.hmrc.fileupload.{WSHttp, WireMockSpec}
+import uk.gov.hmrc.fileupload_deprecated.Errors.EnvelopeValidationError
+import uk.gov.hmrc.fileupload_deprecated.{WSHttp, WireMockSpec}
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpGet}
-import uk.gov.hmrc.fileupload.UploadFixtures._
+import uk.gov.hmrc.fileupload_deprecated.UploadFixtures._
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}

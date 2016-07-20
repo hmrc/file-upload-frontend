@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.services
+package uk.gov.hmrc.fileupload_deprecated.services
 
-import uk.gov.hmrc.fileupload.connectors._
+import uk.gov.hmrc.fileupload_deprecated.connectors._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.HeaderCarrier
 
