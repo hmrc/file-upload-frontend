@@ -187,7 +187,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
       new File(s"$tmpDir/$validEnvelopeId-testUpload.txt.Unscanned") should exist
     }
 
-    "ensure that file data matches the original data" in  {
+    "ensure that file data matches the original data" ignore  {
       val controller = testFileUploadController()
 
       val fakeRequest = createUploadRequest()
