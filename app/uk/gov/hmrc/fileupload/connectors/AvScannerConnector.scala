@@ -18,33 +18,37 @@ package uk.gov.hmrc.fileupload.connectors
 
 import play.api.Play
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusChecker}
-import uk.gov.hmrc.play.config.RunMode
+import uk.gov.hmrc.clamav.config.ClamAvConfig
+import uk.gov.hmrc.play.config.{RunMode, ServicesConfig}
 
 import scala.concurrent.Future
+import scala.util.Try
 
-object ClamAvScannerConnector extends AvScannerConnector with RunMode {
-  implicit lazy val clamAvConfig = ClamAvConfig(Play.current.configuration.getConfig(s"$env.clam.antivirus"))
+class ClamAvScannerConnector(virusChecker: VirusChecker) extends AvScannerConnector with RunMode {
 
-  override def virusChecker = {
-    ClamAntiVirus(clamAvConfig)
-  }
-}
-
-trait AvScannerConnector {
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  def virusChecker: VirusChecker
-
-  def iteratee = Iteratee.fold(Future(virusChecker)) { (state, bytes: Array[Byte]) =>
-    state flatMap { scanner => scanner.send(bytes) map { _ => scanner } }
-  }
-
-  def scan(enumerator: Enumerator[Array[Byte]]) = {
+  def scan(enumerator: Enumerator[Array[Byte]]): Future[Try[Boolean]] = {
     for {
       scanner <- (enumerator |>>> iteratee) flatMap identity
       result <- scanner.checkForVirus()
     } yield result
   }
+
+  private def iteratee = Iteratee.fold(Future(virusChecker)) { (state, bytes: Array[Byte]) =>
+    state flatMap { scanner => scanner.send(bytes) map { _ => scanner } }
+  }
+}
+
+object ClamAvScannerConnector extends ServicesConfig {
+
+  implicit lazy val clamAvConfig = ClamAvConfig(Play.current.configuration.getConfig(s"$env.clam.antivirus"))
+
+  def virusChecker = ClamAntiVirus(clamAvConfig)
+}
+
+trait AvScannerConnector {
+
+  def scan(enumerator: Enumerator[Array[Byte]]): Future[Try[Boolean]]
 }

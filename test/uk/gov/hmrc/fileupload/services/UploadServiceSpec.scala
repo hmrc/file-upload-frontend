@@ -32,7 +32,7 @@ class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter
 
   private val quarantineStoreConnector = TmpFileQuarantineStoreConnector
 
-  def testUploadService(avScannerConnector: AvScannerConnector = new TestAvScannerConnector()) =
+  def testUploadService(avScannerConnector: AvScannerConnector = new StubResonseAvScannerConnector()) =
     new UploadService(avScannerConnector, TestFileUploadConnector, quarantineStoreConnector)
 
   implicit val hc = HeaderCarrier()
@@ -73,7 +73,7 @@ class UploadServiceSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter
     "Flag files as 'VirusDetected' when they have failed AV scanning" ignore {
       val data = FileData(data = testFile, name = eicarFile, contentType = "text/plain", envelopeId = validEnvelopeId, fileId = "1")
 
-      val uploadService = testUploadService(new TestAvScannerConnector(Failure(new VirusDetectedException("TEST"))))
+      val uploadService = testUploadService(new StubResonseAvScannerConnector(Failure(new VirusDetectedException("TEST"))))
 
       await(uploadService.validateAndPersist(data))
 

@@ -30,7 +30,10 @@ import scala.util.{Failure, Try}
 
 
 object ProdFileUploadController extends
-  FileUploadController(new UploadService(ClamAvScannerConnector, new FileUploadConnector, new MongoQuarantineStoreConnector("quarantine") with MongoDbConnection))
+  FileUploadController(new UploadService(new ClamAvScannerConnector(ClamAvScannerConnector.virusChecker),
+    new FileUploadConnector, new MongoQuarantineStoreConnector("quarantine") with MongoDbConnection)) {
+
+}
 
 class FileUploadController(uploadService: UploadService) extends FrontendController {
 

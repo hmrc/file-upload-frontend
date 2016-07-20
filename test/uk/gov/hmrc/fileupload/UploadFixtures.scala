@@ -43,27 +43,20 @@ object UploadFixtures {
   val validFileId = "0987654321"
   val fileController = testFileUploadController()
 
-  def testFileUploadController(avScannerConnector: AvScannerConnector = new TestAvScannerConnector()): FileUploadController = {
+  def testFileUploadController(avScannerConnector: AvScannerConnector = new StubResonseAvScannerConnector()): FileUploadController = {
     new FileUploadController(new UploadService(avScannerConnector, TestFileUploadConnector, TmpFileQuarantineStoreConnector))
   }
 
   val testCollectionName: String = "testFileUploadCollection"
   val eicarFile = "eicar-standard-av-test-file.txt"
 
-  class TestAvScannerConnector(fail: Try[Boolean] = Success(true), pause: Span = 0 seconds) extends AvScannerConnector {
-    def sentData = virusChecker.asInstanceOf[DelayCheckingVirusChecker].sentData
+  class StubResonseAvScannerConnector(response: Try[Boolean] = Success(true)) extends AvScannerConnector {
 
-    lazy val virusChecker: VirusChecker = new DelayCheckingVirusChecker {
-      override val response = fail
-      override val delay = pause toMillis
-    }
+    override def scan(enumerator: Enumerator[Array[Byte]]): Future[Try[Boolean]] = Future.successful(response)
   }
 
-  trait DelayCheckingVirusChecker extends VirusChecker {
+  class StubCheckingVirusChecker extends VirusChecker {
     var sentData: Array[Byte] = Array()
-    val response: Try[Boolean] = Success(true)
-    val delay = (0 seconds) toMillis
-
     var scanInitiated = false
     var scanCompleted = false
 
@@ -76,8 +69,7 @@ object UploadFixtures {
 
     override def finish()(implicit ec : ExecutionContext) = {
       Future {
-        Thread.sleep(delay)
-        response
+        Success(true)
       }.map { r =>
         scanCompleted = true
         r
