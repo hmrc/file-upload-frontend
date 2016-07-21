@@ -21,8 +21,8 @@ import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
-import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.fileupload.upload.Service.UploadRequestError
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,13 +36,22 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
   }
 
   "POST /upload" should{
-    "return 200 if successfully upload files" in {
+    "return OK response if successfully upload files" in {
       val request = createUploadRequest()
 
       val controller = new FileUploadController(() => Future.successful(Xor.right("")))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.OK
+    }
+
+    "return BAD_REQUEST response if request error when uploading files" in {
+      val request = createUploadRequest()
+
+      val controller = new FileUploadController(() => Future.successful(Xor.left(UploadRequestError("someId", "that was a bad request"))))
+      val result = controller.upload()(request).futureValue
+
+      status(result) shouldBe Status.BAD_REQUEST
     }
   }
 

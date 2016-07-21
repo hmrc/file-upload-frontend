@@ -28,7 +28,8 @@ object Service {
   type UploadResult = Xor[UploadError, String]
 
   sealed trait UploadError
-  case class UploadServiceError(id: String, message: String)
+  case class UploadServiceError(id: String, message: String) extends UploadError
+  case class UploadRequestError(id: String, message: String) extends UploadError
 
   def upload(envelopeAvailable: String => EnvelopeAvailableResult,
              quarantine: _ => QuarantineUploadResult,
