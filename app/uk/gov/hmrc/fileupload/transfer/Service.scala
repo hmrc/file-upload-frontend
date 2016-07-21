@@ -17,23 +17,33 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
-import uk.gov.hmrc.play.http.HttpResponse
+import uk.gov.hmrc.EnvelopeId
+import uk.gov.hmrc.play.http.{HttpResponse, NotFoundException}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 object Service {
 
-  type EnvelopeAvailableResult = Xor[EnvelopeAvailableError, String]
-  type TransferResult = Xor[TransferError, String]
+  type EnvelopeAvailableResult = Xor[EnvelopeAvailableError, EnvelopeId]
+  type TransferResult = Xor[TransferError, EnvelopeId]
 
   sealed trait EnvelopeAvailableError
-  case class EnvelopeAvailableEnvelopeNotFoundError(id: String)
-  case class EnvelopeAvailableServiceError(id: String, message: String)
+
+  case class EnvelopeAvailableEnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
+  case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
 
   sealed trait TransferError
-  case class TransferServiceError(id: String, message: String)
 
-  def envelopeAvailable(check: String => Future[HttpResponse])(id: String): Future[EnvelopeAvailableResult] = ???
+  case class TransferServiceError(id: EnvelopeId, message: String)
+
+  def envelopeAvailable(check: EnvelopeId => Future[HttpResponse])(id: EnvelopeId)
+                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
+
+    check(id).map(_ => Xor.right(id)).recover {
+      case _: NotFoundException => Xor.left(EnvelopeAvailableEnvelopeNotFoundError(id))
+      case throwable => Xor.left(EnvelopeAvailableServiceError(id, throwable.getMessage))
+    }
+  }
 
   def transfer(): Future[TransferResult] = ???
 
