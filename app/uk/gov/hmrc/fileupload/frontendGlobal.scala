@@ -26,9 +26,11 @@ import play.api.{Application, Configuration, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
+import uk.gov.hmrc.fileupload.transfer.Service
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
+import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 
 
@@ -55,7 +57,9 @@ object FrontendGlobal
 
   import play.api.libs.concurrent.Execution.Implicits._
 
-  val uploadFile = upload.Service.upload(null,null, null, null) _
+  val uploadFile = {
+    upload.Service.upload(transfer.Service.envelopeAvailable(transfer.Service.envelopeLookup("", HeaderCarrier())), null, null, null) _
+  }
 
   val FileUploadControllerClass = classOf[FileUploadController]
   lazy val fileUploadController = new FileUploadController(uploadFile)

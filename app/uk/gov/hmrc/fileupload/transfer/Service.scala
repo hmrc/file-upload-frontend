@@ -18,7 +18,8 @@ package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
 import uk.gov.hmrc.EnvelopeId
-import uk.gov.hmrc.play.http.{HttpResponse, NotFoundException}
+import uk.gov.hmrc.fileupload.WSHttp
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse, NotFoundException}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -47,5 +48,9 @@ object Service {
 
   def transfer(): Future[TransferResult] = ???
 
+  def envelopeLookup(baseUrl: String, headerCarrier: HeaderCarrier)(envelopeId: EnvelopeId): Future[HttpResponse] = {
+    implicit val hc = headerCarrier
 
+    WSHttp.GET[HttpResponse](s"$baseUrl/file-upload/envelope/${envelopeId.value}")
+  }
 }

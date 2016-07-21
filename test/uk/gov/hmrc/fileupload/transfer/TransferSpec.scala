@@ -32,7 +32,6 @@ import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class TransferSpec extends UnitSpec with BeforeAndAfterAll with ScalaFutures with WithFakeApplication {
 
@@ -48,11 +47,7 @@ class TransferSpec extends UnitSpec with BeforeAndAfterAll with ScalaFutures wit
     fileUploadBacked.stop()
   }
 
-  def lookup(envelopeId: EnvelopeId): Future[HttpResponse] = {
-    implicit val hc = HeaderCarrier()
-
-    WSHttp.GET[HttpResponse](s"http://localhost:8080/file-upload/envelope/${envelopeId.value}")
-  }
+  val lookup = Service.envelopeLookup("http://localhost:8080", HeaderCarrier()) _
 
   "When calling the envelope check" should {
     "if the ID is known of return a success" in {
