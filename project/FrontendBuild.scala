@@ -47,6 +47,7 @@ private object AppDependencies {
   private val playReactivemongoVersion = "4.8.0"
   private val simpleReactivemongoVersion = "4.8.0"
   private val clamAvClientVersion = "2.2.0"
+  private val catsVersion = "0.6.0"
 
   val compile = Seq(
     ws,
@@ -60,7 +61,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "govuk-template" % govukTemplateVersion,
     "uk.gov.hmrc" %% "play-health" % playHealthVersion,
     "uk.gov.hmrc" %% "play-ui" % playUiVersion,
-    "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion
+    "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
+    "org.typelevel" %% "cats" % catsVersion
   )
 
   trait TestDependencies {

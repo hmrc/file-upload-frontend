@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
 import play.api.libs.iteratee.Enumerator
@@ -25,6 +26,7 @@ import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
 
@@ -39,7 +41,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
       val redirectURL = "http://success.com"
       val request = createUploadRequest(successRedirectURL = redirectURL)
 
-      val controller = new FileUploadController()
+      val controller = new FileUploadController(() => Future.successful(Xor.right("")))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.SEE_OTHER

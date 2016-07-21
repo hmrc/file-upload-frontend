@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.controllers
+package uk.gov.hmrc.fileupload.virusscan
 
-import play.api.mvc.{Action, Results}
-import uk.gov.hmrc.fileupload.upload.Service.UploadResult
+import cats.data.Xor
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
-class FileUploadController(uploadFile: () => Future[UploadResult])
-                          (implicit executionContext: ExecutionContext) {
+object Service {
 
-  def upload() = Action.async(EnumeratorBodyParser.parse) { implicit request =>
-    //call uploadFile(...)
-    Future.successful(Results.SeeOther(request.body.dataParts("successRedirect").head))
-  }
+  type ScanResult = Xor[ScanError, String]
+
+  sealed trait ScanError
+  case class ScanVirusDetected(id: String, message: String)
+  case class ScanServiceError(id: String, message: String)
+
+  def scan(): Future[ScanResult] = ???
+
 }

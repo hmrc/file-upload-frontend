@@ -16,16 +16,20 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import play.api.mvc.{Action, Results}
-import uk.gov.hmrc.fileupload.upload.Service.UploadResult
+import play.api.libs.iteratee.{Concurrent, Iteratee}
+import play.api.mvc.BodyParsers.parse.{Multipart, _}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
-class FileUploadController(uploadFile: () => Future[UploadResult])
-                          (implicit executionContext: ExecutionContext) {
+object EnumeratorBodyParser {
 
-  def upload() = Action.async(EnumeratorBodyParser.parse) { implicit request =>
-    //call uploadFile(...)
-    Future.successful(Results.SeeOther(request.body.dataParts("successRedirect").head))
-  }
+  def parse()(implicit executionContext: ExecutionContext) = multipartFormData(Multipart.handleFilePart {
+    case Multipart.FileInfo(partName, filename, contentType) =>
+      val (enum, channel) = Concurrent.broadcast[Array[Byte]]
+
+      Iteratee.foreach[Array[Byte]] { channel.push }.map { _ =>
+        channel.eofAndEnd()
+        enum
+      }
+  })
 }

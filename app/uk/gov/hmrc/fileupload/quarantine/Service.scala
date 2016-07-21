@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.controllers
+package uk.gov.hmrc.fileupload.quarantine
 
-import play.api.mvc.{Action, Results}
-import uk.gov.hmrc.fileupload.upload.Service.UploadResult
+import cats.data.Xor
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
-class FileUploadController(uploadFile: () => Future[UploadResult])
-                          (implicit executionContext: ExecutionContext) {
+object Service {
 
-  def upload() = Action.async(EnumeratorBodyParser.parse) { implicit request =>
-    //call uploadFile(...)
-    Future.successful(Results.SeeOther(request.body.dataParts("successRedirect").head))
-  }
+  type QuarantineUploadResult = Xor[QuarantineUploadError, String]
+
+  sealed trait QuarantineUploadError
+  case class QuarantineUploadServiceError(id: String, message: String)
+
+  def upload(): Future[QuarantineUploadResult]= ???
+
 }

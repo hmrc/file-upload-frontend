@@ -55,8 +55,10 @@ object FrontendGlobal
 
   import play.api.libs.concurrent.Execution.Implicits._
 
+  val uploadFile = upload.Service.upload(null,null, null, null) _
+
   val FileUploadControllerClass = classOf[FileUploadController]
-  lazy val fileUploadController = new FileUploadController()
+  lazy val fileUploadController = new FileUploadController(uploadFile)
 
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
     controllerClass match {
