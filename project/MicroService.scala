@@ -60,7 +60,8 @@ trait MicroService {
       fork in Test := false,
       testOptions in Test := Seq(Tests.Filter(! _.contains("_deprecated"))),
       retrieveManaged := true,
-      evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false)
+      evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
+      scalacOptions += "-Xfatal-warnings"
     )
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
