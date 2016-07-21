@@ -44,18 +44,14 @@ This endpoint *requires*:
 #### Parameters
 |Parameter|Required?|Example|Description|
 |---|---|---|---|
-|`successRedirect`|Y|`http://www.tax.gov.uk/service/uploadSuccess`|*Client side* redirection - fully qualified, external URL. This is used within a 303 SEE OTHER redirect and should indicate the next page within your user journey for a successful upload outcome. NB: This will result in an HTTP `GET` of the indicated endpoint.|
-|`failureRedirect`|Y|`http://www.tax.gov.uk/service/uploadFailure`|*Client side* redirection - fully qualified, external URL. This is used within a 303 SEE OTHER redirect and should indicate the next page within your user journey for a failure of upload outcome. NB: This will result in an HTTP `GET` of the indicated endpoint.|
 |`envelopeId`|Y|`1234567890`|A file-upload service generated envelope identifier. This will be validated against the file-upload service so a valid envelope *must* have been created prior to invoking this endpoint|
 |`fileId`|Y|`0987654321`|A file-upload service generated file identifier. This will be validated against the file-upload service so a valid envelope *must* have been created prior to invoking this endpoint|
 
 #### Responses
 |Outcome|Response Code|Definition|Parameters|Description|
 |---|---|---|---|---|
-|Success|303|`SEE OTHER` -> `successRedirect`|`None`|Returned if the file was uploaded successfully to the service|
-|Failure|303|`SEE OTHER` -> `failureRedirect`|`invalidParam` -> `[paramName]` (0-*)|Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
-|Failure|303|`SEE OTHER` -> `REFERER`|`invalidParam` -> `[paramName]` (0-*)|If `failureRedirect` is absent. Returned if parameter validation (indicated by 1 or more `invalidParam` parameters) or if the file upload failed (no parameters)|
-|Failure|400|`BAD REQUEST`|`None`|If both `failureRedirect` and `Referer` header are not present|
+|Success|200|`OK`|`None`|Returned if the file was uploaded successfully to the service|
+|Failure|400|`BAD REQUEST`|`None`|If HTTP request of invalid format or missing mandatory parameters|
 
 ### License
 
