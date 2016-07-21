@@ -18,6 +18,7 @@ package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
 import uk.gov.hmrc.EnvelopeId
+import uk.gov.hmrc.fileupload.quarantine.File
 import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadResult
 import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableResult, TransferResult}
 import uk.gov.hmrc.fileupload.virusscan.Service.ScanResult
@@ -34,7 +35,7 @@ object Service {
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
              transfer: _ => Future[TransferResult],
-             quarantine: _ => QuarantineUploadResult,
+             quarantine: File => QuarantineUploadResult,
              scan: _ => ScanResult)(): Future[UploadResult] = ???
 
 }

@@ -26,13 +26,12 @@ import play.api.{Application, Configuration, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
-import uk.gov.hmrc.fileupload.transfer.Service
+import uk.gov.hmrc.fileupload.infrastructure.DefaultMongoConnection
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
-
 
 object FrontendGlobal
   extends DefaultFrontendGlobal {
@@ -57,6 +56,13 @@ object FrontendGlobal
 
   import play.api.libs.concurrent.Execution.Implicits._
 
+  lazy val db = DefaultMongoConnection.db
+
+  //quarantine
+  lazy val quarantineRepository = quarantine.Repository(db)
+  lazy val quarantineServiceUpload = quarantine.Service.upload(quarantineRepository.writeFile) _
+
+  //upload
   val uploadFile = {
     upload.Service.upload(transfer.Service.envelopeAvailable(transfer.Service.envelopeLookup("", HeaderCarrier())), null, null, null) _
   }

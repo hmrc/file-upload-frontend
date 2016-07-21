@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc
+package uk.gov.hmrc.fileupload.infrastructure
 
-case class EnvelopeId(value :String) extends AnyVal
+import play.modules.reactivemongo.MongoDbConnection
 
-case class FileId(value: String) extends AnyVal
+object DefaultMongoConnection extends MongoDbConnection
