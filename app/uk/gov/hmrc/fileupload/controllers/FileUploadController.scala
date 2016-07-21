@@ -26,6 +26,6 @@ class FileUploadController(uploadFile: () => Future[UploadResult])
 
   def upload() = Action.async(EnumeratorBodyParser.parse) { implicit request =>
     //call uploadFile(...)
-    Future.successful(Results.SeeOther(request.body.dataParts("successRedirect").head))
+    Future.successful(Results.Ok)
   }
 }

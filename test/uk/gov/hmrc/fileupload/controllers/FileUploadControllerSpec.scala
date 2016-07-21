@@ -30,22 +30,19 @@ import scala.concurrent.Future
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
 
-  def createUploadRequest(successRedirectURL:String = "http://somewhere.com/success"): FakeRequest[MultipartFormData[Enumerator[Array[Byte]]]] = {
-    val params = Map("successRedirect" -> Seq(successRedirectURL))
-    val multipartBody = MultipartFormData[Enumerator[Array[Byte]]](params, Seq.empty, Seq.empty, Seq.empty)
+  def createUploadRequest(): FakeRequest[MultipartFormData[Enumerator[Array[Byte]]]] = {
+    val multipartBody = MultipartFormData[Enumerator[Array[Byte]]](Map.empty, Seq.empty, Seq.empty, Seq.empty)
     FakeRequest[MultipartFormData[Enumerator[Array[Byte]]]](method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
   }
 
   "POST /upload" should{
-    "return 200" in {
-      val redirectURL = "http://success.com"
-      val request = createUploadRequest(successRedirectURL = redirectURL)
+    "return 200 if successfully upload files" in {
+      val request = createUploadRequest()
 
       val controller = new FileUploadController(() => Future.successful(Xor.right("")))
       val result = controller.upload()(request).futureValue
 
-      status(result) shouldBe Status.SEE_OTHER
-      redirectLocation(result) shouldBe Some(redirectURL)
+      status(result) shouldBe Status.OK
     }
   }
 
