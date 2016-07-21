@@ -22,7 +22,7 @@ import play.api.http.Status
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.fileupload.upload.Service.UploadRequestError
+import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadServiceError}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,6 +53,14 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
 
       status(result) shouldBe Status.BAD_REQUEST
     }
-  }
 
+    "return INTERNAL_SERVER_ERROR response if service error when uploading files" in {
+      val request = createUploadRequest()
+
+      val controller = new FileUploadController(() => Future.successful(Xor.left(UploadServiceError("someId", "something went wrong"))))
+      val result = controller.upload()(request).futureValue
+
+      status(result) shouldBe Status.INTERNAL_SERVER_ERROR
+    }
+  }
 }
