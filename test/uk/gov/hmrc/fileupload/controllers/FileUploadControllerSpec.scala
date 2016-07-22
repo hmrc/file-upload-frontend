@@ -22,7 +22,7 @@ import play.api.http.Status
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.EnvelopeId
+import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadServiceError}
 import uk.gov.hmrc.play.test.UnitSpec
 

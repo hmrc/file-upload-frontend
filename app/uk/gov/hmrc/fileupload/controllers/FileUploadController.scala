@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import play.api.mvc.{Action, Results}
-import uk.gov.hmrc.EnvelopeId
+import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadResult, UploadServiceError}
 
 import scala.concurrent.{ExecutionContext, Future}

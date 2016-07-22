@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.io.File
-
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
@@ -45,7 +43,7 @@ object FrontendGlobal
     ApplicationCrypto.verifyConfiguration()
   }
 
-  override def onLoadConfig(config: Configuration, path: File, classloader: ClassLoader, mode: Mode): Configuration = {
+  override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
     super.onLoadConfig(config, path, classloader, mode)
   }
 

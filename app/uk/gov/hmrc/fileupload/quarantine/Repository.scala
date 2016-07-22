@@ -22,7 +22,7 @@ import play.modules.reactivemongo.JSONFileToSave
 import reactivemongo.api.gridfs.GridFS
 import reactivemongo.api.{DB, DBMetaCommands}
 import reactivemongo.json.JSONSerializationPack
-import uk.gov.hmrc.{EnvelopeId, FileId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 import uk.gov.hmrc.fileupload.quarantine.Repository.{WriteFileNotPersistedError, WriteFileResult}
 
 import scala.concurrent.{ExecutionContext, Future}

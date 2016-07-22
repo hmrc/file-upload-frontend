@@ -17,8 +17,7 @@
 package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
-import uk.gov.hmrc.EnvelopeId
-import uk.gov.hmrc.fileupload.quarantine.File
+import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadResult
 import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableResult, EnvelopeAvailableServiceError, TransferResult}
 import uk.gov.hmrc.fileupload.virusscan.Service.ScanResult
@@ -34,7 +33,7 @@ object Service {
   case class UploadRequestError(id: EnvelopeId, message: String) extends UploadError
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
-             transfer: _ => Future[TransferResult],
+             transfer: (EnvelopeId, FileId, File) => Future[TransferResult],
              quarantine: File => QuarantineUploadResult,
              scan: _ => ScanResult)(envelopeId: EnvelopeId)(implicit executionContext: ExecutionContext): Future[UploadResult] = {
 

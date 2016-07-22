@@ -18,8 +18,6 @@ package uk.gov.hmrc.fileupload
 
 import java.util.UUID
 
-import uk.gov.hmrc.{EnvelopeId, FileId}
-
 object Fixtures {
 
   def anyFileId = FileId(randomUUID)

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
-import uk.gov.hmrc.EnvelopeId
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.fileupload.quarantine.Repository.{WriteFileNotPersistedError, WriteFileResult}
 
 import scala.concurrent.{ExecutionContext, Future}

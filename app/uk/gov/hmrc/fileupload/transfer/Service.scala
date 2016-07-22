@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
-import uk.gov.hmrc.{EnvelopeId, FileId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.WSHttp
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse, NotFoundException}
 

@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc
+package uk.gov.hmrc.fileupload
+
+import play.api.libs.iteratee.Enumerator
 
 case class EnvelopeId(value :String) extends AnyVal
 
 case class FileId(value: String) extends AnyVal
+
+case class File(data: Enumerator[Array[Byte]], filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId)
+
