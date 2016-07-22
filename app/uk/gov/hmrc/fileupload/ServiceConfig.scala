@@ -20,5 +20,5 @@ import uk.gov.hmrc.play.config.ServicesConfig
 
 object ServiceConfig extends ServicesConfig {
 
-  lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
+  lazy val fileUploadBackendBaseUrl = baseUrl(s"file-upload-backend")
 }
