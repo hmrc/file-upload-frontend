@@ -67,8 +67,9 @@ object FrontendGlobal
     upload.Service.upload(transfer.Service.envelopeAvailable(transfer.Service.envelopeLookup("", HeaderCarrier())), null, null, null) _
   }
 
-  val FileUploadControllerClass = classOf[FileUploadController]
   lazy val fileUploadController = new FileUploadController(uploadFile)
+
+  val FileUploadControllerClass = classOf[FileUploadController]
 
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
     controllerClass match {

@@ -22,6 +22,7 @@ import play.api.http.Status
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.EnvelopeId
 import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadServiceError}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -39,7 +40,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     "return OK response if successfully upload files" in {
       val request = createUploadRequest()
 
-      val controller = new FileUploadController(() => Future.successful(Xor.right("")))
+      val controller = new FileUploadController(envelopeId => Future.successful(Xor.right(envelopeId)))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.OK
@@ -48,7 +49,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     "return BAD_REQUEST response if request error when uploading files" in {
       val request = createUploadRequest()
 
-      val controller = new FileUploadController(() => Future.successful(Xor.left(UploadRequestError("someId", "that was a bad request"))))
+      val controller = new FileUploadController(envelopeId => Future.successful(Xor.left(UploadRequestError(EnvelopeId("someId"), "that was a bad request"))))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.BAD_REQUEST
@@ -57,7 +58,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     "return INTERNAL_SERVER_ERROR response if service error when uploading files" in {
       val request = createUploadRequest()
 
-      val controller = new FileUploadController(() => Future.successful(Xor.left(UploadServiceError("someId", "something went wrong"))))
+      val controller = new FileUploadController(envelopeId => Future.successful(Xor.left(UploadServiceError(EnvelopeId("someId"), "something went wrong"))))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR

@@ -18,15 +18,16 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import play.api.mvc.{Action, Results}
+import uk.gov.hmrc.EnvelopeId
 import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadResult, UploadServiceError}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadController(uploadFile: () => Future[UploadResult])
+class FileUploadController(uploadFile: EnvelopeId => Future[UploadResult])
                           (implicit executionContext: ExecutionContext) {
 
   def upload() = Action.async(EnumeratorBodyParser.parse) { implicit request =>
-    uploadFile().map {
+    uploadFile(EnvelopeId("")).map {
       case Xor.Left(UploadServiceError(_, message)) => Results.InternalServerError(message)
       case Xor.Left(UploadRequestError(_, message)) => Results.BadRequest(message)
       case Xor.Right(_) => Results.Ok

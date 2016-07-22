@@ -27,11 +27,11 @@ import scala.concurrent.Future
 
 object Service {
 
-  type UploadResult = Xor[UploadError, String]
+  type UploadResult = Xor[UploadError, EnvelopeId]
 
   sealed trait UploadError
-  case class UploadServiceError(id: String, message: String) extends UploadError
-  case class UploadRequestError(id: String, message: String) extends UploadError
+  case class UploadServiceError(id: EnvelopeId, message: String) extends UploadError
+  case class UploadRequestError(id: EnvelopeId, message: String) extends UploadError
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
              transfer: _ => Future[TransferResult],
