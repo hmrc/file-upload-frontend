@@ -36,6 +36,6 @@ object Service {
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
              transfer: _ => Future[TransferResult],
              quarantine: File => QuarantineUploadResult,
-             scan: _ => ScanResult)(): Future[UploadResult] = ???
+             scan: _ => ScanResult)(envelopeId: EnvelopeId): Future[UploadResult] = Future.successful(Xor.right(envelopeId))
 
 }

@@ -63,8 +63,10 @@ object FrontendGlobal
   lazy val quarantineServiceUpload = quarantine.Service.upload(quarantineRepository.writeFile) _
 
   //upload
-  val uploadFile = {
-    upload.Service.upload(transfer.Service.envelopeAvailable(transfer.Service.envelopeLookup("", HeaderCarrier())), null, null, null) _
+  lazy val uploadFile = {
+    upload.Service.upload(transfer.Service.envelopeAvailable(
+      transfer.Service.envelopeLookup(ServiceConfig.fileUploadBackendBaseUrl, HeaderCarrier())),
+      null, null, null) _
   }
 
   lazy val fileUploadController = new FileUploadController(uploadFile)
