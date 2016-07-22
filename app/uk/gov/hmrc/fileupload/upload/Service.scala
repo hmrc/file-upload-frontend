@@ -20,10 +20,10 @@ import cats.data.Xor
 import uk.gov.hmrc.EnvelopeId
 import uk.gov.hmrc.fileupload.quarantine.File
 import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadResult
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableResult, TransferResult}
+import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableResult, EnvelopeAvailableServiceError, TransferResult}
 import uk.gov.hmrc.fileupload.virusscan.Service.ScanResult
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 object Service {
 
@@ -36,6 +36,12 @@ object Service {
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
              transfer: _ => Future[TransferResult],
              quarantine: File => QuarantineUploadResult,
-             scan: _ => ScanResult)(envelopeId: EnvelopeId): Future[UploadResult] = Future.successful(Xor.right(envelopeId))
+             scan: _ => ScanResult)(envelopeId: EnvelopeId)(implicit executionContext: ExecutionContext): Future[UploadResult] = {
 
+    envelopeAvailable(envelopeId) map {
+      case Xor.Right(_) => Xor.right(envelopeId)
+      case Xor.Left(EnvelopeAvailableEnvelopeNotFoundError(_)) => Xor.left(UploadServiceError(envelopeId, s"Envelope ID [${envelopeId.value}] does not exist"))
+      case Xor.Left(EnvelopeAvailableServiceError(_, message)) => Xor.left(UploadServiceError(envelopeId, message))
+    }
+  }
 }
