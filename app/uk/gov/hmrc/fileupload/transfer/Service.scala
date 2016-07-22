@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
-import uk.gov.hmrc.EnvelopeId
+import uk.gov.hmrc.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.WSHttp
 import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse, NotFoundException}
 
@@ -35,22 +35,33 @@ object Service {
 
   sealed trait TransferError
 
-  case class TransferServiceError(id: EnvelopeId, message: String)
+  case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
-  def envelopeAvailable(check: EnvelopeId => Future[HttpResponse])(id: EnvelopeId)
+  def envelopeAvailable(httpCall: EnvelopeId => Future[HttpResponse])(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
 
-    check(id).map(_ => Xor.right(id)).recover {
-      case _: NotFoundException => Xor.left(EnvelopeAvailableEnvelopeNotFoundError(id))
-      case throwable => Xor.left(EnvelopeAvailableServiceError(id, throwable.getMessage))
+    httpCall(envelopeId).map(_ => Xor.right(envelopeId)).recover {
+      case _: NotFoundException => Xor.left(EnvelopeAvailableEnvelopeNotFoundError(envelopeId))
+      case throwable => Xor.left(EnvelopeAvailableServiceError(envelopeId, throwable.getMessage))
     }
   }
 
-  def transfer(): Future[TransferResult] = ???
-
-  def envelopeLookup(baseUrl: String, headerCarrier: HeaderCarrier)(envelopeId: EnvelopeId): Future[HttpResponse] = {
+  def envelopeAvailableCall(baseUrl: String, headerCarrier: HeaderCarrier)(envelopeId: EnvelopeId): Future[HttpResponse] = {
     implicit val hc = headerCarrier
 
     WSHttp.GET[HttpResponse](s"$baseUrl/file-upload/envelope/${envelopeId.value}")
+  }
+
+  def transfer(httpCall: (EnvelopeId, FileId) => Future[HttpResponse])(envelopeId :EnvelopeId, fileId: FileId)
+              (implicit executionContext: ExecutionContext): Future[TransferResult] = {
+    httpCall(envelopeId, fileId).map(_ => Xor.right(envelopeId)).recover {
+      case throwable => Xor.left(TransferServiceError(envelopeId, throwable.getMessage))
+    }
+  }
+
+  def transferCall(baseUrl: String, headerCarrier: HeaderCarrier)(envelopeId :EnvelopeId, fileId: FileId): Future[HttpResponse] = {
+    implicit val hc = headerCarrier
+
+    WSHttp.PUT[String, HttpResponse](s"$baseUrl/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/content", "")
   }
 }

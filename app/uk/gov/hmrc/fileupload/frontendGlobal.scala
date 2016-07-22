@@ -65,7 +65,7 @@ object FrontendGlobal
   //upload
   lazy val uploadFile = {
     upload.Service.upload(transfer.Service.envelopeAvailable(
-      transfer.Service.envelopeLookup(ServiceConfig.fileUploadBackendBaseUrl, HeaderCarrier())),
+      transfer.Service.envelopeAvailableCall(ServiceConfig.fileUploadBackendBaseUrl, HeaderCarrier())),
       null, null, null) _
   }
 

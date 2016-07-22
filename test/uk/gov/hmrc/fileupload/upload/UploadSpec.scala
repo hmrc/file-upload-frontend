@@ -19,21 +19,21 @@ package uk.gov.hmrc.fileupload.upload
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.EnvelopeId
+import uk.gov.hmrc.fileupload.Fixtures.anyEnvelopeId
 import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableServiceError}
 import uk.gov.hmrc.fileupload.upload.Service.UploadServiceError
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.Future
-
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class UploadSpec extends UnitSpec with ScalaFutures {
 
   "Uploading" should {
 
-    val existingEnvelopeId = EnvelopeId("existing123")
-    val unknownEnvelopeId = EnvelopeId("unknown123")
-    val errorCausingEnvelopeId = EnvelopeId("error123")
+    val existingEnvelopeId = anyEnvelopeId
+    val unknownEnvelopeId = anyEnvelopeId
+    val errorCausingEnvelopeId = anyEnvelopeId
 
     val envelopeCheck = (envelopeId: EnvelopeId) => envelopeId match {
       case `existingEnvelopeId` => Future.successful(Xor.right(existingEnvelopeId))
