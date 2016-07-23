@@ -18,9 +18,9 @@ package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
-import uk.gov.hmrc.fileupload.EnvelopeId
-import uk.gov.hmrc.fileupload.Fixtures.anyEnvelopeId
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableServiceError}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
+import uk.gov.hmrc.fileupload.Fixtures._
+import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferResult, TransferServiceError}
 import uk.gov.hmrc.fileupload.upload.Service.UploadServiceError
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -31,29 +31,42 @@ class UploadSpec extends UnitSpec with ScalaFutures {
 
   "Uploading" should {
 
-    val existingEnvelopeId = anyEnvelopeId
-    val unknownEnvelopeId = anyEnvelopeId
-    val errorCausingEnvelopeId = anyEnvelopeId
+    val UnknownEnvelopeId = anyEnvelopeId
+    val ErrorCausingEnvelopeId = anyEnvelopeId
+    val CannotTransferEnvelopeId = anyEnvelopeId
 
     val envelopeCheck = (envelopeId: EnvelopeId) => envelopeId match {
-      case `existingEnvelopeId` => Future.successful(Xor.right(existingEnvelopeId))
-      case `unknownEnvelopeId` => Future.successful(Xor.left(EnvelopeAvailableEnvelopeNotFoundError(envelopeId)))
-      case `errorCausingEnvelopeId` => Future.successful(Xor.left(EnvelopeAvailableServiceError(envelopeId, "someError")))
+      case UnknownEnvelopeId => Future.successful(Xor.left(EnvelopeAvailableEnvelopeNotFoundError(envelopeId)))
+      case ErrorCausingEnvelopeId => Future.successful(Xor.left(EnvelopeAvailableServiceError(envelopeId, "someEnvelopeExistsError")))
+      case validEnvelopeId => Future.successful(Xor.right(envelopeId))
     }
 
-    "success if the envelope exists" in {
-      Service.upload(envelopeCheck, null, null, null)(existingEnvelopeId).futureValue shouldBe
-        Xor.right(existingEnvelopeId)
+    val transfer = (file: File) => file match {
+      case File(_, _, _, CannotTransferEnvelopeId, _) => Future.successful(Xor.left(TransferServiceError(file.envelopeId, "someErrorTransferring")))
+      case File(_, _, _, validEnvelopeId, _) => Future.successful(Xor.right(file.envelopeId))
+    }
+
+    val upload = Service.upload(envelopeCheck, transfer, null, null) _
+
+    "success if the envelope exists and can transfer" in {
+      val validEnvelopeId = anyEnvelopeId
+
+      upload(anyFileFor(validEnvelopeId)).futureValue shouldBe Xor.right(validEnvelopeId)
     }
 
     "error if the envelope does not exist" in {
-      Service.upload(envelopeCheck, null, null, null)(unknownEnvelopeId).futureValue shouldBe
-        Xor.left(UploadServiceError(unknownEnvelopeId, s"Envelope ID [${unknownEnvelopeId.value}] does not exist"))
+      upload(anyFileFor(UnknownEnvelopeId)).futureValue shouldBe
+        Xor.left(UploadServiceError(UnknownEnvelopeId, s"Envelope ID [${UnknownEnvelopeId.value}] does not exist"))
     }
 
-    "error if the envelope existance causes an error" in {
-      Service.upload(envelopeCheck, null, null, null)(errorCausingEnvelopeId).futureValue shouldBe
-        Xor.left(UploadServiceError(errorCausingEnvelopeId, "someError"))
+    "error if the envelope existence causes an error" in {
+      upload(anyFileFor(ErrorCausingEnvelopeId)).futureValue shouldBe
+        Xor.left(UploadServiceError(ErrorCausingEnvelopeId, "someEnvelopeExistsError"))
+    }
+
+    "error if the cannot transfer" in {
+      upload(anyFileFor(CannotTransferEnvelopeId)).futureValue shouldBe
+        Xor.left(UploadServiceError(CannotTransferEnvelopeId, "someErrorTransferring"))
     }
   }
 }

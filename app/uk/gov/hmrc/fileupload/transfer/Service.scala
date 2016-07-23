@@ -28,12 +28,12 @@ object Service {
   type EnvelopeAvailableResult = Xor[EnvelopeAvailableError, EnvelopeId]
   type TransferResult = Xor[TransferError, EnvelopeId]
 
-  sealed trait EnvelopeAvailableError
+  sealed trait TransferError
+
+  sealed trait EnvelopeAvailableError extends TransferError
 
   case class EnvelopeAvailableEnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
   case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
-
-  sealed trait TransferError
 
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 

@@ -18,11 +18,17 @@ package uk.gov.hmrc.fileupload
 
 import java.util.UUID
 
+import play.api.libs.iteratee.Enumerator
+
 object Fixtures {
 
   def anyFileId = FileId(randomUUID)
 
   def anyEnvelopeId = EnvelopeId(randomUUID)
+
+  def anyFile() = anyFileFor()
+
+  def anyFileFor(envelopeId: EnvelopeId = anyEnvelopeId, fileId: FileId = anyFileId) = File(Enumerator.empty, "file.txt", None, envelopeId, fileId)
 
   private def randomUUID = UUID.randomUUID().toString
 

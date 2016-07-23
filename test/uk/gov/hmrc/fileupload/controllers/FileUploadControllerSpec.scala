@@ -40,7 +40,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     "return OK response if successfully upload files" in {
       val request = createUploadRequest()
 
-      val controller = new FileUploadController(envelopeId => Future.successful(Xor.right(envelopeId)))
+      val controller = new FileUploadController(file => Future.successful(Xor.right(file.envelopeId)))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.OK
@@ -49,7 +49,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     "return BAD_REQUEST response if request error when uploading files" in {
       val request = createUploadRequest()
 
-      val controller = new FileUploadController(envelopeId => Future.successful(Xor.left(UploadRequestError(EnvelopeId("someId"), "that was a bad request"))))
+      val controller = new FileUploadController(file => Future.successful(Xor.left(UploadRequestError(file.envelopeId, "that was a bad request"))))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.BAD_REQUEST
@@ -58,7 +58,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     "return INTERNAL_SERVER_ERROR response if service error when uploading files" in {
       val request = createUploadRequest()
 
-      val controller = new FileUploadController(envelopeId => Future.successful(Xor.left(UploadServiceError(EnvelopeId("someId"), "something went wrong"))))
+      val controller = new FileUploadController(file => Future.successful(Xor.left(UploadServiceError(file.envelopeId, "something went wrong"))))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR

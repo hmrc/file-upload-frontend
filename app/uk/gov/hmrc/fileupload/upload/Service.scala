@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.upload
 import cats.data.Xor
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadResult
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableResult, EnvelopeAvailableServiceError, TransferResult}
+import uk.gov.hmrc.fileupload.transfer.Service._
 import uk.gov.hmrc.fileupload.virusscan.Service.ScanResult
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,18 +29,31 @@ object Service {
   type UploadResult = Xor[UploadError, EnvelopeId]
 
   sealed trait UploadError
+
   case class UploadServiceError(id: EnvelopeId, message: String) extends UploadError
+
   case class UploadRequestError(id: EnvelopeId, message: String) extends UploadError
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
-             transfer: (EnvelopeId, FileId, File) => Future[TransferResult],
+             transfer: File => Future[TransferResult],
              quarantine: File => QuarantineUploadResult,
-             scan: _ => ScanResult)(envelopeId: EnvelopeId)(implicit executionContext: ExecutionContext): Future[UploadResult] = {
+             scan: _ => ScanResult)(file: File)
+            (implicit executionContext: ExecutionContext): Future[UploadResult] = {
 
-    envelopeAvailable(envelopeId) map {
-      case Xor.Right(_) => Xor.right(envelopeId)
-      case Xor.Left(EnvelopeAvailableEnvelopeNotFoundError(_)) => Xor.left(UploadServiceError(envelopeId, s"Envelope ID [${envelopeId.value}] does not exist"))
-      case Xor.Left(EnvelopeAvailableServiceError(_, message)) => Xor.left(UploadServiceError(envelopeId, message))
+    val envelopeId = file.envelopeId
+
+    for {
+      envelopeAvailableResult <- envelopeAvailable(envelopeId)
+      transferResult <- transfer(file)
+    } yield {
+      (for {
+        _ <- envelopeAvailableResult
+        _ <- transferResult
+      } yield envelopeId).leftMap {
+        case EnvelopeAvailableEnvelopeNotFoundError(_) => UploadServiceError(envelopeId, s"Envelope ID [${envelopeId.value}] does not exist")
+        case EnvelopeAvailableServiceError(_, message) => UploadServiceError(envelopeId, message)
+        case TransferServiceError(_, message) => UploadServiceError(envelopeId, message)
+      }
     }
   }
 }
