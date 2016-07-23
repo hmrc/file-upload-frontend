@@ -18,7 +18,8 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import play.api.libs.iteratee.Enumerator
-import play.api.mvc.{Action, Results}
+import play.api.mvc.{Action, MultipartFormData, Request, Results}
+import uk.gov.hmrc.fileupload.controllers.FileUploadController.validateRequest
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadResult, UploadServiceError}
 
@@ -28,10 +29,24 @@ class FileUploadController(uploadFile: File => Future[UploadResult])
                           (implicit executionContext: ExecutionContext) {
 
   def upload() = Action.async(EnumeratorBodyParser.parse) { implicit request =>
-    uploadFile(File(Enumerator.empty, "file.txt", None, EnvelopeId(""), FileId(""))).map {
+    validateRequest(request).fold(message => Future.successful(Results.BadRequest(message)), uploadFile).map {
       case Xor.Left(UploadServiceError(_, message)) => Results.InternalServerError(message)
       case Xor.Left(UploadRequestError(_, message)) => Results.BadRequest(message)
       case Xor.Right(_) => Results.Ok
     }
+  }
+}
+
+object FileUploadController {
+
+
+  def validateRequest(request: Request[MultipartFormData[Enumerator[Array[Byte]]]]): Xor[String, File] = {
+    def extract(parameter: String) = Xor.fromOption(request.body.dataParts.get(parameter).flatMap(_.headOption), s"Missing $parameter")
+
+    for {
+      fileData <- Xor.fromOption(request.body.files.headOption.map(f => (f.ref, f.filename, f.contentType)), "Missing file data")
+      envelopeId <- extract("envelopeId")
+      fileID <- extract("fileId")
+    } yield File(fileData._1, fileData._2, fileData._3, EnvelopeId(envelopeId), FileId(fileID))
   }
 }

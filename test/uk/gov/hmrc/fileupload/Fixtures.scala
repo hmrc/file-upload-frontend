@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
+import java.net.URLConnection
 import java.util.UUID
 
 import play.api.libs.iteratee.Enumerator
@@ -28,7 +29,14 @@ object Fixtures {
 
   def anyFile() = anyFileFor()
 
-  def anyFileFor(envelopeId: EnvelopeId = anyEnvelopeId, fileId: FileId = anyFileId) = File(Enumerator.empty, "file.txt", None, envelopeId, fileId)
+  def anyFileFor(envelopeId: EnvelopeId = anyEnvelopeId, fileId: FileId = anyFileId) = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    val temporaryFile = java.io.File.createTempFile("tmp", ".txt")
+    temporaryFile.deleteOnExit()
+
+    File(Enumerator.fromFile(temporaryFile), temporaryFile.getName, Some(URLConnection.guessContentTypeFromName(temporaryFile.getName)), envelopeId, fileId)
+  }
 
   private def randomUUID = UUID.randomUUID().toString
 

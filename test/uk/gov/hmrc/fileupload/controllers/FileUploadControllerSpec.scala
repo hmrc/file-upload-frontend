@@ -19,11 +19,11 @@ package uk.gov.hmrc.fileupload.controllers
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
-import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.fileupload.EnvelopeId
-import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadServiceError}
+import uk.gov.hmrc.fileupload.Fixtures.anyFile
+import uk.gov.hmrc.fileupload.File
+import uk.gov.hmrc.fileupload.upload.Service._
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -31,16 +31,28 @@ import scala.concurrent.Future
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
 
-  def createUploadRequest(): FakeRequest[MultipartFormData[Enumerator[Array[Byte]]]] = {
-    val multipartBody = MultipartFormData[Enumerator[Array[Byte]]](Map.empty, Seq.empty, Seq.empty, Seq.empty)
-    FakeRequest[MultipartFormData[Enumerator[Array[Byte]]]](method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
+  def createUploadRequest(file: File = anyFile()) = {
+    val params = Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value))
+
+    val multipartBody = MultipartFormData(params,
+      Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, file.data)),
+      Seq.empty, Seq.empty)
+
+    FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
   }
 
   "POST /upload" should{
     "return OK response if successfully upload files" in {
-      val request = createUploadRequest()
+      val file = anyFile()
 
-      val controller = new FileUploadController(file => Future.successful(Xor.right(file.envelopeId)))
+      val request = createUploadRequest(file)
+
+      val uploadFile: (File) => Future[UploadResult] = {
+        case `file` => Future.successful(Xor.right(file.envelopeId))
+        case unknownFile => fail(s"Trying to upload wrong file data [$unknownFile] expected [$file]")
+      }
+
+      val controller = new FileUploadController(uploadFile)
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.OK
