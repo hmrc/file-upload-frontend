@@ -24,8 +24,10 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.concurrent.ScalaFutures
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import org.scalatest.time.{Milliseconds, Second, Seconds, Span}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, Fixtures}
 import uk.gov.hmrc.fileupload.Fixtures._
 import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferServiceError}
 import uk.gov.hmrc.play.http.HeaderCarrier
@@ -51,9 +53,11 @@ class TransferSpec extends UnitSpec with BeforeAndAfterAll with ScalaFutures wit
     fileUploadBacked.stop()
   }
 
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(1, Second))
+
   "When calling the envelope check" should {
 
-    val lookup = Service.envelopeAvailableCall(baseUrl, HeaderCarrier()) _
+    val lookup = Service.envelopeAvailableCall(baseUrl) _
 
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId
@@ -76,8 +80,7 @@ class TransferSpec extends UnitSpec with BeforeAndAfterAll with ScalaFutures wit
 
       respond(envelopeId, HTTP_INTERNAL_ERROR, "SOME_ERROR")
 
-      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId,
-        s"""GET of '$baseUrl/file-upload/envelope/${envelopeId.value}' returned 500. Response body: 'SOME_ERROR'"""))
+      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
 
     def respond(envelopeId: EnvelopeId, status: Int, body: String = ""): Unit = {
@@ -90,7 +93,7 @@ class TransferSpec extends UnitSpec with BeforeAndAfterAll with ScalaFutures wit
     }
   }
 
-  val transfer = Service.transfer(Service.transferCall(baseUrl, HeaderCarrier())) _
+  val transfer = Service.transfer(Service.transferCall(baseUrl)) _
 
   "When uploading a file" should {
     "be successful if file uploaded" in {
@@ -99,7 +102,7 @@ class TransferSpec extends UnitSpec with BeforeAndAfterAll with ScalaFutures wit
 
       respond(envelopeId, fileId, 200)
 
-      transfer(envelopeId, fileId).futureValue shouldBe Xor.right(envelopeId)
+      transfer(Fixtures.anyFileFor(envelopeId, fileId)).futureValue shouldBe Xor.right(envelopeId)
     }
 
     "give an error if file uploaded" in {
@@ -108,17 +111,16 @@ class TransferSpec extends UnitSpec with BeforeAndAfterAll with ScalaFutures wit
 
       respond(envelopeId, fileId, 500, "SOME_ERROR")
 
-      transfer(envelopeId, fileId).futureValue shouldBe Xor.left(TransferServiceError(envelopeId,
-          s"""PUT of '$baseUrl/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/content' returned 500. Response body: 'SOME_ERROR'"""))
+      transfer(Fixtures.anyFileFor(envelopeId, fileId)).futureValue shouldBe Xor.left(TransferServiceError(envelopeId, "SOME_ERROR"))
     }
-  }
 
-  def respond(envelopeId: EnvelopeId, fileId: FileId, status: Int, body: String = ""): Unit = {
-    fileUploadBacked.addStubMapping(
-      put(urlPathMatching(s"/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/content"))
-        .willReturn(new ResponseDefinitionBuilder()
-          .withBody(body)
-          .withStatus(status))
-        .build())
+    def respond(envelopeId: EnvelopeId, fileId: FileId, status: Int, body: String = ""): Unit = {
+      fileUploadBacked.addStubMapping(
+        put(urlPathMatching(s"/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/content"))
+          .willReturn(new ResponseDefinitionBuilder()
+            .withBody(body)
+            .withStatus(status))
+          .build())
+    }
   }
 }

@@ -28,7 +28,6 @@ import uk.gov.hmrc.fileupload.infrastructure.DefaultMongoConnection
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 
 object FrontendGlobal
@@ -63,7 +62,7 @@ object FrontendGlobal
   //upload
   lazy val uploadFile = {
     upload.Service.upload(transfer.Service.envelopeAvailable(
-      transfer.Service.envelopeAvailableCall(ServiceConfig.fileUploadBackendBaseUrl, HeaderCarrier())),
+      transfer.Service.envelopeAvailableCall(ServiceConfig.fileUploadBackendBaseUrl)),
       null, null, null) _
   }
 
