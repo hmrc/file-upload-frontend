@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload.controllers
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
+import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.fileupload.Fixtures.anyFile
@@ -31,21 +32,21 @@ import scala.concurrent.Future
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
 
-  def createUploadRequest(file: File = anyFile()) = {
-    val params = Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value))
-
-    val multipartBody = MultipartFormData(params,
+  def validUploadRequest(file: File = anyFile()) = {
+    uploadRequest(MultipartFormData(Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value)),
       Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, file.data)),
-      Seq.empty, Seq.empty)
+      Seq.empty, Seq.empty))
+  }
 
+  def uploadRequest(multipartBody: MultipartFormData[Enumerator[Array[Byte]]]) = {
     FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
   }
 
-  "POST /upload" should{
+  "POST /upload" should {
     "return OK response if successfully upload files" in {
       val file = anyFile()
 
-      val request = createUploadRequest(file)
+      val request = validUploadRequest(file)
 
       val uploadFile: (File) => Future[UploadResult] = {
         case `file` => Future.successful(Xor.right(file.envelopeId))
@@ -59,7 +60,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     }
 
     "return BAD_REQUEST response if request error when uploading files" in {
-      val request = createUploadRequest()
+      val request = validUploadRequest()
 
       val controller = new FileUploadController(file => Future.successful(Xor.left(UploadRequestError(file.envelopeId, "that was a bad request"))))
       val result = controller.upload()(request).futureValue
@@ -68,12 +69,40 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     }
 
     "return INTERNAL_SERVER_ERROR response if service error when uploading files" in {
-      val request = createUploadRequest()
+      val request = validUploadRequest()
 
       val controller = new FileUploadController(file => Future.successful(Xor.left(UploadServiceError(file.envelopeId, "something went wrong"))))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR
+    }
+
+    Seq("fileId", "envelopeId") foreach {
+      missingParam =>
+        s"Bad request if missing $missingParam" in {
+          val file = anyFile()
+          val validRequest = validUploadRequest(file)
+          val bodyMissingParameter: MultipartFormData[Enumerator[Array[Byte]]] = MultipartFormData(validRequest.body.dataParts - missingParam,
+            Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, file.data)),
+            Seq.empty, Seq.empty)
+
+          val controller = new FileUploadController(_ => Future.successful(Xor.right(file.envelopeId)))
+          val result = controller.upload()(uploadRequest(bodyMissingParameter)).futureValue
+
+          status(result) shouldBe Status.BAD_REQUEST
+        }
+    }
+
+    s"Bad request if missing file data" in {
+      val file = anyFile()
+      val validRequest = validUploadRequest(file)
+      val bodyMissingFileData: MultipartFormData[Enumerator[Array[Byte]]] = MultipartFormData(validRequest.body.dataParts,
+        Seq.empty, Seq.empty, Seq.empty)
+
+      val controller = new FileUploadController(_ => Future.successful(Xor.right(file.envelopeId)))
+      val result = controller.upload()(uploadRequest(bodyMissingFileData)).futureValue
+
+      status(result) shouldBe Status.BAD_REQUEST
     }
   }
 }

@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import play.api.libs.iteratee.Enumerator
-import play.api.mvc.{Action, MultipartFormData, Request, Results}
+import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController.validateRequest
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadResult, UploadServiceError}
@@ -29,11 +29,11 @@ class FileUploadController(uploadFile: File => Future[UploadResult])
                           (implicit executionContext: ExecutionContext) {
 
   def upload() = Action.async(EnumeratorBodyParser.parse) { implicit request =>
-    validateRequest(request).fold(message => Future.successful(Results.BadRequest(message)), uploadFile).map {
+    validateRequest(request).map(uploadFile.andThen(_.map {
       case Xor.Left(UploadServiceError(_, message)) => Results.InternalServerError(message)
       case Xor.Left(UploadRequestError(_, message)) => Results.BadRequest(message)
       case Xor.Right(_) => Results.Ok
-    }
+    })).fold(message => Future.successful(Results.BadRequest(message)), identity)
   }
 }
 
