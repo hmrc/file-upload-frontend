@@ -27,10 +27,11 @@ import uk.gov.hmrc.fileupload.File
 import uk.gov.hmrc.fileupload.upload.Service._
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
+
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   def validUploadRequest(file: File = anyFile()) = {
     uploadRequest(MultipartFormData(Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value)),

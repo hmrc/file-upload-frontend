@@ -26,7 +26,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ServiceSpec extends UnitSpec with ScalaFutures {
+class QuarantineSpec extends UnitSpec with ScalaFutures {
 
   implicit val ec = ExecutionContext.global
 
