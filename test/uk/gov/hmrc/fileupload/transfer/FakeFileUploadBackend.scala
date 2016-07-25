@@ -16,14 +16,21 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
+import java.nio.file.Files
+
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
+import org.apache.commons.io.FileUtils
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import play.api.libs.iteratee.Iteratee
+import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 
-trait FakeFileUploadBackend extends BeforeAndAfterAll {
+import collection.JavaConverters._
+
+trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   this: Suite =>
 
   lazy val fileUploadBackendPort = 8080
@@ -42,21 +49,29 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll {
     server.stop()
   }
 
-  def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = 200, body: String = ""): Unit = {
-    server.addStubMapping(
-      put(urlPathMatching(s"/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/content"))
-        .willReturn(new ResponseDefinitionBuilder()
-          .withBody(body)
-          .withStatus(status))
-        .build())
-  }
-
-  def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = 200, body: String = ""): Unit = {
+  def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = 200, body: String = "") = {
     server.addStubMapping(
       get(urlPathMatching(s"/file-upload/envelope/${envelopeId.value}"))
         .willReturn(new ResponseDefinitionBuilder()
           .withBody(body)
           .withStatus(status))
         .build())
+  }
+
+  def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = 200, body: String = "") = {
+    server.addStubMapping(
+      put(urlPathMatching(uploadUrl(envelopeId, fileId)))
+        .willReturn(new ResponseDefinitionBuilder()
+          .withBody(body)
+          .withStatus(status))
+        .build())
+  }
+
+  def verifyReceivedFile(envelopeId: EnvelopeId, fileId: FileId, contents: String) = {
+    server.findAll(putRequestedFor(urlPathMatching(uploadUrl(envelopeId, fileId)))).asScala.exists(_.getBodyAsString == contents)
+  }
+
+  private def uploadUrl(envelopeId: EnvelopeId, fileId: FileId) = {
+    s"/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/content"
   }
 }

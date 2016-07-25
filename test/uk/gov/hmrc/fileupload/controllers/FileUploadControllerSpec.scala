@@ -73,7 +73,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
         s"Bad request if missing $missingParam" in {
           val file = anyFile()
           val validRequest = validUploadRequest(file)
-          val bodyMissingParameter: MultipartFormData[Enumerator[Array[Byte]]] = MultipartFormData(validRequest.body.dataParts - missingParam,
+          val bodyMissingParameter = MultipartFormData(validRequest.body.dataParts - missingParam,
             Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, file.data)),
             Seq.empty, Seq.empty)
 

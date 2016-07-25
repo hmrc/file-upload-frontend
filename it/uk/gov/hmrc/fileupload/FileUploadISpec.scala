@@ -2,8 +2,7 @@ package uk.gov.hmrc.fileupload
 
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
-import play.api.http.Status
-import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
+import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.RestFixtures.validUploadRequest
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
 import uk.gov.hmrc.fileupload.transfer.FakeFileUploadBackend
@@ -19,14 +18,16 @@ class FileUploadISpec extends UnitSpec with ScalaFutures with WithFakeApplicatio
 
   "File upload front-end" should {
     "transfer a file to the back-end" in {
-      val file = anyFile()
+      val fileContents = "someTextContents"
+      val tempFile = temporaryTexFile(Some(fileContents))
+      val file = anyFileFor(file = tempFile)
       val request = validUploadRequest(file)
       responseToUpload(file.envelopeId, file.fileId)
       respondToEnvelopeCheck(file.envelopeId)
 
       val result = controller.upload()(request).futureValue
 
-      status(result) shouldBe Status.OK
+      verifyReceivedFile(file.envelopeId, file.fileId, fileContents)
     }
   }
 

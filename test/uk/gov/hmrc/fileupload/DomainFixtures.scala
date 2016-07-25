@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload
 import java.net.URLConnection
 import java.util.UUID
 
+import org.apache.commons.io.FileUtils
 import play.api.libs.iteratee.Enumerator
 
 object DomainFixtures {
@@ -29,13 +30,19 @@ object DomainFixtures {
 
   def anyFile() = anyFileFor()
 
-  def anyFileFor(envelopeId: EnvelopeId = anyEnvelopeId, fileId: FileId = anyFileId) = {
+  def temporaryTexFile(data: Option[String] = None) = {
+    val temporaryFile = java.io.File.createTempFile("tmp", ".txt")
+
+    data.foreach(FileUtils.writeStringToFile(temporaryFile, _))
+
+    temporaryFile.deleteOnExit()
+    temporaryFile
+  }
+
+  def anyFileFor(envelopeId: EnvelopeId = anyEnvelopeId, fileId: FileId = anyFileId, file: java.io.File = temporaryTexFile()) = {
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val temporaryFile = java.io.File.createTempFile("tmp", ".txt")
-    temporaryFile.deleteOnExit()
-
-    File(Enumerator.fromFile(temporaryFile), temporaryFile.getName, Some(URLConnection.guessContentTypeFromName(temporaryFile.getName)), envelopeId, fileId)
+    File(Enumerator.fromFile(file), file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)), envelopeId, fileId)
   }
 
   private def randomUUID = UUID.randomUUID().toString
