@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.quarantine
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.fileupload.File
-import uk.gov.hmrc.fileupload.Fixtures.{anyEnvelopeId, anyFileId}
+import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
 import uk.gov.hmrc.fileupload.quarantine.Repository.WriteFileNotPersistedError
 import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadServiceError
 import uk.gov.hmrc.play.test.UnitSpec

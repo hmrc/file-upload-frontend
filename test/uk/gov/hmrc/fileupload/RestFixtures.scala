@@ -16,28 +16,20 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.net.URLConnection
-import java.util.UUID
-
 import play.api.libs.iteratee.Enumerator
+import play.api.mvc.MultipartFormData
+import play.api.test.{FakeHeaders, FakeRequest}
+import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 
-object Fixtures {
+object RestFixtures {
 
-  def anyFileId = FileId(randomUUID)
-
-  def anyEnvelopeId = EnvelopeId(randomUUID)
-
-  def anyFile() = anyFileFor()
-
-  def anyFileFor(envelopeId: EnvelopeId = anyEnvelopeId, fileId: FileId = anyFileId) = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    val temporaryFile = java.io.File.createTempFile("tmp", ".txt")
-    temporaryFile.deleteOnExit()
-
-    File(Enumerator.fromFile(temporaryFile), temporaryFile.getName, Some(URLConnection.guessContentTypeFromName(temporaryFile.getName)), envelopeId, fileId)
+  def uploadRequest(multipartBody: MultipartFormData[Enumerator[Array[Byte]]]) = {
+    FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
   }
 
-  private def randomUUID = UUID.randomUUID().toString
-
+  def validUploadRequest(file: File = anyFile()) = {
+    uploadRequest(MultipartFormData(Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value)),
+      Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, file.data)),
+      Seq.empty, Seq.empty))
+  }
 }

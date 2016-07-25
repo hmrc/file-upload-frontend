@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.upload
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
-import uk.gov.hmrc.fileupload.Fixtures._
+import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferResult, TransferServiceError}
 import uk.gov.hmrc.fileupload.upload.Service.UploadServiceError
 import uk.gov.hmrc.play.test.UnitSpec

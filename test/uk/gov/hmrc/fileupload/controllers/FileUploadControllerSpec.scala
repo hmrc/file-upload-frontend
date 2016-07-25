@@ -21,8 +21,8 @@ import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
-import play.api.test.{FakeHeaders, FakeRequest}
-import uk.gov.hmrc.fileupload.Fixtures.anyFile
+import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
+import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload.File
 import uk.gov.hmrc.fileupload.upload.Service._
 import uk.gov.hmrc.play.test.UnitSpec
@@ -32,16 +32,6 @@ import scala.concurrent.Future
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
 
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  def validUploadRequest(file: File = anyFile()) = {
-    uploadRequest(MultipartFormData(Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value)),
-      Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, file.data)),
-      Seq.empty, Seq.empty))
-  }
-
-  def uploadRequest(multipartBody: MultipartFormData[Enumerator[Array[Byte]]]) = {
-    FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
-  }
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {

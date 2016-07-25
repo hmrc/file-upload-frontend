@@ -59,16 +59,16 @@ object FrontendGlobal
   lazy val quarantineRepository = quarantine.Repository(db)
   lazy val quarantineServiceUpload = quarantine.Service.upload(quarantineRepository.writeFile) _
 
+  // transfer
+  lazy val envelopeAvailable = transfer.Service.envelopeAvailable(transfer.Service.envelopeAvailableCall(ServiceConfig.fileUploadBackendBaseUrl)) _
+  lazy val transferCall = transfer.Service.transfer(transfer.Service.transferCall(ServiceConfig.fileUploadBackendBaseUrl)) _
+
   //upload
-  lazy val uploadFile = {
-    upload.Service.upload(transfer.Service.envelopeAvailable(
-      transfer.Service.envelopeAvailableCall(ServiceConfig.fileUploadBackendBaseUrl)),
-      null, null, null) _
-  }
+  lazy val uploadFile = upload.Service.upload(envelopeAvailable, transferCall, null, null) _
 
   lazy val fileUploadController = new FileUploadController(uploadFile)
 
-  val FileUploadControllerClass = classOf[FileUploadController]
+  private val FileUploadControllerClass = classOf[FileUploadController]
 
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
     controllerClass match {
