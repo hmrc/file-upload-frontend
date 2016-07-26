@@ -22,6 +22,7 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
+import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
@@ -67,8 +68,8 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
         .build())
   }
 
-  def verifyReceivedFile(envelopeId: EnvelopeId, fileId: FileId, contents: String) = {
-    server.findAll(putRequestedFor(urlPathMatching(uploadUrl(envelopeId, fileId)))).asScala.exists(_.getBodyAsString == contents)
+  def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] = {
+    server.findAll(putRequestedFor(urlPathMatching(uploadUrl(envelopeId, fileId)))).asScala.headOption
   }
 
   private def uploadUrl(envelopeId: EnvelopeId, fileId: FileId) = {
