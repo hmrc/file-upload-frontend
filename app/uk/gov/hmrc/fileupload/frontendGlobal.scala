@@ -25,6 +25,7 @@ import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
 import uk.gov.hmrc.fileupload.infrastructure.DefaultMongoConnection
+import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
@@ -70,9 +71,13 @@ object FrontendGlobal
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 
+  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl)
+  private val TestOnlyControllerClass = classOf[TestOnlyController]
+
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
     controllerClass match {
       case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
+      case TestOnlyControllerClass => testOnlyController.asInstanceOf[A]
       case _ => super.getControllerInstance(controllerClass)
     }
   }
