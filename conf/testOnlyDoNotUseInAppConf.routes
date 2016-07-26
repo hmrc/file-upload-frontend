@@ -11,3 +11,5 @@
 
 # Add all the application routes to the prod.routes file
 ->         /                          prod.Routes
+
+POST        /test-only/create-envelope               @uk.gov.hmrc.fileupload.testonly.TestOnlyController.createEnvelope
