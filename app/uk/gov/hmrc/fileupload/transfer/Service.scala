@@ -20,7 +20,6 @@ import cats.data.Xor
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.ws.{WS, WSResponse}
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
-import uk.gov.hmrc.play.http.{HeaderCarrier, NotFoundException}
 import play.api.Play.current
 import play.api.http.Status
 
@@ -36,6 +35,7 @@ object Service {
   sealed trait EnvelopeAvailableError extends TransferError
 
   case class EnvelopeAvailableEnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
+
   case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
 
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
@@ -68,11 +68,11 @@ object Service {
   }
 
   def transferCall(baseUrl: String)(file: File)(implicit ec: ExecutionContext): Future[WSResponse] = {
-    Iteratee.flatten(file.data(Iteratee.consume[Array[Byte]]())).run.flatMap {
-      data =>
+    (file.data |>>> Iteratee.consume[Array[Byte]]()).flatMap {
+      body =>
         WS.url(s"$baseUrl/file-upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}/content")
           .withHeaders("Content-Type" -> "application/octet-stream")
-          .put(data)
+          .put(body)
     }
   }
 }
