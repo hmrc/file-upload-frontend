@@ -1,5 +1,7 @@
 package uk.gov.hmrc.fileupload
 
+import java.net.URL
+
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
@@ -12,7 +14,7 @@ class FileUploadISpec extends UnitSpec with ScalaFutures with WithFakeApplicatio
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  override lazy val fileUploadBackendPort = ServiceConfig.getConfInt("file-upload-backend.port", fail("Cannot get port property"))
+  override lazy val fileUploadBackendPort = new URL(ServiceConfig.fileUploadBackendBaseUrl).getPort
 
   val controller = FrontendGlobal.getControllerInstance[FileUploadController](classOf[FileUploadController])
 
