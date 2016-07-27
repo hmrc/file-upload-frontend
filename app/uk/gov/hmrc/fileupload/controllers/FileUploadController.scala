@@ -16,19 +16,22 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import java.nio.file.Files
+
 import cats.data.Xor
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController.validateRequest
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 import uk.gov.hmrc.fileupload.upload.Service.{UploadRequestError, UploadResult, UploadServiceError}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(uploadFile: File => Future[UploadResult])
                           (implicit executionContext: ExecutionContext) {
 
-  def upload() = Action.async(EnumeratorBodyParser.parse) { implicit request =>
+
+  def upload() = Action.async(BodyParsers.parse.multipartFormData) { implicit request =>
     validateRequest(request).map(uploadFile.andThen(_.map {
       case Xor.Left(UploadServiceError(_, message)) => Results.InternalServerError(message)
       case Xor.Left(UploadRequestError(_, message)) => Results.BadRequest(message)
@@ -39,14 +42,14 @@ class FileUploadController(uploadFile: File => Future[UploadResult])
 
 object FileUploadController {
 
+  def validateRequest(request: Request[MultipartFormData[TemporaryFile]]): Xor[String, File] = {
 
-  def validateRequest(request: Request[MultipartFormData[Enumerator[Array[Byte]]]]): Xor[String, File] = {
     def extract(parameter: String) = Xor.fromOption(request.body.dataParts.get(parameter).flatMap(_.headOption), s"Missing $parameter")
 
     for {
       fileData <- Xor.fromOption(request.body.files.headOption.map(f => (f.ref, f.filename, f.contentType)), "Missing file data")
       envelopeId <- extract("envelopeId")
       fileID <- extract("fileId")
-    } yield File(fileData._1, fileData._2, fileData._3, EnvelopeId(envelopeId), FileId(fileID))
+    } yield File(Files.readAllBytes(fileData._1.file.toPath), fileData._2, fileData._3, EnvelopeId(envelopeId), FileId(fileID))
   }
 }

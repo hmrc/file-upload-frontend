@@ -16,20 +16,23 @@
 
 package uk.gov.hmrc.fileupload
 
-import play.api.libs.iteratee.Enumerator
+import java.nio.file.{Files, Paths}
+
+import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 
 object RestFixtures {
 
-  def uploadRequest(multipartBody: MultipartFormData[Enumerator[Array[Byte]]]) = {
+  def uploadRequest(multipartBody: MultipartFormData[TemporaryFile]) = {
     FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
   }
 
   def validUploadRequest(file: File = anyFile()) = {
     uploadRequest(MultipartFormData(Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value)),
-      Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, file.data)),
+      Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType,
+        TemporaryFile(Files.write(Paths.get(file.filename), file.data).toFile))),
       Seq.empty, Seq.empty))
   }
 }

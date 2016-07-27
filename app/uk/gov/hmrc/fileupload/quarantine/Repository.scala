@@ -17,13 +17,12 @@
 package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
-import play.api.libs.json.{JsUndefined, Json}
-import play.modules.reactivemongo.JSONFileToSave
+import play.api.libs.json.Json
 import reactivemongo.api.gridfs.GridFS
 import reactivemongo.api.{DB, DBMetaCommands}
 import reactivemongo.json.JSONSerializationPack
+import uk.gov.hmrc.fileupload.quarantine.Repository.WriteFileResult
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
-import uk.gov.hmrc.fileupload.quarantine.Repository.{WriteFileNotPersistedError, WriteFileResult}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -39,8 +38,6 @@ object Repository {
 
 class Repository(mongo: () => DB with DBMetaCommands) {
 
-  import play.modules.reactivemongo.GridFSController.readFileReads
-  import reactivemongo.json.ImplicitBSONHandlers._
   import reactivemongo.json.collection.JSONCollectionProducer
 
   lazy val gfs = GridFS[JSONSerializationPack.type](mongo(), "quarantine")
@@ -49,16 +46,6 @@ class Repository(mongo: () => DB with DBMetaCommands) {
     Json.obj("envelopeId" -> envelopeId.value, "fileId" -> fileId.value)
 
   def writeFile(file: File)(implicit ex: ExecutionContext): Future[WriteFileResult] = {
-    val fileToSave = JSONFileToSave(filename = Some(file.filename), contentType = file.contentType, metadata = metadata(file.envelopeId, file.fileId))
-
-    for {
-      readFile <- file.data |>>> gfs.iteratee(fileToSave)
-      result <- readFile map {
-        case x if x.id.isInstanceOf[JsUndefined] => Xor.Left(WriteFileNotPersistedError(file.envelopeId))
-        case _ => Xor.Right(file.envelopeId)
-      }
-    } yield result
-
+    Future.successful(Xor.right(file.envelopeId))
   }
-
 }

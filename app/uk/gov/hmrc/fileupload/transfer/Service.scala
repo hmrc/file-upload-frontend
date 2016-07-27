@@ -68,11 +68,8 @@ object Service {
   }
 
   def transferCall(baseUrl: String)(file: File)(implicit ec: ExecutionContext): Future[WSResponse] = {
-    (file.data |>>> Iteratee.consume[Array[Byte]]()).flatMap {
-      body =>
-        WS.url(s"$baseUrl/file-upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}/content")
-          .withHeaders("Content-Type" -> "application/octet-stream")
-          .put(body)
-    }
+    WS.url(s"$baseUrl/file-upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}/content")
+      .withHeaders("Content-Type" -> "application/octet-stream")
+      .put(file.data)
   }
 }

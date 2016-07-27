@@ -17,10 +17,10 @@
 package uk.gov.hmrc.fileupload
 
 import java.net.URLConnection
+import java.nio.file.Files
 import java.util.UUID
 
 import org.apache.commons.io.FileUtils
-import play.api.libs.iteratee.Enumerator
 
 object DomainFixtures {
 
@@ -40,9 +40,7 @@ object DomainFixtures {
   }
 
   def anyFileFor(envelopeId: EnvelopeId = anyEnvelopeId, fileId: FileId = anyFileId, file: java.io.File = temporaryTexFile()) = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    File(Enumerator.fromFile(file), file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)), envelopeId, fileId)
+    File(Files.readAllBytes(file.toPath), file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)), envelopeId, fileId)
   }
 
   private def randomUUID = UUID.randomUUID().toString

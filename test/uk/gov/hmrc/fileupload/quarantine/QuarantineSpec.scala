@@ -18,8 +18,7 @@ package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
-import uk.gov.hmrc.fileupload.File
-import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
+import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.quarantine.Repository.WriteFileNotPersistedError
 import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadServiceError
 import uk.gov.hmrc.play.test.UnitSpec
@@ -32,7 +31,7 @@ class QuarantineSpec extends UnitSpec with ScalaFutures {
 
   "create" should {
     "be successful" in {
-      val file = File(null, "test.pdf", None, anyEnvelopeId, anyFileId)
+      val file = anyFile()
       val upload = Service.upload(_ => Future.successful(Xor.Right(file.envelopeId))) _
 
       val result = upload(file).futureValue
@@ -41,7 +40,7 @@ class QuarantineSpec extends UnitSpec with ScalaFutures {
     }
 
     "be not successful when writeFile is not successful" in {
-      val file = File(null, "test.pdf", None, anyEnvelopeId, anyFileId)
+      val file = anyFile()
       val upload = Service.upload(_ => Future.successful(Xor.Left(WriteFileNotPersistedError(file.envelopeId)))) _
 
       val result = upload(file).futureValue
@@ -50,7 +49,7 @@ class QuarantineSpec extends UnitSpec with ScalaFutures {
     }
 
     "be not successful when future fails" in {
-      val file = File(null, "test.pdf", None, anyEnvelopeId, anyFileId)
+      val file = anyFile()
       val upload = Service.upload(_ => Future.failed(new Exception("not good"))) _
 
       val result = upload(file).futureValue

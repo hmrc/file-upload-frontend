@@ -19,9 +19,9 @@ package uk.gov.hmrc.fileupload.controllers
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import play.api.http.Status
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData
-import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
+import uk.gov.hmrc.fileupload.DomainFixtures.{anyFile, temporaryTexFile}
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload.File
 import uk.gov.hmrc.fileupload.upload.Service._
@@ -40,7 +40,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
       val request = validUploadRequest(file)
 
       val uploadFile: (File) => Future[UploadResult] = {
-        case `file` => Future.successful(Xor.right(file.envelopeId))
+        case File(_, _, _, file.envelopeId, file.fileId) => Future.successful(Xor.right(file.envelopeId))
         case unknownFile => fail(s"Trying to upload wrong file data [$unknownFile] expected [$file]")
       }
 
@@ -74,7 +74,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
           val file = anyFile()
           val validRequest = validUploadRequest(file)
           val bodyMissingParameter = MultipartFormData(validRequest.body.dataParts - missingParam,
-            Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, file.data)),
+            Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType, TemporaryFile(temporaryTexFile()))),
             Seq.empty, Seq.empty)
 
           val controller = new FileUploadController(_ => Future.successful(Xor.right(file.envelopeId)))
@@ -87,7 +87,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     s"Bad request if missing file data" in {
       val file = anyFile()
       val validRequest = validUploadRequest(file)
-      val bodyMissingFileData: MultipartFormData[Enumerator[Array[Byte]]] = MultipartFormData(validRequest.body.dataParts,
+      val bodyMissingFileData: MultipartFormData[TemporaryFile] = MultipartFormData(validRequest.body.dataParts,
         Seq.empty, Seq.empty, Seq.empty)
 
       val controller = new FileUploadController(_ => Future.successful(Xor.right(file.envelopeId)))
