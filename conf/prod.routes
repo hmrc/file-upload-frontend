@@ -1,6 +1,4 @@
 # Add all the application routes to the app.routes file
-->         /file-upload-frontend              app.Routes
-->         /                          health.Routes
-->     	   /template                  template.Routes
-
-GET        /admin/metrics             com.kenshoo.play.metrics.MetricsController.metrics
+GET        /admin/metrics        com.kenshoo.play.metrics.MetricsController.metrics
+->         /                     health.Routes
+->         /                     app.Routes
