@@ -8,7 +8,7 @@ Frontend for uploading files to the Tax Platform
 
 This service is written in [Scala](http://www.scala-lang.org/) and [Play](http://playframework.com/), so needs at least a [JRE] to run.
 
-## Run the application
+## Run the application locally
 
 To run the application execute
 
@@ -16,15 +16,17 @@ To run the application execute
 sbt run
 ```
 
-and then access the application at
+The endpoints below can then be accessed with the base url http://localhost:8899/file-upload/
+
+## Service manager
 
 ```
-http://localhost:9000/file-upload-frontend/
+sm --start FILE_UPLOAD_ALL
 ```
 
 ## Endpoints
 
-### POST /upload
+### Upload a File
 
 This endpoint allows the uploading of a file to the tax platform by means of the `file-upload` service.
 
@@ -41,6 +43,10 @@ This endpoint *requires*:
 * the contentType to be defined as `multipart/form-data` with the below parameters defined alongside the actual file content.
 * a single filePart be present containing the data to be uploaded to the corresponding `fileId` within the envelope.
 
+|---|---|
+|HTTP method|POST|
+|URL path|/upload|
+
 #### Parameters
 |Parameter|Required?|Example|Description|
 |---|---|---|---|
@@ -52,6 +58,28 @@ This endpoint *requires*:
 |---|---|---|---|---|
 |Success|200|`OK`|`None`|Returned if the file was uploaded successfully to the service|
 |Failure|400|`BAD REQUEST`|`None`|If HTTP request of invalid format or missing mandatory parameters|
+
+## Create Envelope (for test purposes only)
+
+|---|---|
+|HTTP method|POST|
+|URL path|/test-only/create-envelope|
+
+#### Example Response
+
+``` JSON
+{
+  "envelopeId": "3f994068-f810-4290-89ca-7e8ec43cea9c"
+}
+```
+
+## Show Envelope (for test purposes only)
+
+Coming soon
+
+## Show File (for test purposes only)
+
+Coming soon
 
 ### License
 
