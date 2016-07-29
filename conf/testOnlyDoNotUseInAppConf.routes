@@ -10,7 +10,8 @@
 # Failing to follow this rule may result in test routes deployed in production.
 
 
-POST        /file-upload/test-only/create-envelope            @uk.gov.hmrc.fileupload.testonly.TestOnlyController.createEnvelope
+POST        /file-upload/test-only/create-envelope                                          @uk.gov.hmrc.fileupload.testonly.TestOnlyController.createEnvelope
+GET         /file-upload/test-only/download-file/envelope/:envelopeId/file/:fileId/content  @uk.gov.hmrc.fileupload.testonly.TestOnlyController.downloadFile(envelopeId: String, fileId: String)
 
 # Add all the application routes to the prod.routes file
 ->          /                                                 prod.Routes

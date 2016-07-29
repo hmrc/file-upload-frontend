@@ -42,4 +42,7 @@ class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionCo
     }
   }
 
+  def downloadFile(envelopeId: String, fileId: String) = Action.async { request =>
+    WS.url(s"$baseUrl/file-upload/envelope/$envelopeId/file/$fileId/content").get().map(response => Ok(response.body))
+  }
 }
