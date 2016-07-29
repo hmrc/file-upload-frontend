@@ -58,7 +58,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
 
   def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = Status.OK, body: String = "") = {
     server.addStubMapping(
-      put(urlPathMatching(uploadUrl(envelopeId, fileId)))
+      put(urlPathMatching(fileContentUrl(envelopeId, fileId)))
         .willReturn(new ResponseDefinitionBuilder()
           .withBody(body)
           .withStatus(status))
@@ -74,11 +74,20 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
         .build())
   }
 
-  def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] = {
-    server.findAll(putRequestedFor(urlPathMatching(uploadUrl(envelopeId, fileId)))).asScala.headOption
+  def responseToDownloadFile(envelopeId: EnvelopeId, fileId: FileId, textBody: String) = {
+    server.addStubMapping(
+      get(urlPathMatching(fileContentUrl(envelopeId, fileId)))
+        .willReturn(new ResponseDefinitionBuilder()
+          .withBody(textBody)
+          .withStatus(Status.OK))
+        .build())
   }
 
-  private def uploadUrl(envelopeId: EnvelopeId, fileId: FileId) = {
+  def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] = {
+    server.findAll(putRequestedFor(urlPathMatching(fileContentUrl(envelopeId, fileId)))).asScala.headOption
+  }
+
+  private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) = {
     s"/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/content"
   }
 }
