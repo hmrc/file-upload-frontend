@@ -25,7 +25,7 @@ class CreateEnvelopeEndpointISpec extends UnitSpec with ScalaFutures with WithFa
 
       val response = controller.createEnvelope()(request).futureValue
 
-      status(response) shouldBe Status.OK
+      status(response) shouldBe Status.CREATED
       bodyOf(response) shouldBe s"""{"envelopeId":"${envelopeId.value}"}"""
     }
   }

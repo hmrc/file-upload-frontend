@@ -38,7 +38,7 @@ class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionCo
     val payload = Json.obj()
 
     WS.url(s"$baseUrl/file-upload/envelope").post(payload).map { response =>
-      Ok(Json.obj("envelopeId" -> extractEnvelopeId(response)))
+      Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
     }
   }
 
