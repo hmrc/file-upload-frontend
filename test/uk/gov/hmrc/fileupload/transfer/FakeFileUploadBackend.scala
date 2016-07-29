@@ -16,17 +16,14 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
-import java.nio.file.Files
-
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
-import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
-import play.api.libs.iteratee.Iteratee
+import play.api.http.Status
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 
 import collection.JavaConverters._
@@ -36,7 +33,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
 
   lazy val fileUploadBackendPort = 8080
 
-  private lazy val server = new WireMockServer(wireMockConfig().port(fileUploadBackendPort))
+  lazy val server = new WireMockServer(wireMockConfig().port(fileUploadBackendPort))
 
   final lazy val fileUploadBackendBaseUrl = s"http://localhost:$fileUploadBackendPort"
 
@@ -50,7 +47,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
     server.stop()
   }
 
-  def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = 200, body: String = "") = {
+  def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = Status.OK, body: String = "") = {
     server.addStubMapping(
       get(urlPathMatching(s"/file-upload/envelope/${envelopeId.value}"))
         .willReturn(new ResponseDefinitionBuilder()
@@ -59,12 +56,21 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
         .build())
   }
 
-  def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = 200, body: String = "") = {
+  def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = Status.OK, body: String = "") = {
     server.addStubMapping(
       put(urlPathMatching(uploadUrl(envelopeId, fileId)))
         .willReturn(new ResponseDefinitionBuilder()
           .withBody(body)
           .withStatus(status))
+        .build())
+  }
+
+  def respondToCreateEnvelope(envelopeIdOfCreated: EnvelopeId) = {
+    server.addStubMapping(
+      post(urlPathMatching(s"/file-upload/envelope"))
+        .willReturn(new ResponseDefinitionBuilder()
+            .withHeader("Location", s"localhost:$fileUploadBackendPort/file-upload/envelope/${envelopeIdOfCreated.value}")
+          .withStatus(Status.CREATED))
         .build())
   }
 

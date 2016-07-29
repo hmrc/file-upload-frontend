@@ -12,8 +12,6 @@ import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 class FileUploadISpec extends UnitSpec with ScalaFutures with WithFakeApplication with FakeFileUploadBackend {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   override lazy val fileUploadBackendPort = new URL(ServiceConfig.fileUploadBackendBaseUrl).getPort
 
   val controller = FrontendGlobal.getControllerInstance[FileUploadController](classOf[FileUploadController])
