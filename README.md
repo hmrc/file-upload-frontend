@@ -26,9 +26,9 @@ sm --start FILE_UPLOAD_ALL
 
 This endpoint allows the uploading of a file to the tax platform.
 
-|---|---|---|
-|HTTP method|POST|
-|URL path|/upload|
+|HTTP method|URL path|
+|---|---|
+|POST|/upload|
 
 #### Request
 
@@ -50,9 +50,9 @@ The contentType to be defined as `multipart/form-data` with a single filePart be
 
 ## Create Envelope (for test purposes only)
 
-|---|---|---|
-|HTTP method|POST|
-|URL path|/test-only/create-envelope|
+|HTTP method|URL path|
+|---|---|
+|POST|/test-only/create-envelope|
 
 #### Responses
 
@@ -66,9 +66,9 @@ The contentType to be defined as `multipart/form-data` with a single filePart be
 
 ## Download File (for test purposes only)
 
-|---|---|---|
-|HTTP method|GET|
-|URL path|/test-only/download-file/envelope/790ad9cb-d775-44cb-bab9-bcd05b0a3b20/file/1/content|
+|HTTP method|URL path|
+|---|---|
+|GET|/test-only/download-file/envelope/790ad9cb-d775-44cb-bab9-bcd05b0a3b20/file/1/content|
 
 #### Responses
 
