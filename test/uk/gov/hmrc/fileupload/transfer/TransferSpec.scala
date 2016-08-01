@@ -24,7 +24,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.ServiceConfig
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferServiceError}
+import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferServiceError}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -50,7 +50,7 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
 
       respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
-      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableEnvelopeNotFoundError(envelopeId))
+      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.left(EnvelopeNotFoundError(envelopeId))
     }
 
     "if an error occurs return an error" in {

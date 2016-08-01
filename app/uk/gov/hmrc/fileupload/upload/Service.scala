@@ -32,8 +32,6 @@ object Service {
 
   case class UploadServiceError(id: EnvelopeId, message: String) extends UploadError
 
-  case class UploadRequestError(id: EnvelopeId, message: String) extends UploadError
-
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
              transfer: File => Future[TransferResult],
              quarantine: File => QuarantineUploadResult,
@@ -50,7 +48,7 @@ object Service {
         _ <- envelopeAvailableResult
         _ <- transferResult
       } yield envelopeId).leftMap {
-        case EnvelopeAvailableEnvelopeNotFoundError(_) => UploadServiceError(envelopeId, s"Envelope ID [${envelopeId.value}] does not exist")
+        case EnvelopeNotFoundError(_) => UploadServiceError(envelopeId, s"Envelope ID [${envelopeId.value}] does not exist")
         case EnvelopeAvailableServiceError(_, message) => UploadServiceError(envelopeId, message)
         case TransferServiceError(_, message) => UploadServiceError(envelopeId, message)
       }

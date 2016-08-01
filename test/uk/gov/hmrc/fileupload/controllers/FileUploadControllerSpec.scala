@@ -50,15 +50,6 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
       status(result) shouldBe Status.OK
     }
 
-    "return BAD_REQUEST response if request error when uploading files" in {
-      val request = validUploadRequest()
-
-      val controller = new FileUploadController(file => Future.successful(Xor.left(UploadRequestError(file.envelopeId, "that was a bad request"))))
-      val result = controller.upload()(request).futureValue
-
-      status(result) shouldBe Status.BAD_REQUEST
-    }
-
     "return INTERNAL_SERVER_ERROR response if service error when uploading files" in {
       val request = validUploadRequest()
 

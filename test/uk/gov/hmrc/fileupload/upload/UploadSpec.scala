@@ -20,7 +20,7 @@ import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableEnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferResult, TransferServiceError}
+import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferResult, TransferServiceError}
 import uk.gov.hmrc.fileupload.upload.Service.UploadServiceError
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -36,7 +36,7 @@ class UploadSpec extends UnitSpec with ScalaFutures {
     val CannotTransferEnvelopeId = anyEnvelopeId
 
     val envelopeCheck = (envelopeId: EnvelopeId) => envelopeId match {
-      case UnknownEnvelopeId => Future.successful(Xor.left(EnvelopeAvailableEnvelopeNotFoundError(envelopeId)))
+      case UnknownEnvelopeId => Future.successful(Xor.left(EnvelopeNotFoundError(envelopeId)))
       case ErrorCausingEnvelopeId => Future.successful(Xor.left(EnvelopeAvailableServiceError(envelopeId, "someEnvelopeExistsError")))
       case validEnvelopeId => Future.successful(Xor.right(envelopeId))
     }

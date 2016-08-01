@@ -34,7 +34,7 @@ object Service {
 
   sealed trait EnvelopeAvailableError extends TransferError
 
-  case class EnvelopeAvailableEnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
+  case class EnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
 
   case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
 
@@ -46,7 +46,7 @@ object Service {
     httpCall(envelopeId).map {
       response => response.status match {
         case Status.OK => Xor.right(envelopeId)
-        case Status.NOT_FOUND => Xor.left(EnvelopeAvailableEnvelopeNotFoundError(envelopeId))
+        case Status.NOT_FOUND => Xor.left(EnvelopeNotFoundError(envelopeId))
         case _ => Xor.left(EnvelopeAvailableServiceError(envelopeId, response.body))
       }
     }
