@@ -43,10 +43,12 @@ The contentType to be defined as `multipart/form-data` with a single filePart be
 
 #### Responses
 
-|Outcome|HTTP Code|Description|
-|---|---|---|
-|Success|200|Successful|
-|Failure|400|Invalid request|
+|HTTP Code|Outcome|
+|---|---|
+|200|Successful|
+|400|Invalid request|
+|404|Specified `envelopeId` does not exist|
+|500|Unanticipated downstream system error|
 
 ## Create Envelope (for test purposes only)
 
