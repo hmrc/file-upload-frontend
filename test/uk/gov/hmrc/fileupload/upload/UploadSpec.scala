@@ -20,8 +20,8 @@ import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferResult, TransferServiceError}
-import uk.gov.hmrc.fileupload.upload.Service.UploadServiceError
+import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableServiceError, EnvelopeNotFoundError, TransferResult, TransferServiceError}
+import uk.gov.hmrc.fileupload.upload.Service.{UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -56,17 +56,17 @@ class UploadSpec extends UnitSpec with ScalaFutures {
 
     "error if the envelope does not exist" in {
       upload(anyFileFor(UnknownEnvelopeId)).futureValue shouldBe
-        Xor.left(UploadServiceError(UnknownEnvelopeId, s"Envelope ID [${UnknownEnvelopeId.value}] does not exist"))
+        Xor.left(UploadServiceEnvelopeNotFoundError(UnknownEnvelopeId))
     }
 
     "error if the envelope existence causes an error" in {
       upload(anyFileFor(ErrorCausingEnvelopeId)).futureValue shouldBe
-        Xor.left(UploadServiceError(ErrorCausingEnvelopeId, "someEnvelopeExistsError"))
+        Xor.left(UploadServiceDownstreamError(ErrorCausingEnvelopeId, "someEnvelopeExistsError"))
     }
 
     "error if the cannot transfer" in {
       upload(anyFileFor(CannotTransferEnvelopeId)).futureValue shouldBe
-        Xor.left(UploadServiceError(CannotTransferEnvelopeId, "someErrorTransferring"))
+        Xor.left(UploadServiceDownstreamError(CannotTransferEnvelopeId, "someErrorTransferring"))
     }
   }
 }

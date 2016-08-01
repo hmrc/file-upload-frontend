@@ -22,7 +22,7 @@ import cats.data.Xor
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController.validateRequest
-import uk.gov.hmrc.fileupload.upload.Service.{UploadResult, UploadServiceError}
+import uk.gov.hmrc.fileupload.upload.Service.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,7 +33,8 @@ class FileUploadController(uploadFile: File => Future[UploadResult])
 
   def upload() = Action.async(BodyParsers.parse.multipartFormData) { implicit request =>
     validateRequest(request).map(uploadFile.andThen(_.map {
-      case Xor.Left(UploadServiceError(_, message)) => Results.InternalServerError(message)
+      case Xor.Left(UploadServiceDownstreamError(_, message)) => Results.InternalServerError(message)
+      case Xor.Left(UploadServiceEnvelopeNotFoundError(_)) => Results.NotFound
       case Xor.Right(_) => Results.Ok
     })).fold(message => Future.successful(Results.BadRequest(message)), identity)
   }

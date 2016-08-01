@@ -53,10 +53,19 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
     "return INTERNAL_SERVER_ERROR response if service error when uploading files" in {
       val request = validUploadRequest()
 
-      val controller = new FileUploadController(file => Future.successful(Xor.left(UploadServiceError(file.envelopeId, "something went wrong"))))
+      val controller = new FileUploadController(file => Future.successful(Xor.left(UploadServiceDownstreamError(file.envelopeId, "something went wrong"))))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR
+    }
+
+    "return NOT_FOUND response if envelope is not found" in {
+      val request = validUploadRequest()
+
+      val controller = new FileUploadController(file => Future.successful(Xor.left(UploadServiceEnvelopeNotFoundError(file.envelopeId))))
+      val result = controller.upload()(request).futureValue
+
+      status(result) shouldBe Status.NOT_FOUND
     }
 
     Seq("fileId", "envelopeId") foreach {

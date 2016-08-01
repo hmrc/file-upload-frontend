@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadResult
 import uk.gov.hmrc.fileupload.transfer.Service._
 import uk.gov.hmrc.fileupload.virusscan.Service.ScanResult
@@ -30,7 +30,9 @@ object Service {
 
   sealed trait UploadError
 
-  case class UploadServiceError(id: EnvelopeId, message: String) extends UploadError
+  case class UploadServiceDownstreamError(id: EnvelopeId, message: String) extends UploadError
+
+  case class UploadServiceEnvelopeNotFoundError(id: EnvelopeId) extends UploadError
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
              transfer: File => Future[TransferResult],
@@ -48,9 +50,9 @@ object Service {
         _ <- envelopeAvailableResult
         _ <- transferResult
       } yield envelopeId).leftMap {
-        case EnvelopeNotFoundError(_) => UploadServiceError(envelopeId, s"Envelope ID [${envelopeId.value}] does not exist")
-        case EnvelopeAvailableServiceError(_, message) => UploadServiceError(envelopeId, message)
-        case TransferServiceError(_, message) => UploadServiceError(envelopeId, message)
+        case EnvelopeNotFoundError(_) => UploadServiceEnvelopeNotFoundError(envelopeId)
+        case EnvelopeAvailableServiceError(_, message) => UploadServiceDownstreamError(envelopeId, message)
+        case TransferServiceError(_, message) => UploadServiceDownstreamError(envelopeId, message)
       }
     }
   }
