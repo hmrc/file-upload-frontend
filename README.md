@@ -58,13 +58,9 @@ The contentType to be defined as `multipart/form-data` with a single filePart be
 
 #### Responses
 
-|Outcome|HTTP Code|Body|Description|
-|---|---|---|---|
-|Success|201|```
-             {
-               "envelopeId": "`envelopeId`"
-             }
-             ```|Successful|
+|HTTP Code|Outcome|Body|
+|---|---|---|
+|201|Successful|```{ "envelopeId": "`envelopeId`" }```|
 
 ## Download File (for test purposes only)
 
