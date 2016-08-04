@@ -43,7 +43,7 @@ private object AppDependencies {
   private val playPartialsVersion = "4.2.0"
   private val playAuthorisedFrontendVersion = "5.0.0"
   private val playConfigVersion = "2.0.1"
-  private val hmrcTestVersion = "1.6.0"
+  private val hmrcTestVersion = "1.8.0"
   private val playReactivemongoVersion = "4.8.0"
   private val simpleReactivemongoVersion = "4.8.0"
   private val clamAvClientVersion = "2.2.0"
