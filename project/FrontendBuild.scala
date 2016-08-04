@@ -48,6 +48,7 @@ private object AppDependencies {
   private val simpleReactivemongoVersion = "4.8.0"
   private val clamAvClientVersion = "2.2.0"
   private val catsVersion = "0.6.0"
+  private val playAuditingVersion = "1.8.0"
 
   val compile = Seq(
     ws,
@@ -58,6 +59,7 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-authorised-frontend" % playAuthorisedFrontendVersion,
     "uk.gov.hmrc" %% "play-config" % playConfigVersion,
     "uk.gov.hmrc" %% "play-json-logger" % playJsonLoggerVersion,
+    "uk.gov.hmrc" %% "play-auditing" % playAuditingVersion,
     "uk.gov.hmrc" %% "govuk-template" % govukTemplateVersion,
     "uk.gov.hmrc" %% "play-health" % playHealthVersion,
     "uk.gov.hmrc" %% "play-ui" % playUiVersion,

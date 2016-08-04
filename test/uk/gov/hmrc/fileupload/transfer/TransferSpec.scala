@@ -55,12 +55,10 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
 
     "if an error occurs return an error" in {
       val envelopeId = anyEnvelopeId
-      val errorBody = "SOME_ERROR"
 
-      respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
+      respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, "SOME_ERROR")
 
-      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId,
-        s"GET of '${ServiceConfig.fileUploadBackendBaseUrl}/file-upload/envelope/${envelopeId.value}' returned $HTTP_INTERNAL_ERROR. Response body: '$errorBody'"))
+      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
   }
 

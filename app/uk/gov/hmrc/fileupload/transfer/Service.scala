@@ -17,11 +17,11 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
+import play.api.libs.iteratee.Iteratee
 import play.api.libs.ws.{WS, WSResponse}
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, WSHttp}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import play.api.Play.current
 import play.api.http.Status
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse, NotFoundException, Upstream5xxResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,19 +40,20 @@ object Service {
 
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
-  def envelopeAvailable(httpCall: EnvelopeId => Future[HttpResponse])(envelopeId: EnvelopeId)
+  def envelopeAvailable(httpCall: EnvelopeId => Future[WSResponse])(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
 
-    httpCall(envelopeId).map(r => Xor.right(envelopeId)) recover {
-      case _: NotFoundException => Xor.left(EnvelopeNotFoundError(envelopeId))
-      case se: Upstream5xxResponse => Xor.left(EnvelopeAvailableServiceError(envelopeId, se.message))
+    httpCall(envelopeId).map {
+      response => response.status match {
+        case Status.OK => Xor.right(envelopeId)
+        case Status.NOT_FOUND => Xor.left(EnvelopeNotFoundError(envelopeId))
+        case _ => Xor.left(EnvelopeAvailableServiceError(envelopeId, response.body))
+      }
     }
   }
 
-  def envelopeAvailableCall(baseUrl: String)(envelopeId: EnvelopeId): Future[HttpResponse] = {
-    implicit val hc = HeaderCarrier()
-
-    WSHttp.GET(s"$baseUrl/file-upload/envelope/${envelopeId.value}")
+  def envelopeAvailableCall(baseUrl: String)(envelopeId: EnvelopeId): Future[WSResponse] = {
+    WS.url(s"$baseUrl/file-upload/envelope/${envelopeId.value}").get()
   }
 
   def transfer(httpCall: (File) => Future[WSResponse])(file: File)
