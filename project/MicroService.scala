@@ -31,7 +31,7 @@ trait MicroService {
   val appName: String
 
   lazy val appDependencies: Seq[ModuleID] = ???
-  lazy val plugins: Seq[Plugins] = Seq(play.PlayScala)
+  lazy val plugins : Seq[Plugins] = Seq(play.PlayScala)
   lazy val playSettings: Seq[Setting[_]] = Seq.empty
 
   lazy val scoverageSettings = {
@@ -50,7 +50,7 @@ trait MicroService {
   def itFilter(name: String): Boolean = name endsWith "ISpec"
 
   lazy val microservice = Project(appName, file("."))
-    .enablePlugins(Seq(play.PlayScala) ++ plugins: _*)
+    .enablePlugins(Seq(play.PlayScala) ++ plugins : _*)
     .settings(PlayKeys.playDefaultPort := 8899)
     .settings(playSettings ++ scoverageSettings: _*)
     .settings(scalaSettings: _*)
