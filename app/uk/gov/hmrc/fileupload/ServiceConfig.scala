@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload
 
-import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.config.ServicesConfig
 
 object ServiceConfig extends ServicesConfig {

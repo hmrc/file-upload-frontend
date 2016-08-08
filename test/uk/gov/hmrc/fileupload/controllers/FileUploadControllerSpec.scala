@@ -18,6 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Second, Span}
 import play.api.http.Status
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData
@@ -96,4 +97,6 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
       status(result) shouldBe Status.BAD_REQUEST
     }
   }
+
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(1, Second))
 }
