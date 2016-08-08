@@ -16,23 +16,27 @@
 
 package uk.gov.hmrc.fileupload.infrastructure
 
+import cats.data.Xor
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
+import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 import play.api.http.Status
 import play.api.libs.json.{JsSuccess, Json}
 import play.api.libs.ws.WS
+import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with ScalaFutures with WithFakeApplication with Eventually {
+class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with WithFakeApplication with Eventually {
   this: Suite =>
 
   private lazy val fakeDownstreamSystemConfig = wireMockConfig().port(8900)
@@ -46,7 +50,10 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
   private val consumer = Consumer(BaseUri("localhost", fakeAuditConsumerConfig.portNumber(), "http"))
   private val testAppName = "test-app"
   private val auditConnector = AuditConnector(AuditingConfig(Some(consumer), enabled = true, traceRequests = true))
-  private val auditedExecute = PlayHttp.auditedExecute(auditConnector, testAppName) _
+  private var loggedErrors = ListBuffer.empty[Throwable]
+  private val testExecute = PlayHttp.execute(auditConnector, testAppName, Some(t => {
+    loggedErrors += t
+  })) _
 
   override def beforeAll() = {
     super.beforeAll()
@@ -88,7 +95,7 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
             .withStatus(statusCode).withBody("someResponseBody"))
           .build())
 
-      val response = auditedExecute(WS.url(downstreamUrl)(fakeApplication).withMethod("GET")).futureValue
+      val response = await(testExecute(WS.url(downstreamUrl)(fakeApplication).withMethod("GET"))).valueOr(t => fail(t.message))
 
       response.status shouldBe statusCode
       eventually { getAudits.size() shouldBe 1}
@@ -106,6 +113,19 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
     def getAudits = fakeAuditConsumer.findAll(
       postRequestedFor(urlPathMatching("/*"))
     )
+
+    "logs errors" in {
+      fakeDownstreamSystem.addStubMapping(
+        get(urlPathMatching(downstreamPath))
+          .willReturn(new ResponseDefinitionBuilder()
+            .withFault(Fault.MALFORMED_RESPONSE_CHUNK))
+          .build())
+
+      val response = await(testExecute(WS.url(downstreamUrl)(fakeApplication).withMethod("GET")))
+
+      response shouldBe Xor.Left(PlayHttpError("Remotely Closed"))
+      loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely Closed"
+    }
   }
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(5, Seconds))

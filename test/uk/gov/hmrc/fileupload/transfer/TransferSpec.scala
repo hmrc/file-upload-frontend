@@ -35,7 +35,7 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
 
   "When calling the envelope check" should {
 
-    val envelopeAvailable = Service.envelopeAvailable(_.execute(), ServiceConfig.fileUploadBackendBaseUrl) _
+    val envelopeAvailable = Service.envelopeAvailable(_.execute().map(response => Xor.Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
 
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId
@@ -63,7 +63,7 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
     }
   }
 
-  val transfer = Service.transfer(_.execute(), ServiceConfig.fileUploadBackendBaseUrl) _
+  val transfer = Service.transfer(_.execute().map(response => Xor.Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
 
   "When uploading a file" should {
     "be successful if file uploaded" in {

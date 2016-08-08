@@ -20,14 +20,13 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
 import play.api.mvc.Request
-import play.api.{Application, Configuration, Play}
+import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.FileUploadController
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, PlayHttp}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
@@ -62,7 +61,7 @@ object FrontendGlobal
   lazy val quarantineServiceUpload = quarantine.Service.upload(quarantineRepository.writeFile) _
 
   // auditing
-  lazy val auditedHttpExecute = PlayHttp.auditedExecute(auditConnector, ServiceConfig.appName) _
+  lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.error(t.getMessage, t))) _
 
   // transfer
   lazy val envelopeAvailable = transfer.Service.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
