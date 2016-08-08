@@ -17,8 +17,6 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Second, Span}
 import play.api.http.Status
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData
@@ -30,7 +28,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
-class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
+class FileUploadControllerSpec extends UnitSpec {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -46,7 +44,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
       }
 
       val controller = new FileUploadController(uploadFile)
-      val result = controller.upload()(request).futureValue
+      val result = await(controller.upload()(request))
 
       status(result) shouldBe Status.OK
     }
@@ -55,7 +53,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
       val request = validUploadRequest()
 
       val controller = new FileUploadController(file => Future.successful(Xor.left(UploadServiceDownstreamError(file.envelopeId, "something went wrong"))))
-      val result = controller.upload()(request).futureValue
+      val result = await(controller.upload()(request))
 
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR
     }
@@ -64,7 +62,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
       val request = validUploadRequest()
 
       val controller = new FileUploadController(file => Future.successful(Xor.left(UploadServiceEnvelopeNotFoundError(file.envelopeId))))
-      val result = controller.upload()(request).futureValue
+      val result = await(controller.upload()(request))
 
       status(result) shouldBe Status.NOT_FOUND
     }
@@ -79,7 +77,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
             Seq.empty, Seq.empty)
 
           val controller = new FileUploadController(_ => Future.successful(Xor.right(file.envelopeId)))
-          val result = controller.upload()(uploadRequest(bodyMissingParameter)).futureValue
+          val result = await(controller.upload()(uploadRequest(bodyMissingParameter)))
 
           status(result) shouldBe Status.BAD_REQUEST
         }
@@ -92,11 +90,9 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures {
         Seq.empty, Seq.empty, Seq.empty)
 
       val controller = new FileUploadController(_ => Future.successful(Xor.right(file.envelopeId)))
-      val result = controller.upload()(uploadRequest(bodyMissingFileData)).futureValue
+      val result = await(controller.upload()(uploadRequest(bodyMissingFileData)))
 
       status(result) shouldBe Status.BAD_REQUEST
     }
   }
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(1, Second))
 }
