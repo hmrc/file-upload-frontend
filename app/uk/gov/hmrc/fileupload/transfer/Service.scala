@@ -17,11 +17,10 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
-import play.api.libs.iteratee.Iteratee
-import play.api.libs.ws.{WS, WSResponse}
-import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import play.api.Play.current
 import play.api.http.Status
+import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,10 +39,10 @@ object Service {
 
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
-  def envelopeAvailable(httpCall: EnvelopeId => Future[WSResponse])(envelopeId: EnvelopeId)
+  def envelopeAvailable(httpCall: (WSRequestHolder => Future[WSResponse]), baseUrl: String)(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
 
-    httpCall(envelopeId).map {
+    httpCall(WS.url(s"$baseUrl/file-upload/envelope/${envelopeId.value}").withMethod("GET")).map {
       response => response.status match {
         case Status.OK => Xor.right(envelopeId)
         case Status.NOT_FOUND => Xor.left(EnvelopeNotFoundError(envelopeId))
@@ -52,24 +51,18 @@ object Service {
     }
   }
 
-  def envelopeAvailableCall(baseUrl: String)(envelopeId: EnvelopeId): Future[WSResponse] = {
-    WS.url(s"$baseUrl/file-upload/envelope/${envelopeId.value}").get()
-  }
-
-  def transfer(httpCall: (File) => Future[WSResponse])(file: File)
+  def transfer(httpCall: (WSRequestHolder => Future[WSResponse]), baseUrl: String)(file: File)
               (implicit executionContext: ExecutionContext): Future[TransferResult] = {
 
-    httpCall(file).map {
-      response => response.status match {
-        case Status.OK => Xor.right(file.envelopeId)
-        case _ => Xor.left(TransferServiceError(file.envelopeId, response.body))
-      }
-    }
-  }
-
-  def transferCall(baseUrl: String)(file: File)(implicit ec: ExecutionContext): Future[WSResponse] = {
-    WS.url(s"$baseUrl/file-upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}/content")
+    httpCall(WS.url(s"$baseUrl/file-upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}/content")
       .withHeaders("Content-Type" -> "application/octet-stream")
-      .put(file.data)
+      .withBody(file.data)
+      .withMethod("PUT"))
+      .map {
+        response => response.status match {
+          case Status.OK => Xor.right(file.envelopeId)
+          case _ => Xor.left(TransferServiceError(file.envelopeId, response.body))
+        }
+      }
   }
 }

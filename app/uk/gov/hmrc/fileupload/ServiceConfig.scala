@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.fileupload
 
+import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.config.ServicesConfig
 
 object ServiceConfig extends ServicesConfig {
 
-  lazy val fileUploadBackendBaseUrl = baseUrl(s"file-upload-backend")
+  lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
+  lazy val appName = getString("appName")
 }

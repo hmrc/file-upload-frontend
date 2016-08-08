@@ -24,9 +24,9 @@ import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.http.Status
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   this: Suite =>
@@ -69,7 +69,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
     server.addStubMapping(
       post(urlPathMatching(s"/file-upload/envelope"))
         .willReturn(new ResponseDefinitionBuilder()
-            .withHeader("Location", s"localhost:$fileUploadBackendPort/file-upload/envelope/${envelopeIdOfCreated.value}")
+            .withHeader("Location", s"$fileUploadBackendBaseUrl/file-upload/envelope/${envelopeIdOfCreated.value}")
           .withStatus(Status.CREATED))
         .build())
   }

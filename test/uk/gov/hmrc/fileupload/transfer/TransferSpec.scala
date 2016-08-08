@@ -24,7 +24,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.ServiceConfig
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeNotFoundError, EnvelopeAvailableServiceError, TransferServiceError}
+import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableServiceError, EnvelopeNotFoundError, TransferServiceError}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,14 +35,14 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
 
   "When calling the envelope check" should {
 
-    val lookup = Service.envelopeAvailableCall(fileUploadBackendBaseUrl) _
+    val envelopeAvailable = Service.envelopeAvailable(_.execute(), ServiceConfig.fileUploadBackendBaseUrl) _
 
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId
 
       respondToEnvelopeCheck(envelopeId, HTTP_OK)
 
-      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.right(envelopeId)
+      envelopeAvailable(envelopeId).futureValue shouldBe Xor.right(envelopeId)
     }
 
     "if the ID is not known of return an error" in {
@@ -50,19 +50,20 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
 
       respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
-      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.left(EnvelopeNotFoundError(envelopeId))
+      envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeNotFoundError(envelopeId))
     }
 
     "if an error occurs return an error" in {
       val envelopeId = anyEnvelopeId
+      val errorBody = "SOME_ERROR"
 
-      respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, "SOME_ERROR")
+      respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
 
-      Service.envelopeAvailable(lookup)(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
+      envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
   }
 
-  val transfer = Service.transfer(Service.transferCall(fileUploadBackendBaseUrl)) _
+  val transfer = Service.transfer(_.execute(), ServiceConfig.fileUploadBackendBaseUrl) _
 
   "When uploading a file" should {
     "be successful if file uploaded" in {
