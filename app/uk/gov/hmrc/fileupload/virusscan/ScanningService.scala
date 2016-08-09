@@ -44,13 +44,13 @@ object ScanningService {
     ClamAvConfig(Play.configuration.getConfig("clam.antivirus"))
   }
 
-  def scan(implicit ec: ExecutionContext): AvScanIteratee = {
+  def scanIteratee(implicit ec: ExecutionContext): AvScanIteratee = {
     val clamAntiVirus = ClamAntiVirus(clamAvConfig)
-    scan(clamAntiVirus.send, clamAntiVirus.checkForVirus)
+    scanIteratee(clamAntiVirus.send, clamAntiVirus.checkForVirus)
   }
 
-  private[virusscan] def scan(sendChunk: Array[Byte] => Future[Unit], checkForVirus: () => Future[Try[Boolean]])
-          (implicit ec: ExecutionContext): AvScanIteratee = {
+  private[virusscan] def scanIteratee(sendChunk: Array[Byte] => Future[Unit], checkForVirus: () => Future[Try[Boolean]])
+                                     (implicit ec: ExecutionContext): AvScanIteratee = {
 
     Iteratee.fold[Array[Byte],Future[Unit]](Future.successful(())) { (previousResult, chunk) =>
       previousResult.flatMap(_ => sendChunk(chunk))
