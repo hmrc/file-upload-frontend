@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.virusscan
+package uk.gov.hmrc.fileupload.utils
 
-import cats.data.Xor
+import play.api.Logger
 
-import scala.concurrent.Future
+import scala.util.control.NonFatal
 
-object Service {
-
-  type ScanResult = Xor[ScanError, String]
-
-  sealed trait ScanError
-  case class ScanVirusDetected(id: String, message: String)
-  case class ScanServiceError(id: String, message: String)
-
-  def scan(): Future[ScanResult] = ???
-
+object NonFatalWithLogging {
+  def unapply(t: Throwable) = {
+    val result = NonFatal.unapply(t)
+    result.foreach { _ =>
+      Logger.warn(t.getMessage, t)
+    }
+    result
+  }
 }
