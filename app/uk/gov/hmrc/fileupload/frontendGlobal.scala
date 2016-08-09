@@ -61,7 +61,7 @@ object FrontendGlobal
   lazy val quarantineServiceUpload = quarantine.Service.upload(quarantineRepository.writeFile) _
 
   // auditing
-  lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.error(t.getMessage, t))) _
+  lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
 
   // transfer
   lazy val envelopeAvailable = transfer.Service.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
