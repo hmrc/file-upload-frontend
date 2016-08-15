@@ -19,20 +19,36 @@ package uk.gov.hmrc.fileupload
 import java.nio.file.{Files, Paths}
 
 import play.api.libs.Files.TemporaryFile
+import play.api.libs.json.{JsString, JsValue}
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
+import reactivemongo.json.JSONSerializationPack
+import reactivemongo.json.JSONSerializationPack._
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
+import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
+
+import scala.concurrent.Future
 
 object RestFixtures {
 
-  def uploadRequest(multipartBody: MultipartFormData[TemporaryFile]) = {
+  case class TestJsonReadFile(id: JsValue = JsString("testid"), filename: Option[String] = None) extends JSONReadFile {
+    val pack = JSONSerializationPack
+    val contentType: Option[String] = None
+    val chunkSize: Int = 0
+    val length: Long = 0
+    val uploadDate: Option[Long] = None
+    val md5: Option[String] = None
+    val metadata: Document = null
+  }
+
+  def uploadRequest(multipartBody: MultipartFormData[Future[JSONReadFile]]) = {
     FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
   }
 
   def validUploadRequest(file: File = anyFile()) = {
     uploadRequest(MultipartFormData(Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value)),
       Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType,
-        TemporaryFile(Files.write(Paths.get(file.filename), file.data).toFile))),
+        Future.successful(TestJsonReadFile(id = JsString(file.fileId.value), filename = Some(file.filename))))),
       Seq.empty, Seq.empty))
   }
 }

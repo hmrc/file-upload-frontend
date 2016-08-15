@@ -17,23 +17,15 @@
 package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
-import uk.gov.hmrc.fileupload.{EnvelopeId, File}
-import uk.gov.hmrc.fileupload.quarantine.Repository.{WriteFileNotPersistedError, WriteFileResult}
-
-import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.fileupload.EnvelopeId
 
 object Service {
 
   type QuarantineUploadResult = Xor[QuarantineUploadError, EnvelopeId]
 
   sealed trait QuarantineUploadError
-  case class QuarantineUploadServiceError(id: EnvelopeId, message: String) extends QuarantineUploadError
+  case class QuarantineUploadServiceError(filename: String, message: String) extends QuarantineUploadError
 
-  def upload(writeFile: File => Future[WriteFileResult])(file: File)
-            (implicit ex: ExecutionContext): Future[QuarantineUploadResult]=
-    writeFile(file).map {
-      case Xor.Right(envelopeId) => Xor.Right(envelopeId)
-      case Xor.Left(WriteFileNotPersistedError(id)) => Xor.Left(QuarantineUploadServiceError(id, "File not persisted"))
-    }.recover { case e => Xor.Left(QuarantineUploadServiceError(file.envelopeId, e.getMessage)) }
+
 
 }

@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.fileupload.infrastructure
 
-import java.net.URL
+import java.io.OutputStream
+import java.net.{HttpURLConnection, URL}
 
 import cats.data.Xor
+import play.api.libs.iteratee.{Done, Input, Iteratee, Step}
 import play.api.libs.ws.{WSRequestHolder, WSResponse}
 import play.api.mvc.Headers
 import uk.gov.hmrc.play.audit.AuditExtensions._
@@ -27,6 +29,7 @@ import uk.gov.hmrc.play.audit.model.{DataEvent, EventTypes}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 object PlayHttp {
@@ -42,7 +45,7 @@ object PlayHttp {
       response => {
         val path = new URL(request.url).getPath
         connector.sendEvent(DataEvent(appName, EventTypes.Succeeded,
-          tags = Map("method" -> request.method, "statusCode" -> s"${response.status}", "responseBody" -> response.body)
+          tags = Map("method" -> request.method, "statusCode" -> s"${ response.status }", "responseBody" -> response.body)
             ++ hc.toAuditTags(path, path),
           detail = hc.toAuditDetails()))
       }
@@ -59,5 +62,83 @@ object PlayHttp {
     HeaderCarrier.fromHeadersAndSession(new Headers {
       override protected val data: Seq[(String, Seq[String])] = request.headers.toSeq
     })
+  }
+}
+
+object HttpStreamingBody {
+
+  case class Result(response: String, status: Int)
+
+  def apply(url: String,
+            contentType: String = "application/octet-stream",
+            method: String = "POST",
+            contentLength: Option[Long] = None,
+            debug: Boolean = true): HttpStreamingBody =
+    new HttpStreamingBody(url, contentType, method, contentLength, debug)
+}
+
+class HttpStreamingBody(url: String,
+                        contentType: String = "application/octet-stream",
+                        method: String = "POST",
+                        contentLength: Option[Long] = None,
+                        debug: Boolean = true) extends Iteratee[Array[Byte], HttpStreamingBody.Result] {
+
+  require(Seq("POST", "PUT").contains(method.toUpperCase()), "Only POST/PUT supported")
+
+  var mayBeConnection = Option.empty[HttpURLConnection]
+  var mayBeResult = Option.empty[HttpStreamingBody.Result]
+  var mayBeOutput = Option.empty[OutputStream]
+
+  Try(new URL(url).openConnection().asInstanceOf[HttpURLConnection]) match {
+    case Failure(NonFatal(e)) =>
+      logError(e)
+      mayBeResult = Some(HttpStreamingBody.Result(e.getMessage, 400))
+    case Success(con) => mayBeConnection = Some(con)
+  }
+
+  mayBeConnection foreach { connection =>
+    Try {
+      connection.setRequestMethod(method)
+      connection.setRequestProperty("Content-Type", contentType)
+      contentLength foreach connection.setFixedLengthStreamingMode
+      connection.setDoInput(true)
+      connection.setDoOutput(true)
+      connection.connect()
+      mayBeOutput = Some(connection.getOutputStream)
+    } match {
+      case Failure(NonFatal(e)) =>
+        logError(e)
+        mayBeResult = Some(HttpStreamingBody.Result(e.getMessage, 400))
+      case _ => ()
+    }
+  }
+
+
+  def fold[B](folder: (Step[Array[Byte], HttpStreamingBody.Result]) => Future[B])(implicit ec: ExecutionContext): Future[B] = {
+    if (mayBeResult.isDefined) {
+      folder(Step.Done(mayBeResult.get, Input.Empty))
+    } else {
+      folder(Step.Cont {
+        case Input.EOF =>
+          mayBeResult = mayBeConnection.map { con =>
+            HttpStreamingBody.Result(con.getResponseMessage, con.getResponseCode)
+          }
+          mayBeConnection foreach (_.disconnect())
+          Done(mayBeResult.get, Input.EOF)
+        case Input.Empty => this
+        case Input.El(data) =>
+          Try(mayBeOutput foreach (_.write(data))) match {
+            case Failure(NonFatal(e)) =>
+              logError(e)
+              mayBeResult = Some(HttpStreamingBody.Result(e.getMessage, 400))
+            case _ => ()
+          }
+          this
+      })
+    }
+  }
+
+  def logError(e: Throwable): Unit = {
+    if (debug) e.printStackTrace()
   }
 }

@@ -16,40 +16,90 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import java.nio.file.Files
-
 import cats.data.Xor
-import play.api.libs.Files.TemporaryFile
+import play.api.Logger
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.JsString
 import play.api.mvc._
-import uk.gov.hmrc.fileupload.controllers.FileUploadController.validateRequest
+import uk.gov.hmrc.fileupload.controllers.FileUploadController._
+import uk.gov.hmrc.fileupload.fileupload._
+import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.upload.Service.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadController(uploadFile: File => Future[UploadResult])
+class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
+                           transferToTransient: File => Future[UploadResult],
+                           retrieveFile: (String) => Future[Option[FileData]],
+                           scanBinaryData: Enumerator[Array[Byte]] => Future[ScanResult])
                           (implicit executionContext: ExecutionContext) {
 
 
-  def upload() = Action.async(BodyParsers.parse.multipartFormData) { implicit request =>
-    validateRequest(request).map(uploadFile.andThen(_.map {
-      case Xor.Left(UploadServiceDownstreamError(_, message)) => Results.InternalServerError(message)
-      case Xor.Left(UploadServiceEnvelopeNotFoundError(_)) => Results.NotFound
-      case Xor.Right(_) => Results.Ok
-    })).fold(message => Future.successful(Results.BadRequest(message)), identity)
+  def upload() = Action.async(uploadParser()) { implicit request =>
+    val maybeParams: Option[Parameters] = extractParams(request)
+
+    maybeParams.flatMap { p =>
+
+      request.body.files.headOption.map { fileInsideRequest =>
+
+        (for {
+          maybeFile <- getFileFromQuarantine(retrieveFile, p.envelopeId, p.fileId, fileInsideRequest.ref)
+          file = maybeFile.getOrElse(throw new RuntimeException("File not found in quarantine"))
+          scanResult <- scanBinaryData(file.data)
+        } yield {
+          scanResult match {
+            case Xor.Right(_) =>
+             for {
+                maybeFile <- getFileFromQuarantine(retrieveFile, p.envelopeId, p.fileId, fileInsideRequest.ref)
+                file = maybeFile.getOrElse(throw new RuntimeException("File not found in quarantine"))
+                transferResult <- transferToTransient(file)
+              } yield {
+                transferResult match {
+                  case Xor.Left(UploadServiceDownstreamError(_, message)) => Results.InternalServerError(message)
+                  case Xor.Left(UploadServiceEnvelopeNotFoundError(_)) => Results.InternalServerError
+                  case Xor.Right(_) => Results.Ok
+                }
+              }
+            case Xor.Left(ScanResultVirusDetected) =>
+              Logger.warn(s"Virus found!")
+              Future.successful(Results.BadRequest("""{"message": "virus detected"}"""))
+            case Xor.Left(otherProblem) =>
+              Logger.warn(s"Problem with scanning: $otherProblem")
+              Future.successful(Results.InternalServerError)
+          }
+        }).flatMap(identity)
+
+      }
+    }.getOrElse( /* missing params */ Future.successful(Results.BadRequest("""{"message": "no file received"}""")))
   }
+
 }
 
 object FileUploadController {
 
-  def validateRequest(request: Request[MultipartFormData[TemporaryFile]]): Xor[String, File] = {
+  case class Parameters(envelopeId: EnvelopeId, fileId: FileId)
 
-    def extract(parameter: String) = Xor.fromOption(request.body.dataParts.get(parameter).flatMap(_.headOption), s"Missing $parameter")
+  def extractParams(request: Request[MultipartFormData[Future[JSONReadFile]]]): Option[Parameters] = {
+    val maybeEnvelopeId: Option[String] = request.body.dataParts.get("envelopeId").flatMap(_.headOption)
+    val maybeFileId: Option[String] = request.body.dataParts.get("fileId").flatMap(_.headOption)
 
     for {
-      fileData <- Xor.fromOption(request.body.files.headOption.map(f => (f.ref, f.filename, f.contentType)), "Missing file data")
-      envelopeId <- extract("envelopeId")
-      fileID <- extract("fileId")
-    } yield File(Files.readAllBytes(fileData._1.file.toPath), fileData._2, fileData._3, EnvelopeId(envelopeId), FileId(fileID))
+      envelopeId <- maybeEnvelopeId
+      fileId <- maybeFileId
+    } yield Parameters(envelopeId = EnvelopeId(envelopeId), fileId = FileId(fileId))
+  }
+
+  def getFileFromQuarantine(retrieveFile: (String) => Future[Option[FileData]],
+                            envelopeId: EnvelopeId, fileId: FileId, eventualJsonReadFile: Future[JSONReadFile]): Future[Option[File]]= {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    for {
+      jsonReadFile <- eventualJsonReadFile
+      optionalFileData <- retrieveFile(jsonReadFile.id.asInstanceOf[JsString].value)
+    } yield {
+      optionalFileData.map(fileData => File(fileData.data, fileData.length, jsonReadFile.filename.getOrElse(""), jsonReadFile.contentType, envelopeId, fileId))
+    }
   }
 }

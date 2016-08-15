@@ -18,9 +18,10 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import cats.data.Xor
 import play.api.Play
-import play.api.libs.iteratee.Iteratee
-import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
+import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.clamav.config.ClamAvConfig
+import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
+import uk.gov.hmrc.fileupload.ServiceConfig
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,15 +40,17 @@ object ScanningService {
 
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
-  def clamAvConfig = {
-    import play.api.Play.current
-    ClamAvConfig(Play.configuration.getConfig("clam.antivirus"))
+  def scanBinaryData(data: Enumerator[Array[Byte]])(implicit ec: ExecutionContext): Future[ScanResult] = {
+    data.run(scanIteratee).flatMap(identity)
   }
+
+  private def clamAvConfig = ClamAvConfig(ServiceConfig.clamAvConfig)
 
   def scanIteratee(implicit ec: ExecutionContext): AvScanIteratee = {
     val clamAntiVirus = ClamAntiVirus(clamAvConfig)
     scanIteratee(clamAntiVirus.send, clamAntiVirus.checkForVirus)
   }
+
 
   private[virusscan] def scanIteratee(sendChunk: Array[Byte] => Future[Unit], checkForVirus: () => Future[Try[Boolean]])
                                      (implicit ec: ExecutionContext): AvScanIteratee = {

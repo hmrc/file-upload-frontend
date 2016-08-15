@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.fileupload
 
+import play.api.libs.iteratee.Enumerator
+
 case class EnvelopeId(value :String) extends AnyVal
 
 case class FileId(value: String) extends AnyVal
 
-case class File(data: Array[Byte], filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId)
+case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId)
 

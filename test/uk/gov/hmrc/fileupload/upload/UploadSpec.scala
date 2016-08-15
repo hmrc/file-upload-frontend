@@ -42,8 +42,8 @@ class UploadSpec extends UnitSpec with ScalaFutures {
     }
 
     val transfer = (file: File) => file match {
-      case File(_, _, _, CannotTransferEnvelopeId, _) => Future.successful(Xor.left(TransferServiceError(file.envelopeId, "someErrorTransferring")))
-      case File(_, _, _, validEnvelopeId, _) => Future.successful(Xor.right(file.envelopeId))
+      case File(_, _, _, _, CannotTransferEnvelopeId, _) => Future.successful(Xor.left(TransferServiceError(file.envelopeId, "someErrorTransferring")))
+      case File(_, _, _, _, validEnvelopeId, _) => Future.successful(Xor.right(file.envelopeId))
     }
 
     val upload = Service.upload(envelopeCheck, transfer, null, null) _

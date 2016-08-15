@@ -19,7 +19,9 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.Play.current
 import play.api.http.Status
+import play.api.libs.iteratee.Iteratee
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
+import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 
@@ -53,19 +55,32 @@ object Service {
     }
   }
 
-  def transfer(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(file: File)
-              (implicit executionContext: ExecutionContext): Future[TransferResult] = {
+//  def transfer(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(file: File)
+//              (implicit executionContext: ExecutionContext): Future[TransferResult] = {
+//
+//    httpCall(WS.url(s"$baseUrl/file-upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}/content")
+//      .withHeaders("Content-Type" -> "application/octet-stream")
+//      .withBody(file.data)
+//      .withMethod("PUT"))
+//      .map {
+//        case Xor.Left(error) => Xor.left(TransferServiceError(file.envelopeId, error.message))
+//        case Xor.Right(response) => response.status match {
+//          case Status.OK => Xor.right(file.envelopeId)
+//          case _ => Xor.left(TransferServiceError(file.envelopeId, response.body))
+//        }
+//      }
+//  }
 
-    httpCall(WS.url(s"$baseUrl/file-upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}/content")
-      .withHeaders("Content-Type" -> "application/octet-stream")
-      .withBody(file.data)
-      .withMethod("PUT"))
-      .map {
-        case Xor.Left(error) => Xor.left(TransferServiceError(file.envelopeId, error.message))
-        case Xor.Right(response) => response.status match {
-          case Status.OK => Xor.right(file.envelopeId)
-          case _ => Xor.left(TransferServiceError(file.envelopeId, response.body))
-        }
-      }
+  def stream(baseUrl: String)(file: File)
+            (implicit executionContext: ExecutionContext) = {
+    val iterator: Iteratee[Array[Byte], HttpStreamingBody.Result] = HttpStreamingBody(
+      url = s"$baseUrl/file-upload/envelope/${ file.envelopeId.value }/file/${ file.fileId.value }/content",
+      method = "PUT")
+
+    (file.data |>>> iterator).map( r =>
+      r.status match {
+        case Status.OK => Xor.Right(file.envelopeId)
+        case _ => Xor.Left(TransferServiceError(file.envelopeId, r.response))
+      })
   }
 }

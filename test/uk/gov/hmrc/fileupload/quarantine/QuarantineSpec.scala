@@ -29,33 +29,33 @@ class QuarantineSpec extends UnitSpec with ScalaFutures {
 
   implicit val ec = ExecutionContext.global
 
-  "create" should {
-    "be successful" in {
-      val file = anyFile()
-      val upload = Service.upload(_ => Future.successful(Xor.Right(file.envelopeId))) _
-
-      val result = upload(file).futureValue
-
-      result shouldBe Xor.Right(file.envelopeId)
-    }
-
-    "be not successful when writeFile is not successful" in {
-      val file = anyFile()
-      val upload = Service.upload(_ => Future.successful(Xor.Left(WriteFileNotPersistedError(file.envelopeId)))) _
-
-      val result = upload(file).futureValue
-
-      result shouldBe Xor.Left(QuarantineUploadServiceError(file.envelopeId, "File not persisted"))
-    }
-
-    "be not successful when future fails" in {
-      val file = anyFile()
-      val upload = Service.upload(_ => Future.failed(new Exception("not good"))) _
-
-      val result = upload(file).futureValue
-
-      result shouldBe Xor.left(QuarantineUploadServiceError(file.envelopeId, "not good"))
-    }
-  }
+//  "create" should {
+//    "be successful" in {
+//      val file = anyFile()
+//      val upload = Service.upload(_ => Future.successful(Xor.Right(file.envelopeId))) _
+//
+//      val result = upload(file).futureValue
+//
+//      result shouldBe Xor.Right(file.envelopeId)
+//    }
+//
+//    "be not successful when writeFile is not successful" in {
+//      val file = anyFile()
+//      val upload = Service.upload(_ => Future.successful(Xor.Left(WriteFileNotPersistedError(file.envelopeId)))) _
+//
+//      val result = upload(file).futureValue
+//
+//      result shouldBe Xor.Left(QuarantineUploadServiceError(file.envelopeId, "File not persisted"))
+//    }
+//
+//    "be not successful when future fails" in {
+//      val file = anyFile()
+//      val upload = Service.upload(_ => Future.failed(new Exception("not good"))) _
+//
+//      val result = upload(file).futureValue
+//
+//      result shouldBe Xor.left(QuarantineUploadServiceError(file.envelopeId, "not good"))
+//    }
+//  }
 
 }

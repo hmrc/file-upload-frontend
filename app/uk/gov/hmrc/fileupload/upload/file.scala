@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.fileupload
 
-import play.api.Play
-import uk.gov.hmrc.play.config.ServicesConfig
+import play.api.libs.json.JsValue
+import reactivemongo.api.gridfs.{GridFS, ReadFile}
+import reactivemongo.json.JSONSerializationPack
 
-object ServiceConfig extends ServicesConfig {
-  lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
-  lazy val appName = getString("appName")
-  lazy val clamAvConfig = Play.current.configuration.getConfig(s"$env.clam.antivirus")
+package object fileupload {
+  type ByteStream = Array[Byte]
+  type JSONGridFS = GridFS[JSONSerializationPack.type]
+  type JSONReadFile = ReadFile[JSONSerializationPack.type, JsValue]
 }
