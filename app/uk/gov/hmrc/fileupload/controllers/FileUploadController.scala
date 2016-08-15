@@ -58,7 +58,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
               } yield {
                 transferResult match {
                   case Xor.Left(UploadServiceDownstreamError(_, message)) => Results.InternalServerError(message)
-                  case Xor.Left(UploadServiceEnvelopeNotFoundError(_)) => Results.InternalServerError
+                  case Xor.Left(UploadServiceEnvelopeNotFoundError(_)) => Results.NotFound("""{"message": "no evnelope found"}""")
                   case Xor.Right(_) => Results.Ok
                 }
               }
