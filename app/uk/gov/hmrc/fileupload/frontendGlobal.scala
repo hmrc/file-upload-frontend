@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
+import akka.actor.ActorRef
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
@@ -25,6 +26,7 @@ import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, PlayHttp}
+import uk.gov.hmrc.fileupload.notifier.NotifierActor
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.virusscan.ScanningService
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
@@ -39,9 +41,25 @@ object FrontendGlobal
   override val loggingFilter = LoggingFilter
   override val frontendAuditFilter = AuditFilter
 
+  var subscribe: (ActorRef, Class[_]) => Boolean = _
+  var publish: (AnyRef) => Unit = _
+
   override def onStart(app: Application) {
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
+
+    // event stream
+    import play.api.libs.concurrent.Akka
+    import play.api.Play.current
+    val eventStream = Akka.system.eventStream
+    subscribe = eventStream.subscribe
+    publish = eventStream.publish
+
+    // notifier
+    Akka.system.actorOf(NotifierActor.props(subscribe), "notifierActor")
+
+    fileUploadController
+    testOnlyController
   }
 
   override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
@@ -54,6 +72,8 @@ object FrontendGlobal
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
   import play.api.libs.concurrent.Execution.Implicits._
+
+  // db
 
   lazy val db = DefaultMongoConnection.db
 
@@ -69,7 +89,7 @@ object FrontendGlobal
 //  lazy val transferCall = transfer.Service.transfer(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
   lazy val streamTransferCall = transfer.Service.stream(ServiceConfig.fileUploadBackendBaseUrl) _
 
-  //upload
+  // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
   lazy val uploadFile = upload.Service.upload(envelopeAvailable, streamTransferCall, null, null) _
 
