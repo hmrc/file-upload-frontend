@@ -93,7 +93,7 @@ object FrontendGlobal
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
   lazy val uploadFile = upload.Service.upload(envelopeAvailable, streamTransferCall, null, null) _
 
-  val scanBinaryData = ScanningService.scanBinaryData _
+  lazy val scanBinaryData = ScanningService.scanBinaryData(publish) _
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser,
     transferToTransient = uploadFile,

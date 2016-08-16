@@ -39,8 +39,12 @@ object ScanningService {
 
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
-  def scanBinaryData(file: File)(implicit ec: ExecutionContext): Future[ScanResult] = {
-    file.consume(scanIteratee).flatMap(identity)
+  def scanBinaryData(publish: (AnyRef) => Unit)(file: File)(implicit ec: ExecutionContext): Future[ScanResult] = {
+    val future: Future[ScanResult] = file.consume(scanIteratee).flatMap(identity)
+    future.onComplete( _ =>
+      publish( NoVirusDetected(envelopeId = file.envelopeId, fileId = file.fileId) )
+    )
+    future
   }
 
   private def clamAvConfig = ClamAvConfig(ServiceConfig.clamAvConfig)
