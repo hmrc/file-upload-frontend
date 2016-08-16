@@ -33,7 +33,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            transferToTransient: File => Future[UploadResult],
                            retrieveFile: (String) => Future[Option[FileData]],
-                           scanBinaryData: Enumerator[Array[Byte]] => Future[ScanResult])
+                           scanBinaryData: File => Future[ScanResult])
                           (implicit executionContext: ExecutionContext) {
 
 
@@ -47,7 +47,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
         (for {
           maybeFile <- getFileFromQuarantine(retrieveFile, p.envelopeId, p.fileId, fileInsideRequest.ref)
           file = maybeFile.getOrElse(throw new RuntimeException("File not found in quarantine"))
-          scanResult <- scanBinaryData(file.data)
+          scanResult <- scanBinaryData(file)
         } yield {
           scanResult match {
             case Xor.Right(_) =>

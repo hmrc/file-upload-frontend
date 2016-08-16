@@ -31,7 +31,7 @@ import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.upload.Service._
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultUnexpectedResult}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
@@ -58,7 +58,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
                     uploadFile: File => Future[UploadResult] = _ => failed,
                     retrieveFile: (String) => Future[Option[FileData]] = _ => Future.successful(Some(FileData(0, null))),
-                    scanBinaryData: Enumerator[Array[Byte]] => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean))) =
+                    scanBinaryData: File => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean))) =
     new FileUploadController(uploadParser, uploadFile, retrieveFile, scanBinaryData)
 
   "POST /upload" should {

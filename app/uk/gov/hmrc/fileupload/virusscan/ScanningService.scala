@@ -17,11 +17,10 @@
 package uk.gov.hmrc.fileupload.virusscan
 
 import cats.data.Xor
-import play.api.Play
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
-import uk.gov.hmrc.fileupload.ServiceConfig
+import uk.gov.hmrc.fileupload.{File, ServiceConfig}
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,8 +39,8 @@ object ScanningService {
 
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
-  def scanBinaryData(data: Enumerator[Array[Byte]])(implicit ec: ExecutionContext): Future[ScanResult] = {
-    data.run(scanIteratee).flatMap(identity)
+  def scanBinaryData(file: File)(implicit ec: ExecutionContext): Future[ScanResult] = {
+    file.consume(scanIteratee).flatMap(identity)
   }
 
   private def clamAvConfig = ClamAvConfig(ServiceConfig.clamAvConfig)

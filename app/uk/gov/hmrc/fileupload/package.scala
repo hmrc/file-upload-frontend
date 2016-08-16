@@ -16,11 +16,17 @@
 
 package uk.gov.hmrc.fileupload
 
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.{Enumerator, Iteratee}
+
+import scala.concurrent.Future
 
 case class EnvelopeId(value :String) extends AnyVal
 
 case class FileId(value: String) extends AnyVal
 
-case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId)
+case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId) {
+  def consume[A](iteratee: Iteratee[Array[Byte], A]):  Future[A] = {
+    return data.run(iteratee)
+  }
+}
 
