@@ -20,16 +20,18 @@ import cats.data.Xor
 import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
+import play.api.libs.json.{JsString, Json}
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
-import uk.gov.hmrc.fileupload.{EnvelopeId, File}
+import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId, File}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object Service {
 
   type EnvelopeAvailableResult = Xor[EnvelopeAvailableError, EnvelopeId]
+  type EnvelopeCallbackResult = Xor[EnvelopeAvailableError, Option[EnvelopeCallback]]
   type TransferResult = Xor[TransferError, EnvelopeId]
 
   sealed trait TransferError
@@ -54,6 +56,26 @@ object Service {
       }
     }
   }
+
+
+  def envelopeCallback(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
+                      (implicit executionContext: ExecutionContext): Future[EnvelopeCallbackResult] = {
+
+    httpCall(WS.url(s"$baseUrl/file-upload/envelope/${envelopeId.value}").withMethod("GET")).map {
+      case Xor.Left(error) => Xor.left(EnvelopeAvailableServiceError(envelopeId, error.message))
+      case Xor.Right(response) => response.status match {
+        case Status.OK => Xor.right(maybeEnvelopeCallback(response.body))
+        case Status.NOT_FOUND => Xor.left(EnvelopeNotFoundError(envelopeId))
+        case _ => Xor.left(EnvelopeAvailableServiceError(envelopeId, response.body))
+      }
+    }
+  }
+
+  private def maybeEnvelopeCallback(jsonStr: String) =
+    (Json.parse(jsonStr)  \ "callback") match {
+      case JsString(value) => Some(EnvelopeCallback(value))
+      case _ => None
+    }
 
 //  def transfer(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(file: File)
 //              (implicit executionContext: ExecutionContext): Future[TransferResult] = {
