@@ -17,11 +17,11 @@
 package uk.gov.hmrc.fileupload.virusscan
 
 import cats.data.Xor
-import play.api.libs.iteratee.{Enumerator, Iteratee}
+import play.api.libs.iteratee.Iteratee
 import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
-import uk.gov.hmrc.fileupload.{File, ServiceConfig}
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
+import uk.gov.hmrc.fileupload.{File, ServiceConfig}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -41,9 +41,18 @@ object ScanningService {
 
   def scanBinaryData(publish: (AnyRef) => Unit)(file: File)(implicit ec: ExecutionContext): Future[ScanResult] = {
     val future: Future[ScanResult] = file.consume(scanIteratee).flatMap(identity)
-    future.onComplete( _ =>
-      publish( NoVirusDetected(envelopeId = file.envelopeId, fileId = file.fileId) )
-    )
+    future.onComplete {
+      case Success(result) => result match {
+        case Xor.Right(ScanResultFileClean) => publish(NoVirusDetected(envelopeId = file.envelopeId, fileId = file.fileId))
+        case Xor.Left(ScanResultVirusDetected) => publish(VirusDetected(envelopeId = file.envelopeId, fileId = file.fileId, "virus detected"))
+        case Xor.Left(ScanResultFailureSendingChunks(t)) =>
+        case Xor.Left(ScanResultUnexpectedResult) =>
+        case Xor.Left(ScanResultError(t)) =>
+
+      }
+      case Failure(f) =>
+    }
+
     future
   }
 

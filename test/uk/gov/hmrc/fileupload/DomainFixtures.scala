@@ -17,7 +17,6 @@
 package uk.gov.hmrc.fileupload
 
 import java.net.URLConnection
-import java.nio.file.Files
 import java.util.UUID
 
 import org.apache.commons.io.FileUtils

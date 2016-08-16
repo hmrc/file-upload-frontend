@@ -20,7 +20,6 @@ import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsString, JsValue}
 import play.api.mvc.{BodyParser, MultipartFormData}
 import reactivemongo.json.JSONSerializationPack

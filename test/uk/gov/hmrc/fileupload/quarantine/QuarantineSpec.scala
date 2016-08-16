@@ -16,14 +16,10 @@
 
 package uk.gov.hmrc.fileupload.quarantine
 
-import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
-import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
-import uk.gov.hmrc.fileupload.quarantine.Repository.WriteFileNotPersistedError
-import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadServiceError
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class QuarantineSpec extends UnitSpec with ScalaFutures {
 

@@ -17,10 +17,10 @@
 package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
-import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.fileupload.quarantine.Service.QuarantineUploadResult
 import uk.gov.hmrc.fileupload.transfer.Service._
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.ScanResult
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 
 import scala.concurrent.{ExecutionContext, Future}
 

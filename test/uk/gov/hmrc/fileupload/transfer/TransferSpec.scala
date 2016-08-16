@@ -24,7 +24,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.ServiceConfig
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableServiceError, EnvelopeNotFoundError, TransferServiceError}
+import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import play.api.Logger
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsString
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._

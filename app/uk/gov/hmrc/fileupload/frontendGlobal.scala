@@ -49,8 +49,8 @@ object FrontendGlobal
     ApplicationCrypto.verifyConfiguration()
 
     // event stream
-    import play.api.libs.concurrent.Akka
     import play.api.Play.current
+    import play.api.libs.concurrent.Akka
     val eventStream = Akka.system.eventStream
     subscribe = eventStream.subscribe
     publish = eventStream.publish

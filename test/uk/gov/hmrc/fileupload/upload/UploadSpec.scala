@@ -18,10 +18,10 @@ package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
-import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableServiceError, EnvelopeNotFoundError, TransferResult, TransferServiceError}
+import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableServiceError, EnvelopeNotFoundError, TransferServiceError}
 import uk.gov.hmrc.fileupload.upload.Service.{UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global

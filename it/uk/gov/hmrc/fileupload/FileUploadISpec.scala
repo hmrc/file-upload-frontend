@@ -2,7 +2,6 @@ package uk.gov.hmrc.fileupload
 
 import java.net.URL
 
-import org.scalatest.Pending
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._

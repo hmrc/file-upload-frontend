@@ -28,7 +28,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure, Random, Success}
+import scala.util.{Failure, Success}
 
 class ScanningServiceSpec extends UnitSpec with Matchers with ScalaFutures {
 
