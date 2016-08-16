@@ -23,7 +23,7 @@ import play.api.libs.json.JsString
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
-import uk.gov.hmrc.fileupload.quarantine.FileData
+import uk.gov.hmrc.fileupload.quarantine.{FileData, Quarantined}
 import uk.gov.hmrc.fileupload.upload.Service.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
@@ -33,12 +33,17 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            transferToTransient: File => Future[UploadResult],
                            retrieveFile: (String) => Future[Option[FileData]],
-                           scanBinaryData: File => Future[ScanResult])
+                           scanBinaryData: File => Future[ScanResult],
+                           publish: (AnyRef) => Unit)
                           (implicit executionContext: ExecutionContext) {
 
 
   def upload() = Action.async(uploadParser()) { implicit request =>
     val maybeParams: Option[Parameters] = extractParams(request)
+
+    maybeParams.foreach { p =>
+      publish(Quarantined(p.envelopeId, p.fileId))
+    }
 
     maybeParams.flatMap { p =>
 

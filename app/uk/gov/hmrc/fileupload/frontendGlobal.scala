@@ -87,7 +87,7 @@ object FrontendGlobal
   // transfer
   lazy val envelopeAvailable = transfer.Service.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 //  lazy val transferCall = transfer.Service.transfer(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
-  lazy val streamTransferCall = transfer.Service.stream(ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val streamTransferCall = transfer.Service.stream(ServiceConfig.fileUploadBackendBaseUrl, publish) _
 
   // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
@@ -98,7 +98,8 @@ object FrontendGlobal
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser,
     transferToTransient = uploadFile,
     retrieveFile = retrieveFile,
-    scanBinaryData = scanBinaryData)
+    scanBinaryData = scanBinaryData,
+    publish = publish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 

@@ -71,7 +71,7 @@ object Service {
 //      }
 //  }
 
-  def stream(baseUrl: String)(file: File)
+  def stream(baseUrl: String, publish: (AnyRef) => Unit)(file: File)
             (implicit executionContext: ExecutionContext) = {
     val iterator: Iteratee[Array[Byte], HttpStreamingBody.Result] = HttpStreamingBody(
       url = s"$baseUrl/file-upload/envelope/${ file.envelopeId.value }/file/${ file.fileId.value }/content",
@@ -79,8 +79,12 @@ object Service {
 
     (file.data |>>> iterator).map( r =>
       r.status match {
-        case Status.OK => Xor.Right(file.envelopeId)
-        case _ => Xor.Left(TransferServiceError(file.envelopeId, r.response))
+        case Status.OK =>
+          publish(ToTransientMoved(file.envelopeId, file.fileId))
+          Xor.Right(file.envelopeId)
+        case _ =>
+          publish(MovingToTransientFailed(file.envelopeId, file.fileId, r.response))
+          Xor.Left(TransferServiceError(file.envelopeId, r.response))
       })
   }
 }

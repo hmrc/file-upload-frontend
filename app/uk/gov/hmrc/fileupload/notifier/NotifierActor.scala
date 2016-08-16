@@ -33,15 +33,15 @@ class NotifierActor(subscribe: (ActorRef, Class[_]) => Boolean) extends Actor wi
   
   def receive = {
     case e: Quarantined =>
-      log.info("Quarantined envelopeId = {}, fileID = {}", e.envelopeId, e.fileId)
+      log.info("Quarantined event received for {} and {}", e.envelopeId, e.fileId)
     case e: NoVirusDetected =>
-      log.info("NoVirusDetected envelopeId = {}, fileID = {}", e.envelopeId, e.fileId)
+      log.info("NoVirusDetected event received for {} and {}", e.envelopeId, e.fileId)
     case e: VirusDetected =>
-      log.info("VirusDetected envelopeId = {}, fileID = {}, reason = {}", e.envelopeId, e.fileId, e.reason)
+      log.info("VirusDetected event received for {} and {} and reason = {}", e.envelopeId, e.fileId, e.reason)
     case e: ToTransientMoved =>
-      log.info("ToTransientMoved envelopeId = {}, fileID = {}", e.envelopeId, e.fileId)
+      log.info("ToTransientMoved event received for {} and {}", e.envelopeId, e.fileId)
     case e: MovingToTransientFailed =>
-      log.info("MovingToTransientFailed envelopeId = {}, fileID = {}", e.envelopeId, e.fileId, e.reason)
+      log.info("MovingToTransientFailed event received for {} and {} and {}", e.envelopeId, e.fileId, e.reason)
   }
 }
 
