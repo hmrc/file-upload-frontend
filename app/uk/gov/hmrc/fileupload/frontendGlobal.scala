@@ -26,13 +26,15 @@ import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, PlayHttp}
-import uk.gov.hmrc.fileupload.notifier.NotifierActor
+import uk.gov.hmrc.fileupload.notifier.{NotifierActor, NotifierService}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.virusscan.ScanningService
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
+
+import scala.concurrent.Future
 
 object FrontendGlobal
   extends DefaultFrontendGlobal {
@@ -56,7 +58,7 @@ object FrontendGlobal
     publish = eventStream.publish
 
     // notifier
-    Akka.system.actorOf(NotifierActor.props(subscribe), "notifierActor")
+    Akka.system.actorOf(NotifierActor.props(subscribe, sendNotification), "notifierActor")
 
     fileUploadController
     testOnlyController
@@ -94,6 +96,10 @@ object FrontendGlobal
   lazy val uploadFile = upload.Service.upload(envelopeAvailable, streamTransferCall, null, null) _
 
   lazy val scanBinaryData = ScanningService.scanBinaryData(publish) _
+
+  // notifier
+  //TODO: inject proper toConsumerUrl function
+  lazy val sendNotification = NotifierService.notify(auditedHttpExecute, _ => Future.successful(None)) _
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser,
     transferToTransient = uploadFile,
