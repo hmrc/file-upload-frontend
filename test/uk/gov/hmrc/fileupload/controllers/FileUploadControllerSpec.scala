@@ -58,8 +58,9 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
                     uploadFile: File => Future[UploadResult] = _ => failed,
                     retrieveFile: (String) => Future[Option[FileData]] = _ => Future.successful(Some(FileData(0, null))),
-                    scanBinaryData: File => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean))) =
-    new FileUploadController(uploadParser, uploadFile, retrieveFile, scanBinaryData)
+                    scanBinaryData: File => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean)),
+                    publish: (AnyRef) => Unit = _ => Unit) =
+    new FileUploadController(uploadParser, uploadFile, retrieveFile, scanBinaryData, publish)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
