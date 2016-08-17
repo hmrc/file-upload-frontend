@@ -55,22 +55,6 @@ object Service {
     }
   }
 
-//  def transfer(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(file: File)
-//              (implicit executionContext: ExecutionContext): Future[TransferResult] = {
-//
-//    httpCall(WS.url(s"$baseUrl/file-upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}/content")
-//      .withHeaders("Content-Type" -> "application/octet-stream")
-//      .withBody(file.data)
-//      .withMethod("PUT"))
-//      .map {
-//        case Xor.Left(error) => Xor.left(TransferServiceError(file.envelopeId, error.message))
-//        case Xor.Right(response) => response.status match {
-//          case Status.OK => Xor.right(file.envelopeId)
-//          case _ => Xor.left(TransferServiceError(file.envelopeId, response.body))
-//        }
-//      }
-//  }
-
   def stream(baseUrl: String, publish: (AnyRef) => Unit)(file: File)
             (implicit executionContext: ExecutionContext) = {
     val iterator: Iteratee[Array[Byte], HttpStreamingBody.Result] = HttpStreamingBody(
