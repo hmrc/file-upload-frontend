@@ -17,8 +17,7 @@
 package uk.gov.hmrc.fileupload.notifier
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import uk.gov.hmrc.fileupload.notifier.NotifierService.{Notification, NotifyResult}
 import uk.gov.hmrc.fileupload.quarantine.Quarantined
 import uk.gov.hmrc.fileupload.transfer.{MovingToTransientFailed, ToTransientMoved}
 import uk.gov.hmrc.fileupload.virusscan.{NoVirusDetected, VirusDetected}
@@ -26,7 +25,7 @@ import uk.gov.hmrc.fileupload.virusscan.{NoVirusDetected, VirusDetected}
 import scala.concurrent.Future
 
 class NotifierActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                    notify: (EnvelopeId, FileId, String, Option[String]) => Future[NotifyResult]) extends Actor with ActorLogging {
+                    notify: (Notification) => Future[NotifyResult]) extends Actor with ActorLogging {
   
   override def preStart = {
     subscribe(self, classOf[Quarantined])
@@ -39,24 +38,24 @@ class NotifierActor(subscribe: (ActorRef, Class[_]) => Boolean,
   def receive = {
     case e: Quarantined =>
       log.info("Quarantined event received for {} and {}", e.envelopeId, e.fileId)
-      notify(e.envelopeId, e.fileId, "QUARANTINED", None)
+      notify(Notification(e.envelopeId, e.fileId, "QUARANTINED", None))
     case e: NoVirusDetected =>
       log.info("NoVirusDetected event received for {} and {}", e.envelopeId, e.fileId)
-      notify(e.envelopeId, e.fileId, "CLEANED", None)
+      notify(Notification(e.envelopeId, e.fileId, "CLEANED", None))
     case e: VirusDetected =>
       log.info("VirusDetected event received for {} and {} and reason = {}", e.envelopeId, e.fileId, e.reason)
-      notify(e.envelopeId, e.fileId, "ERROR", Some("VirusDetected"))
+      notify(Notification(e.envelopeId, e.fileId, "ERROR", Some("VirusDetected")))
     case e: ToTransientMoved =>
       log.info("ToTransientMoved event received for {} and {}", e.envelopeId, e.fileId)
-      notify(e.envelopeId, e.fileId, "AVAILABLE", None)
+      notify(Notification(e.envelopeId, e.fileId, "AVAILABLE", None))
     case e: MovingToTransientFailed =>
       log.info("MovingToTransientFailed event received for {} and {} and {}", e.envelopeId, e.fileId, e.reason)
-      notify(e.envelopeId, e.fileId, "ERROR", Some("MovingToTransientFailed"))
+      notify(Notification(e.envelopeId, e.fileId, "ERROR", Some("MovingToTransientFailed")))
   }
 }
 
 object NotifierActor {
 
-  def props(subscribe: (ActorRef, Class[_]) => Boolean, notify: (EnvelopeId, FileId, String, Option[String]) => Future[NotifyResult]) =
+  def props(subscribe: (ActorRef, Class[_]) => Boolean, notify: (Notification) => Future[NotifyResult]) =
     Props(new NotifierActor(subscribe = subscribe, notify = notify))
 }
