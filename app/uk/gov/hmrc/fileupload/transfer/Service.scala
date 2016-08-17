@@ -31,13 +31,10 @@ import scala.concurrent.{ExecutionContext, Future}
 object Service {
 
   type EnvelopeAvailableResult = Xor[EnvelopeAvailableError, EnvelopeId]
-  type TransferResult = Xor[TransferError, EnvelopeId]
 
-  sealed trait TransferError
-  sealed trait EnvelopeAvailableError extends TransferError
+  sealed trait EnvelopeAvailableError
   case class EnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
   case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
-  case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
   def envelopeAvailable(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
@@ -52,11 +49,11 @@ object Service {
     }
   }
 
+  type EnvelopeCallbackResult = Xor[CallbackAvailableError, EnvelopeCallback]
+
   sealed trait CallbackAvailableError
   case class CallbackNotFoundError(id: EnvelopeId) extends CallbackAvailableError
   case class CallbackRetrievalServiceError(id: EnvelopeId, message: String) extends CallbackAvailableError
-
-  type EnvelopeCallbackResult = Xor[CallbackAvailableError, EnvelopeCallback]
 
   def envelopeCallback(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
                       (implicit executionContext: ExecutionContext): Future[EnvelopeCallbackResult] = {
@@ -80,6 +77,10 @@ object Service {
     }
   }
 
+  type TransferResult = Xor[TransferError, EnvelopeId]
+
+  sealed trait TransferError
+  case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
   def stream(baseUrl: String, publish: (AnyRef) => Unit)(file: File)
             (implicit executionContext: ExecutionContext) = {
