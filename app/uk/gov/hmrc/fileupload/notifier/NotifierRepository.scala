@@ -39,13 +39,13 @@ object NotifierRepository {
   def notify(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]))
             (notification: Notification, envelopeCallback: EnvelopeCallback)
             (implicit executionContext: ExecutionContext): Future[NotifyResult] =
-        httpCall(WS.url(
-          s"${envelopeCallback.value}?envelopeId=${notification.envelopeId.value}&fileId=${notification.fileId.value}&reason=${notification.reason}")
-          .withMethod("GET")).map {
-          case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, error.message))
-          case Xor.Right(response) => response.status match {
-            case Status.OK => Xor.right(notification.envelopeId)
-            case _ => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, response.body))
-          }
-        }
+    httpCall(WS.url(
+      s"${envelopeCallback.value}?envelopeId=${notification.envelopeId.value}&fileId=${notification.fileId.value}&reason=${notification.reason}")
+      .withMethod("GET")).map {
+      case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, error.message))
+      case Xor.Right(response) => response.status match {
+        case Status.OK => Xor.right(notification.envelopeId)
+        case _ => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, response.body))
+      }
+    }
 }
