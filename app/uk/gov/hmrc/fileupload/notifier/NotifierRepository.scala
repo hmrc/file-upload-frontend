@@ -21,7 +21,6 @@ import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
-import uk.gov.hmrc.fileupload.transfer.Service.EnvelopeCallbackResult
 import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId, FileId}
 
 import scala.concurrent.{ExecutionContext, Future}

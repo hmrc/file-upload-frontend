@@ -36,7 +36,8 @@ object ScanningService {
 
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
-  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]] )(publish: (AnyRef) => Unit)(file: File)(implicit ec: ExecutionContext): Future[ScanResult] = {
+  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]])(publish: (AnyRef) => Unit)(file: File)
+                    (implicit ec: ExecutionContext): Future[ScanResult] = {
     val future: Future[ScanResult] = file.streamTo(scanner()).flatMap(identity)
     future.onComplete {
       case Success(result) => result match {
@@ -45,12 +46,10 @@ object ScanningService {
         case Xor.Left(ScanResultFailureSendingChunks(t)) =>
         case Xor.Left(ScanResultUnexpectedResult) =>
         case Xor.Left(ScanResultError(t)) =>
-
       }
       case Failure(f) =>
     }
 
     future
   }
-
 }
