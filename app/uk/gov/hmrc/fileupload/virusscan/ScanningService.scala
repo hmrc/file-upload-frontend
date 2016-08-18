@@ -37,9 +37,8 @@ object ScanningService {
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
   def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]])(publish: (AnyRef) => Unit)(file: File)
-                    (implicit ec: ExecutionContext): Future[ScanResult] = {
-    val future: Future[ScanResult] = file.streamTo(scanner()).flatMap(identity)
-    future.onComplete {
+                    (implicit ec: ExecutionContext): Future[ScanResult] =
+    file.streamTo(scanner()).flatMap(identity).andThen {
       case Success(result) => result match {
         case Xor.Right(ScanResultFileClean) => publish(NoVirusDetected(envelopeId = file.envelopeId, fileId = file.fileId))
         case Xor.Left(ScanResultVirusDetected) => publish(VirusDetected(envelopeId = file.envelopeId, fileId = file.fileId, "virus detected"))
@@ -49,7 +48,4 @@ object ScanningService {
       }
       case Failure(f) =>
     }
-
-    future
-  }
 }
