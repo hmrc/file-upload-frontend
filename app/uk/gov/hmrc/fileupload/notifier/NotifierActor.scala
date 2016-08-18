@@ -21,7 +21,7 @@ import cats.data.Xor
 import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId}
 import uk.gov.hmrc.fileupload.notifier.NotifierRepository.{Notification, NotifyResult}
 import uk.gov.hmrc.fileupload.quarantine.Quarantined
-import uk.gov.hmrc.fileupload.transfer.Service._
+import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.transfer.{MovingToTransientFailed, ToTransientMoved}
 import uk.gov.hmrc.fileupload.virusscan.{NoVirusDetected, VirusDetected}
 

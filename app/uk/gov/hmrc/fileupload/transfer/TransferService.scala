@@ -24,7 +24,7 @@ import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId, File}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object Service {
+object TransferService {
 
   type EnvelopeAvailableResult = Xor[EnvelopeAvailableError, EnvelopeId]
 
