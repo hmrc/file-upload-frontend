@@ -23,7 +23,6 @@ import play.api.Mode._
 import play.api.mvc.Request
 import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
-import uk.gov.hmrc.clamav.ClamAntiVirus
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, PlayHttp}
@@ -87,8 +86,11 @@ object FrontendGlobal
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
 
   // transfer
-  lazy val envelopeAvailable = transfer.Service.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
-  lazy val envelopeCallback = transfer.Service.envelopeCallback(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val findEnvelopeCallback = transfer.Repository.envelopeCallback(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+
+  lazy val envelopeAvailable = transfer.Service.envelopeAvailable(isEnvelopeAvailable) _
+  lazy val envelopeCallback = transfer.Service.envelopeCallback(findEnvelopeCallback) _
   lazy val streamTransferCall = transfer.Service.stream(ServiceConfig.fileUploadBackendBaseUrl, publish) _
 
   // upload

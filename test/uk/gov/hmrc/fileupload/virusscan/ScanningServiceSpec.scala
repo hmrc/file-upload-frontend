@@ -58,6 +58,7 @@ class ScanningServiceSpec extends UnitSpec with Matchers with ScalaFutures {
 
       ScanningService.scanBinaryData(scanner)(publisher)(file).futureValue
 
+      collector shouldNot equal(null)
       collector.isInstanceOf[NoVirusDetected] shouldBe true
       val noVirusDetected = collector.asInstanceOf[NoVirusDetected]
       noVirusDetected.envelopeId shouldBe envelopeId
@@ -80,6 +81,7 @@ class ScanningServiceSpec extends UnitSpec with Matchers with ScalaFutures {
 
       ScanningService.scanBinaryData(scanner)(publisher)(file).futureValue
 
+      collector shouldNot equal(null)
       collector.isInstanceOf[VirusDetected] shouldBe true
       val virusDetected = collector.asInstanceOf[VirusDetected]
       virusDetected.envelopeId shouldBe envelopeId
