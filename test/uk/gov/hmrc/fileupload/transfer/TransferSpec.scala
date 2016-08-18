@@ -33,9 +33,11 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
 
   override lazy val fileUploadBackendPort = new URL(ServiceConfig.fileUploadBackendBaseUrl).getPort
 
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(1, Second))
+
   "When calling the envelope check" should {
 
-    val envelopeAvailable = Service.envelopeAvailable(_.execute().map(response => Xor.Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
+     val envelopeAvailable = Service.envelopeAvailable(_.execute().map(response => Xor.Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
 
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId
@@ -62,28 +64,4 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
       envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
   }
-
-//  val transfer = Service.transfer(_.execute().map(response => Xor.Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
-//
-//  "When uploading a file" should {
-//    "be successful if file uploaded" in {
-//      val envelopeId = anyEnvelopeId
-//      val fileId = anyFileId
-//
-//      responseToUpload(envelopeId, fileId, 200)
-//
-//      transfer(anyFileFor(envelopeId, fileId)).futureValue shouldBe Xor.right(envelopeId)
-//    }
-//
-//    "give an error if file uploaded" in {
-//      val envelopeId = anyEnvelopeId
-//      val fileId = anyFileId
-//
-//      responseToUpload(envelopeId, fileId, 500, "SOME_ERROR")
-//
-//      transfer(anyFileFor(envelopeId, fileId)).futureValue shouldBe Xor.left(TransferServiceError(envelopeId, "SOME_ERROR"))
-//    }
-//  }
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(1, Second))
 }

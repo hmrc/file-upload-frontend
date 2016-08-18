@@ -112,17 +112,5 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
           status(result) shouldBe Status.BAD_REQUEST
         }
     }
-
-    s"Bad request if missing file data" ignore {
-      val file = anyFile()
-      val validRequest = validUploadRequest(file)
-      val bodyMissingFileData: MultipartFormData[Future[JSONReadFile]] = MultipartFormData(validRequest.body.dataParts,
-        Seq.empty, Seq.empty, Seq.empty)
-
-      val controller = newController(uploadFile = _ => Future.successful(Xor.right(file.envelopeId)))
-      val result = controller.upload()(uploadRequest(bodyMissingFileData)).futureValue
-
-      status(result) shouldBe Status.BAD_REQUEST
-    }
   }
 }
