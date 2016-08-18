@@ -23,12 +23,14 @@ import play.api.Mode._
 import play.api.mvc.Request
 import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
+import uk.gov.hmrc.clamav.ClamAntiVirus
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.{NotifierActor, NotifierService}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
-import uk.gov.hmrc.fileupload.virusscan.ScanningService
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.AvScanIteratee
+import uk.gov.hmrc.fileupload.virusscan.{ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
@@ -95,7 +97,8 @@ object FrontendGlobal
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
   lazy val uploadFile = upload.Service.upload(envelopeAvailable, streamTransferCall, null, null) _
 
-  lazy val scanBinaryData = ScanningService.scanBinaryData(publish) _
+  lazy val scanner: () => AvScanIteratee = VirusScanner.scanIteratee
+  lazy val scanBinaryData = ScanningService.scanBinaryData(scanner)(publish) _
 
   // notifier
   //TODO: inject proper toConsumerUrl function

@@ -25,8 +25,8 @@ case class EnvelopeId(value :String) extends AnyVal
 case class FileId(value: String) extends AnyVal
 
 case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId) {
-  def consume[A](iteratee: Iteratee[Array[Byte], A]):  Future[A] = {
-    return data.run(iteratee)
+  def streamTo[A](iteratee: Iteratee[Array[Byte], A]):  Future[A] = {
+    data.run(iteratee)
   }
 }
 

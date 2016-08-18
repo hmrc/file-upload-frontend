@@ -16,14 +16,13 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
-import java.net.SocketException
-
 import cats.data.Xor
 import org.scalatest.Matchers
 import org.scalatest.concurrent.ScalaFutures
-import play.api.libs.iteratee.Enumerator
-import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
+import play.api.libs.iteratee.{Enumerator, Iteratee}
+import uk.gov.hmrc.clamav.VirusDetectedException
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
+import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -43,59 +42,48 @@ class ScanningServiceSpec extends UnitSpec with Matchers with ScalaFutures {
 
   "Scanning service" should {
 
-    s"return $ScanResultFileClean result if input did not contain a virus" in {
-      val chunkEnumerator = enumerator()
+    "should fire a noVirusDetected event when a file is not infected" in {
+      val fileContent: Array[Byte] = "test".getBytes
+      val envelopeId: EnvelopeId = EnvelopeId("envid")
+      val fileId: FileId = FileId("fileid")
+      val file = File(data = Enumerator(fileContent), length = fileContent.size, filename = "test.txt", contentType = Some("application/text"), envelopeId = envelopeId, fileId = fileId )
 
-      val result = await(chunkEnumerator.run(ScanningService.scanIteratee(sendingChunksSuccessful, noVirusFound)).flatMap(identity))
+      var collector: AnyRef = null
+      val publisher =  (event:AnyRef) => {
+        collector = event
+      }
+      val scanner = () => {
+        Iteratee.fold[Array[Byte], Future[ScanResult]](Future.successful(Xor.Right(ScanResultFileClean))) { (result, bytes) => result }
+      }
 
-      result shouldBe Xor.Right(ScanResultFileClean)
+      ScanningService.scanBinaryData(scanner)(publisher)(file).futureValue
+
+      collector.isInstanceOf[NoVirusDetected] shouldBe true
+      val noVirusDetected = collector.asInstanceOf[NoVirusDetected]
+      noVirusDetected.envelopeId shouldBe envelopeId
+      noVirusDetected.fileId shouldBe fileId
     }
 
-    s"return $ScanResultVirusDetected result if input contained a virus" in {
-      val chunkEnumerator = enumerator()
+    "should fire a VirusDetected event when a file is infected" in {
+      val fileContent: Array[Byte] = "Im a very bad virus".getBytes
+      val envelopeId: EnvelopeId = EnvelopeId("envid")
+      val fileId: FileId = FileId("fileid")
+      val file = File(data = Enumerator(fileContent), length = fileContent.size, filename = "test.txt", contentType = Some("application/text"), envelopeId = envelopeId, fileId = fileId )
 
-      val result = await(chunkEnumerator.run(ScanningService.scanIteratee(sendingChunksSuccessful, virusDetected)).flatMap(identity))
+      var collector: AnyRef = null
+      val publisher =  (event:AnyRef) => {
+        collector = event
+      }
+      val scanner = () => {
+        Iteratee.fold[Array[Byte], Future[ScanResult]](Future.successful(Xor.Left(ScanResultVirusDetected))) { (result, bytes) => result }
+      }
 
-      result shouldBe Xor.Left(ScanResultVirusDetected)
-    }
+      ScanningService.scanBinaryData(scanner)(publisher)(file).futureValue
 
-    s"return $ScanResultError result if checkForVirus returned unexpected Success(false) which should never happen" in {
-      val chunkEnumerator = enumerator()
-      val unexpectedResultFromCheckingForAVirus = () => Future.successful(Success(false))
-
-      val result = await(chunkEnumerator.run(ScanningService.scanIteratee(sendingChunksSuccessful, unexpectedResultFromCheckingForAVirus)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultUnexpectedResult)
-    }
-
-    s"return $ScanResultError result if $ClamAntiVirus returned an unanticipated error" in {
-      val chunkEnumerator = enumerator()
-      val exception = new RuntimeException("av-client error")
-      val avClientReturnedErrorWhenCheckingForAVirus = () => Future.successful(Failure(exception))
-
-      val result = await(chunkEnumerator.run(ScanningService.scanIteratee(sendingChunksSuccessful, avClientReturnedErrorWhenCheckingForAVirus)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultError(exception))
-    }
-
-    s"return $ScanResultError result if calling checkForVirus failed (e.g. network issue)" in {
-      val chunkEnumerator = enumerator()
-      val exception = new SocketException("failed to connect to clam av")
-      val problemCheckingForAVirus = () => Future.failed(exception)
-
-      val result = await(chunkEnumerator.run(ScanningService.scanIteratee(sendingChunksSuccessful, problemCheckingForAVirus)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultError(exception))
-    }
-
-    s"return $ScanResultFailureSendingChunks result if calling sendChunk failed (e.g. network issue)" in {
-      val chunkEnumerator = enumerator()
-      val exception = new RuntimeException("unknown error")
-      val sendingChunksFailed = (_ : Array[Byte]) => Future.failed(exception)
-
-      val result = await(chunkEnumerator.run(ScanningService.scanIteratee(sendingChunksFailed, noVirusFound)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultFailureSendingChunks(exception))
+      collector.isInstanceOf[VirusDetected] shouldBe true
+      val virusDetected = collector.asInstanceOf[VirusDetected]
+      virusDetected.envelopeId shouldBe envelopeId
+      virusDetected.fileId shouldBe fileId
     }
 
   }

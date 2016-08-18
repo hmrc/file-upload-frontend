@@ -18,13 +18,10 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import cats.data.Xor
 import play.api.libs.iteratee.Iteratee
-import uk.gov.hmrc.clamav.config.ClamAvConfig
-import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
-import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
-import uk.gov.hmrc.fileupload.{File, ServiceConfig}
+import uk.gov.hmrc.fileupload.File
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object ScanningService {
 
@@ -39,8 +36,8 @@ object ScanningService {
 
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
-  def scanBinaryData(publish: (AnyRef) => Unit)(file: File)(implicit ec: ExecutionContext): Future[ScanResult] = {
-    val future: Future[ScanResult] = file.consume(scanIteratee).flatMap(identity)
+  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]] )(publish: (AnyRef) => Unit)(file: File)(implicit ec: ExecutionContext): Future[ScanResult] = {
+    val future: Future[ScanResult] = file.streamTo(scanner()).flatMap(identity)
     future.onComplete {
       case Success(result) => result match {
         case Xor.Right(ScanResultFileClean) => publish(NoVirusDetected(envelopeId = file.envelopeId, fileId = file.fileId))
@@ -54,35 +51,6 @@ object ScanningService {
     }
 
     future
-  }
-
-  private def clamAvConfig = ClamAvConfig(ServiceConfig.clamAvConfig)
-
-  def scanIteratee(implicit ec: ExecutionContext): AvScanIteratee = {
-    val clamAntiVirus = ClamAntiVirus(clamAvConfig)
-    scanIteratee(clamAntiVirus.send, clamAntiVirus.checkForVirus)
-  }
-
-
-  private[virusscan] def scanIteratee(sendChunk: Array[Byte] => Future[Unit], checkForVirus: () => Future[Try[Boolean]])
-                                     (implicit ec: ExecutionContext): AvScanIteratee = {
-
-    Iteratee.fold[Array[Byte],Future[Unit]](Future.successful(())) { (previousResult, chunk) =>
-      previousResult.flatMap(_ => sendChunk(chunk))
-    }.map {
-      resultOfSendingChunks => resultOfSendingChunks.flatMap { _ =>
-         checkForVirus().map {
-          case Success(true) => Xor.right(ScanResultFileClean)
-          case Success(false) => Xor.left(ScanResultUnexpectedResult) // should never happen as client only returns Success(true)...
-          case Failure(_ : VirusDetectedException) => Xor.left(ScanResultVirusDetected)
-          case Failure(NonFatalWithLogging(ex)) => Xor.left(ScanResultError(ex))
-        }.recover {
-          case NonFatalWithLogging(ex) => Xor.left(ScanResultError(ex))
-        }
-      }.recover {
-        case NonFatalWithLogging(ex) => Xor.left(ScanResultFailureSendingChunks(ex))
-      }
-    }
   }
 
 }
