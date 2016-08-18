@@ -87,13 +87,13 @@ object FrontendGlobal
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
 
   // transfer
-  lazy val envelopeAvailable = transfer.Service.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
-  lazy val envelopeCallback = transfer.Service.envelopeCallback(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
-  lazy val streamTransferCall = transfer.Service.stream(ServiceConfig.fileUploadBackendBaseUrl, publish) _
+  lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val envelopeCallback = transfer.TransferService.envelopeCallback(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val streamTransferCall = transfer.TransferService.stream(ServiceConfig.fileUploadBackendBaseUrl, publish) _
 
   // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
-  lazy val uploadFile = upload.Service.upload(envelopeAvailable, streamTransferCall, null, null) _
+  lazy val uploadFile = upload.UploadService.upload(envelopeAvailable, streamTransferCall, null, null) _
 
   lazy val scanner: () => AvScanIteratee = VirusScanner.scanIteratee
   lazy val scanBinaryData = ScanningService.scanBinaryData(scanner)(publish) _

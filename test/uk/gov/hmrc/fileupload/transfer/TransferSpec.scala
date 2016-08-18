@@ -24,7 +24,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.ServiceConfig
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
+import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,7 +37,7 @@ class TransferSpec extends UnitSpec with ScalaFutures with WithFakeApplication w
 
   "When calling the envelope check" should {
 
-     val envelopeAvailable = Service.envelopeAvailable(_.execute().map(response => Xor.Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
+     val envelopeAvailable = TransferService.envelopeAvailable(_.execute().map(response => Xor.Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
 
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId

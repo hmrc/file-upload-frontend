@@ -23,7 +23,7 @@ import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.quarantine.{FileData, Quarantined}
-import uk.gov.hmrc.fileupload.upload.Service.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
+import uk.gov.hmrc.fileupload.upload.UploadService.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 

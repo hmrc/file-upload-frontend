@@ -29,7 +29,7 @@ import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.quarantine.FileData
-import uk.gov.hmrc.fileupload.upload.Service._
+import uk.gov.hmrc.fileupload.upload.UploadService._
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.play.test.UnitSpec
 

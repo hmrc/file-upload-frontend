@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload
+package uk.gov.hmrc.fileupload.quarantine
 
-import play.api.Play
-import uk.gov.hmrc.play.config.ServicesConfig
+import cats.data.Xor
+import uk.gov.hmrc.fileupload.EnvelopeId
 
-object ServiceConfig extends ServicesConfig {
-  lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
-  lazy val appName = getString("appName")
-  lazy val clamAvConfig = Play.current.configuration.getConfig(s"$env.clam.antivirus")
+object QuarantineService {
+
+  type QuarantineUploadResult = Xor[QuarantineUploadError, EnvelopeId]
+
+  sealed trait QuarantineUploadError
+  case class QuarantineUploadServiceError(filename: String, message: String) extends QuarantineUploadError
+
+
+
 }

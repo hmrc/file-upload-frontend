@@ -19,8 +19,8 @@ package uk.gov.hmrc.fileupload.upload
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.transfer.Service.{EnvelopeAvailableServiceError, EnvelopeNotFoundError, TransferServiceError}
-import uk.gov.hmrc.fileupload.upload.Service.{UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
+import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError, TransferServiceError}
+import uk.gov.hmrc.fileupload.upload.UploadService.{UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -46,7 +46,7 @@ class UploadSpec extends UnitSpec with ScalaFutures {
       case File(_, _, _, _, validEnvelopeId, _) => Future.successful(Xor.right(file.envelopeId))
     }
 
-    val upload = Service.upload(envelopeCheck, transfer, null, null) _
+    val upload = UploadService.upload(envelopeCheck, transfer, null, null) _
 
     "success if the envelope exists and can transfer" in {
       val validEnvelopeId = anyEnvelopeId
