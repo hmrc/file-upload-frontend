@@ -21,32 +21,31 @@ import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import uk.gov.hmrc.fileupload.transfer.Service.EnvelopeCallbackResult
+import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId, FileId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object NotifierService {
+object NotifierRepository {
 
   type NotifyResult = Xor[NotifyError, EnvelopeId]
+
+  case class Notification(envelopeId: EnvelopeId, fileId: FileId, status: String, reason: Option[String])
 
   sealed trait NotifyError
   case class NoConsumerRegisteredError(envelopeId: EnvelopeId, fileId: FileId) extends NotifyError
   case class NotificationFailedError(envelopeId: EnvelopeId, fileId: FileId, reason: String) extends NotifyError
 
-  def notify(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), toConsumerUrl: (EnvelopeId) => Future[Option[String]])
-            (envelopeId: EnvelopeId, fileId: FileId, status: String, reason: Option[String])
+  def notify(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]))
+            (notification: Notification, envelopeCallback: EnvelopeCallback)
             (implicit executionContext: ExecutionContext): Future[NotifyResult] =
-    toConsumerUrl(envelopeId).flatMap {
-      case Some(consumerUrl) =>
-        httpCall(WS.url(s"$consumerUrl?envelopeId=${envelopeId.value}&fileId=${fileId.value}&reason=$reason").withMethod("GET")).map {
-          case Xor.Left(error) => Xor.left(NotificationFailedError(envelopeId, fileId, error.message))
-          case Xor.Right(response) => response.status match {
-            case Status.OK => Xor.right(envelopeId)
-            case _ => Xor.left(NotificationFailedError(envelopeId, fileId, response.body))
-          }
-        }
-      case None => Future { Xor.Left(NoConsumerRegisteredError(envelopeId, fileId)) }
+    httpCall(WS.url(
+      s"${envelopeCallback.value}?envelopeId=${notification.envelopeId.value}&fileId=${notification.fileId.value}&reason=${notification.reason}")
+      .withMethod("GET")).map {
+      case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, error.message))
+      case Xor.Right(response) => response.status match {
+        case Status.OK => Xor.right(notification.envelopeId)
+        case _ => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, response.body))
+      }
     }
-
-
 }

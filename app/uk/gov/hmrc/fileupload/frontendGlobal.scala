@@ -27,7 +27,7 @@ import uk.gov.hmrc.clamav.ClamAntiVirus
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, PlayHttp}
-import uk.gov.hmrc.fileupload.notifier.{NotifierActor, NotifierService}
+import uk.gov.hmrc.fileupload.notifier.{NotifierActor, NotifierRepository}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.AvScanIteratee
 import uk.gov.hmrc.fileupload.virusscan.{ScanningService, VirusScanner}
@@ -36,14 +36,14 @@ import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 
-import scala.concurrent.Future
-
 object FrontendGlobal
   extends DefaultFrontendGlobal {
 
   override val auditConnector = FrontendAuditConnector
   override val loggingFilter = LoggingFilter
   override val frontendAuditFilter = AuditFilter
+
+  import play.api.libs.concurrent.Execution.Implicits._
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
@@ -60,7 +60,7 @@ object FrontendGlobal
     publish = eventStream.publish
 
     // notifier
-    Akka.system.actorOf(NotifierActor.props(subscribe, sendNotification), "notifierActor")
+    Akka.system.actorOf(NotifierActor.props(subscribe, envelopeCallback, sendNotification), "notifierActor")
 
     fileUploadController
     testOnlyController
@@ -75,8 +75,6 @@ object FrontendGlobal
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
-  import play.api.libs.concurrent.Execution.Implicits._
-
   // db
 
   lazy val db = DefaultMongoConnection.db
@@ -90,7 +88,7 @@ object FrontendGlobal
 
   // transfer
   lazy val envelopeAvailable = transfer.Service.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
-//  lazy val transferCall = transfer.Service.transfer(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val envelopeCallback = transfer.Service.envelopeCallback(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
   lazy val streamTransferCall = transfer.Service.stream(ServiceConfig.fileUploadBackendBaseUrl, publish) _
 
   // upload
@@ -102,7 +100,7 @@ object FrontendGlobal
 
   // notifier
   //TODO: inject proper toConsumerUrl function
-  lazy val sendNotification = NotifierService.notify(auditedHttpExecute, _ => Future.successful(None)) _
+  lazy val sendNotification = NotifierRepository.notify(auditedHttpExecute) _
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser,
     transferToTransient = uploadFile,

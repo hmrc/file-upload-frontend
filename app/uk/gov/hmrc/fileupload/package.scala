@@ -20,7 +20,8 @@ import play.api.libs.iteratee.{Enumerator, Iteratee}
 
 import scala.concurrent.Future
 
-case class EnvelopeId(value :String) extends AnyVal
+case class EnvelopeId(value: String) extends AnyVal
+case class EnvelopeCallback(value: String) extends AnyVal
 
 case class FileId(value: String) extends AnyVal
 
