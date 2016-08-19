@@ -59,7 +59,7 @@ object FrontendGlobal
     publish = eventStream.publish
 
     // notifier
-    Akka.system.actorOf(NotifierActor.props(subscribe, envelopeCallback, sendNotification), "notifierActor")
+    Akka.system.actorOf(NotifierActor.props(subscribe, sendNotification), "notifierActor")
 
     fileUploadController
     testOnlyController
@@ -86,11 +86,9 @@ object FrontendGlobal
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
 
   // transfer
-  lazy val findEnvelopeCallback = transfer.Repository.envelopeCallback(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
-  lazy val envelopeCallback = transfer.TransferService.envelopeCallback(findEnvelopeCallback) _
   lazy val streamTransferCall = transfer.TransferService.stream(ServiceConfig.fileUploadBackendBaseUrl, publish) _
 
   // upload
@@ -102,7 +100,7 @@ object FrontendGlobal
 
   // notifier
   //TODO: inject proper toConsumerUrl function
-  lazy val sendNotification = NotifierRepository.notify(auditedHttpExecute) _
+  lazy val sendNotification = NotifierRepository.notify(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser,
     transferToTransient = uploadFile,

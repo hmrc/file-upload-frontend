@@ -18,10 +18,9 @@ package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
 import play.api.http.Status
-import play.api.libs.json.{JsString, Json}
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
-import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId}
+import uk.gov.hmrc.fileupload.EnvelopeId
 import play.api.Play.current
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 
@@ -41,28 +40,4 @@ object Repository {
       }
     }
   }
-
-  def envelopeCallback(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
-                      (implicit executionContext: ExecutionContext): Future[EnvelopeCallbackResult] = {
-
-    def maybeEnvelopeCallback(jsonStr: String) =
-      (Json.parse(jsonStr)  \ "callback") match {
-        case JsString(value) => Some(EnvelopeCallback(value))
-        case _ => None
-      }
-
-    httpCall(WS.url(s"$baseUrl/file-upload/envelope/${envelopeId.value}").withMethod("GET")).map {
-      case Xor.Left(error) => Xor.left(CallbackRetrievalServiceError(envelopeId, error.message))
-      case Xor.Right(response) => response.status match {
-        case Status.OK => maybeEnvelopeCallback(response.body) match {
-          case None => Xor.left(CallbackNotFoundError(envelopeId))
-          case Some(cb @ _) => Xor.right(cb)
-        }
-        case Status.NOT_FOUND => Xor.left(CallbackNotFoundError(envelopeId))
-        case _ => Xor.left(CallbackRetrievalServiceError(envelopeId, response.body))
-      }
-    }
-  }
-
-
 }

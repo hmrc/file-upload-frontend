@@ -19,9 +19,10 @@ package uk.gov.hmrc.fileupload.notifier
 import cats.data.Xor
 import play.api.Play.current
 import play.api.http.Status
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
-import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId, FileId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,18 +30,15 @@ object NotifierRepository {
 
   type NotifyResult = Xor[NotifyError, EnvelopeId]
 
-  case class Notification(envelopeId: EnvelopeId, fileId: FileId, status: String, reason: Option[String])
+  case class Notification(envelopeId: EnvelopeId, fileId: FileId, eventType: String, event: JsValue)
 
   sealed trait NotifyError
-  case class NoConsumerRegisteredError(envelopeId: EnvelopeId, fileId: FileId) extends NotifyError
   case class NotificationFailedError(envelopeId: EnvelopeId, fileId: FileId, reason: String) extends NotifyError
 
-  def notify(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]))
-            (notification: Notification, envelopeCallback: EnvelopeCallback)
+  def notify(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)
+            (notification: Notification)
             (implicit executionContext: ExecutionContext): Future[NotifyResult] =
-    httpCall(WS.url(
-      s"${envelopeCallback.value}?envelopeId=${notification.envelopeId.value}&fileId=${notification.fileId.value}&reason=${notification.reason}")
-      .withMethod("GET")).map {
+    httpCall(WS.url(s"$baseUrl/events/${notification.eventType}").withBody(Json.stringify(notification.event)).withMethod("POST")).map {
       case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right(notification.envelopeId)

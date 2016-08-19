@@ -16,8 +16,17 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
+import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 case class ToTransientMoved(envelopeId: EnvelopeId, fileId: FileId)
 
+object ToTransientMoved {
+  implicit val toTransientMovedFormats: Format[ToTransientMoved] = Json.format[ToTransientMoved]
+}
+
 case class MovingToTransientFailed(envelopeId: EnvelopeId, fileId: FileId, reason: String)
+
+object MovingToTransientFailed {
+  implicit val movingToTransientFailedFormats: Format[MovingToTransientFailed] = Json.format[MovingToTransientFailed]
+}

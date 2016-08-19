@@ -20,7 +20,7 @@ import cats.data.Xor
 import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
-import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId, File}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -32,26 +32,15 @@ object TransferService {
   case class EnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
   case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
 
-  def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
-                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
-    isEnvelopeAvailable(envelopeId)
-  }
-
-  type EnvelopeCallbackResult = Xor[CallbackAvailableError, EnvelopeCallback]
-
-  sealed trait CallbackAvailableError
-  case class CallbackNotFoundError(id: EnvelopeId) extends CallbackAvailableError
-  case class CallbackRetrievalServiceError(id: EnvelopeId, message: String) extends CallbackAvailableError
-
-  def envelopeCallback(findEvenlopeCallback: (EnvelopeId) => Future[EnvelopeCallbackResult] )(envelopeId: EnvelopeId)
-                      (implicit executionContext: ExecutionContext): Future[EnvelopeCallbackResult] = {
-    findEvenlopeCallback(envelopeId)
-  }
-
   type TransferResult = Xor[TransferError, EnvelopeId]
 
   sealed trait TransferError
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
+
+  def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
+                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
+    isEnvelopeAvailable(envelopeId)
+  }
 
   def stream(baseUrl: String, publish: (AnyRef) => Unit)(file: File)
             (implicit executionContext: ExecutionContext) = {

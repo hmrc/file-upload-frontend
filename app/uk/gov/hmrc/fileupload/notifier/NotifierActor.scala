@@ -17,19 +17,16 @@
 package uk.gov.hmrc.fileupload.notifier
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import cats.data.Xor
-import uk.gov.hmrc.fileupload.{EnvelopeCallback, EnvelopeId}
+import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierRepository.{Notification, NotifyResult}
 import uk.gov.hmrc.fileupload.quarantine.Quarantined
-import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.transfer.{MovingToTransientFailed, ToTransientMoved}
 import uk.gov.hmrc.fileupload.virusscan.{NoVirusDetected, VirusDetected}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class NotifierActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                    envelopeCallback: (EnvelopeId) => Future[EnvelopeCallbackResult],
-                    notify: (Notification, EnvelopeCallback) => Future[NotifyResult])
+                    notify: (Notification) => Future[NotifyResult])
                    (implicit executionContext: ExecutionContext) extends Actor with ActorLogging {
   
   override def preStart = {
@@ -43,33 +40,26 @@ class NotifierActor(subscribe: (ActorRef, Class[_]) => Boolean,
   def receive = {
     case e: Quarantined =>
       log.info("Quarantined event received for {} and {}", e.envelopeId, e.fileId)
-      notifyEnvelopeCallback(Notification(e.envelopeId, e.fileId, "QUARANTINED", None))
+      notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
     case e: NoVirusDetected =>
       log.info("NoVirusDetected event received for {} and {}", e.envelopeId, e.fileId)
-      notifyEnvelopeCallback(Notification(e.envelopeId, e.fileId, "CLEANED", None))
+      notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
     case e: VirusDetected =>
       log.info("VirusDetected event received for {} and {} and reason = {}", e.envelopeId, e.fileId, e.reason)
-      notifyEnvelopeCallback(Notification(e.envelopeId, e.fileId, "ERROR", Some("VirusDetected")))
+      notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
     case e: ToTransientMoved =>
       log.info("ToTransientMoved event received for {} and {}", e.envelopeId, e.fileId)
-      notifyEnvelopeCallback(Notification(e.envelopeId, e.fileId, "AVAILABLE", None))
+      notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
     case e: MovingToTransientFailed =>
       log.info("MovingToTransientFailed event received for {} and {} and {}", e.envelopeId, e.fileId, e.reason)
-      notifyEnvelopeCallback(Notification(e.envelopeId, e.fileId, "ERROR", Some("MovingToTransientFailed")))
+      notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
   }
-
-  def notifyEnvelopeCallback(notification: Notification) =
-    envelopeCallback(notification.envelopeId).map {
-      case Xor.Right(callback) => notify(notification, callback)
-      case Xor.Left(e) => log.error(e.toString)
-    }
 }
 
 object NotifierActor {
 
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
-            envelopeCallback: (EnvelopeId) => Future[EnvelopeCallbackResult],
-            notify: (Notification, EnvelopeCallback) => Future[NotifyResult])
+            notify: (Notification) => Future[NotifyResult])
            (implicit executionContext: ExecutionContext) =
-    Props(new NotifierActor(subscribe = subscribe, envelopeCallback = envelopeCallback, notify = notify))
+    Props(new NotifierActor(subscribe = subscribe, notify = notify))
 }
