@@ -12,7 +12,7 @@ To run the application execute
 sbt run
 ```
 
-The endpoints below can then be accessed with the base url http://localhost:8899/file-upload/
+The endpoints can then be accessed with the base url http://localhost:8899/file-upload/
 
 ## Service manager
 
@@ -21,59 +21,9 @@ sm --start FILE_UPLOAD_ALL
 ```
 
 ## Endpoints
-
-### Upload a File
-
-This endpoint allows the uploading of a file to the tax platform.
-
-|HTTP method|URL path|
-|---|---|
-|POST|/upload|
-
-#### Request
-
-The contentType to be defined as `multipart/form-data` with a single filePart be present containing the actual file content.
-
-#### Parameters
-
-|Parameter|Required?|Example|Description|
-|---|---|---|---|
-|`envelopeId`|Y|`1234567890`|A file-upload service generated envelope identifier. This will be validated against the file-upload service so a valid envelope *must* have been created prior to invoking this endpoint|
-|`fileId`|Y|`0987654321`|A file-upload service generated file identifier. This will be validated against the file-upload service so a valid envelope *must* have been created prior to invoking this endpoint|
-
-#### Responses
-
-|HTTP Code|Outcome|
-|---|---|
-|200|Successful|
-|400|Invalid request|
-|404|Specified `envelopeId` does not exist|
-|500|Unanticipated downstream system error|
-
-## Create Envelope (for test purposes only)
-
-|HTTP method|URL path|
-|---|---|
-|POST|/test-only/create-envelope|
-
-#### Responses
-
-|HTTP Code|Outcome|Body|
-|---|---|---|
-|201|Successful|```{ "envelopeId": "`envelopeId`" }```|
-
-## Download File (for test purposes only)
-
-|HTTP method|URL path|
-|---|---|
-|GET|/test-only/download-file/envelope/790ad9cb-d775-44cb-bab9-bcd05b0a3b20/file/1/content|
-
-#### Responses
-
-|Outcome|HTTP Code|Body|Description|
-|---|---|---|---|
-|Success|200|`fileBody`|Successful|
-             
-### License
+            
+[RAML definition](raml/file-upload-frontend.raml)
+            
+## License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")

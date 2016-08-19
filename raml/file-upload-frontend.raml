@@ -1,0 +1,62 @@
+#%RAML 1.0
+title: file-upload
+protocols: [ HTTP, HTTPS ]
+baseUri: {environmentHost}/file-upload
+baseUriParameters:
+  environmentHost:
+    enum: ["www-dev.tax.service.gov.uk","www-qa.tax.service.gov.uk"]
+    description: The host where
+description: Uploading files to the Tax Platform
+
+/upload/envelopeId/{envelopeId}/fileId/{fileId}:
+  uriParameters:
+    envelopeId:
+      displayName: Envelope ID
+      description: A file-upload service generated envelope identifier. This will be validated against the file-upload service so a valid envelope must have been created prior to invoking this endpoint
+      example: "1234567890"
+    fileId:
+      displayName: File ID
+      description: A file-upload service generated file identifier. This will be validated against the file-upload service so a valid envelope must have been created prior to invoking this endpoint
+      example: "0987654321"
+  post:
+    description: Upload a file to the tax platform
+    body:
+      multipart/form-data:
+        description: The file to be uploaded
+        required: true
+        type: file
+    responses:
+      200:
+        description: Successful
+      400:
+        description: Invalid request
+      404:
+        description: Specified envelopeId does not exist
+      500:
+        description: Unanticipated downstream system error
+/test-only:
+  /create-envelope:
+    post:
+      description: Test endpoint for creating an envelope
+      responses:
+        201:
+          description: Successful
+          body:
+            application/json:
+              example: { "envelopeId": "1234567890" }
+  /download-file/envelope/{envelopeId}/file/{fileId}/content:
+    get:
+      description: Test endpoint for downloading a file
+      responses:
+        200:
+          description: Successful
+        404:
+          description: A file with the specified envelopeId and fileId cannot be found.
+          body:
+            application/json:
+              example: |
+                {
+                  "error": {
+                    "msg": "File with id: 1 not found in envelope: 736cd9a0-054b-4d15-9767-0648b7c0f235"
+                  }
+                }
