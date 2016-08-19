@@ -28,7 +28,6 @@ import reactivemongo.bson.BSONDocument
 import reactivemongo.json._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
-import uk.gov.hmrc.fileupload.quarantine.Repository.WriteFileResult
 
 case class FileData(length: Long = 0, data: Enumerator[Array[Byte]] = null)
 

@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload
+package uk.gov.hmrc.fileupload.virusscan
 
-import play.api.Play
-import uk.gov.hmrc.play.config.ServicesConfig
+import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
-object ServiceConfig extends ServicesConfig {
-  lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
-  lazy val appName = getString("appName")
-  lazy val clamAvConfig = Play.current.configuration.getConfig(s"$env.clam.antivirus")
+case class NoVirusDetected(envelopeId: EnvelopeId, fileId: FileId)
+
+object NoVirusDetected {
+  implicit val noVirusDetectedFormats: Format[NoVirusDetected] = Json.format[NoVirusDetected]
+}
+
+case class VirusDetected(envelopeId: EnvelopeId, fileId: FileId, reason: String)
+
+object VirusDetected {
+  implicit val virusDetectedFormats: Format[VirusDetected] = Json.format[VirusDetected]
 }

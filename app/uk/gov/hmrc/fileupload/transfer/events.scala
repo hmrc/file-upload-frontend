@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.quarantine
+package uk.gov.hmrc.fileupload.transfer
 
-import cats.data.Xor
-import uk.gov.hmrc.fileupload.EnvelopeId
+import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
-object Service {
+case class ToTransientMoved(envelopeId: EnvelopeId, fileId: FileId)
 
-  type QuarantineUploadResult = Xor[QuarantineUploadError, EnvelopeId]
+object ToTransientMoved {
+  implicit val toTransientMovedFormats: Format[ToTransientMoved] = Json.format[ToTransientMoved]
+}
 
-  sealed trait QuarantineUploadError
-  case class QuarantineUploadServiceError(filename: String, message: String) extends QuarantineUploadError
+case class MovingToTransientFailed(envelopeId: EnvelopeId, fileId: FileId, reason: String)
 
-
-
+object MovingToTransientFailed {
+  implicit val movingToTransientFailedFormats: Format[MovingToTransientFailed] = Json.format[MovingToTransientFailed]
 }

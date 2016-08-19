@@ -20,7 +20,6 @@ import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsString, JsValue}
 import play.api.mvc.{BodyParser, MultipartFormData}
 import reactivemongo.json.JSONSerializationPack
@@ -30,8 +29,8 @@ import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.quarantine.FileData
-import uk.gov.hmrc.fileupload.upload.Service._
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultUnexpectedResult}
+import uk.gov.hmrc.fileupload.upload.UploadService._
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
@@ -58,8 +57,9 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
                     uploadFile: File => Future[UploadResult] = _ => failed,
                     retrieveFile: (String) => Future[Option[FileData]] = _ => Future.successful(Some(FileData(0, null))),
-                    scanBinaryData: Enumerator[Array[Byte]] => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean))) =
-    new FileUploadController(uploadParser, uploadFile, retrieveFile, scanBinaryData)
+                    scanBinaryData: File => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean)),
+                    publish: (AnyRef) => Unit = _ => Unit) =
+    new FileUploadController(uploadParser, uploadFile, retrieveFile, scanBinaryData, publish)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
@@ -111,18 +111,6 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
 
           status(result) shouldBe Status.BAD_REQUEST
         }
-    }
-
-    s"Bad request if missing file data" ignore {
-      val file = anyFile()
-      val validRequest = validUploadRequest(file)
-      val bodyMissingFileData: MultipartFormData[Future[JSONReadFile]] = MultipartFormData(validRequest.body.dataParts,
-        Seq.empty, Seq.empty, Seq.empty)
-
-      val controller = newController(uploadFile = _ => Future.successful(Xor.right(file.envelopeId)))
-      val result = controller.upload()(uploadRequest(bodyMissingFileData)).futureValue
-
-      status(result) shouldBe Status.BAD_REQUEST
     }
   }
 }

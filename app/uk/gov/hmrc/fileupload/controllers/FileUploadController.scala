@@ -18,13 +18,12 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import play.api.Logger
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsString
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
-import uk.gov.hmrc.fileupload.quarantine.FileData
-import uk.gov.hmrc.fileupload.upload.Service.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
+import uk.gov.hmrc.fileupload.quarantine.{FileData, Quarantined}
+import uk.gov.hmrc.fileupload.upload.UploadService.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 
@@ -33,12 +32,17 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            transferToTransient: File => Future[UploadResult],
                            retrieveFile: (String) => Future[Option[FileData]],
-                           scanBinaryData: Enumerator[Array[Byte]] => Future[ScanResult])
+                           scanBinaryData: File => Future[ScanResult],
+                           publish: (AnyRef) => Unit)
                           (implicit executionContext: ExecutionContext) {
 
 
   def upload() = Action.async(uploadParser()) { implicit request =>
     val maybeParams: Option[Parameters] = extractParams(request)
+
+    maybeParams.foreach { p =>
+      publish(Quarantined(p.envelopeId, p.fileId))
+    }
 
     maybeParams.flatMap { p =>
 
@@ -47,7 +51,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
         (for {
           maybeFile <- getFileFromQuarantine(retrieveFile, p.envelopeId, p.fileId, fileInsideRequest.ref)
           file = maybeFile.getOrElse(throw new RuntimeException("File not found in quarantine"))
-          scanResult <- scanBinaryData(file.data)
+          scanResult <- scanBinaryData(file)
         } yield {
           scanResult match {
             case Xor.Right(_) =>

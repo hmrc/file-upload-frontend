@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
+import akka.actor.ActorRef
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
@@ -25,8 +26,10 @@ import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, PlayHttp}
+import uk.gov.hmrc.fileupload.notifier.{NotifierActor, NotifierRepository}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
-import uk.gov.hmrc.fileupload.virusscan.ScanningService
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.AvScanIteratee
+import uk.gov.hmrc.fileupload.virusscan.{ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
@@ -39,9 +42,27 @@ object FrontendGlobal
   override val loggingFilter = LoggingFilter
   override val frontendAuditFilter = AuditFilter
 
+  import play.api.libs.concurrent.Execution.Implicits._
+
+  var subscribe: (ActorRef, Class[_]) => Boolean = _
+  var publish: (AnyRef) => Unit = _
+
   override def onStart(app: Application) {
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
+
+    // event stream
+    import play.api.Play.current
+    import play.api.libs.concurrent.Akka
+    val eventStream = Akka.system.eventStream
+    subscribe = eventStream.subscribe
+    publish = eventStream.publish
+
+    // notifier
+    Akka.system.actorOf(NotifierActor.props(subscribe, sendNotification), "notifierActor")
+
+    fileUploadController
+    testOnlyController
   }
 
   override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
@@ -53,7 +74,7 @@ object FrontendGlobal
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
-  import play.api.libs.concurrent.Execution.Implicits._
+  // db
 
   lazy val db = DefaultMongoConnection.db
 
@@ -65,20 +86,27 @@ object FrontendGlobal
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
 
   // transfer
-  lazy val envelopeAvailable = transfer.Service.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
-//  lazy val transferCall = transfer.Service.transfer(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
-  lazy val streamTransferCall = transfer.Service.stream(ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  //upload
+  lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
+  lazy val streamTransferCall = transfer.TransferService.stream(ServiceConfig.fileUploadBackendBaseUrl, publish) _
+
+  // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
-  lazy val uploadFile = upload.Service.upload(envelopeAvailable, streamTransferCall, null, null) _
+  lazy val uploadFile = upload.UploadService.upload(envelopeAvailable, streamTransferCall, null, null) _
 
-  val scanBinaryData = ScanningService.scanBinaryData _
+  lazy val scanner: () => AvScanIteratee = VirusScanner.scanIteratee
+  lazy val scanBinaryData = ScanningService.scanBinaryData(scanner)(publish) _
+
+  // notifier
+  //TODO: inject proper toConsumerUrl function
+  lazy val sendNotification = NotifierRepository.notify(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser,
     transferToTransient = uploadFile,
     retrieveFile = retrieveFile,
-    scanBinaryData = scanBinaryData)
+    scanBinaryData = scanBinaryData,
+    publish = publish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 

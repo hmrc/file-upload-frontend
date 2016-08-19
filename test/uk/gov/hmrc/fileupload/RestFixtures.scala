@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.nio.file.{Files, Paths}
-
-import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsString, JsValue}
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}

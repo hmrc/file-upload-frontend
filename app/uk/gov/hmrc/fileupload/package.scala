@@ -16,11 +16,42 @@
 
 package uk.gov.hmrc.fileupload
 
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.{Enumerator, Iteratee}
+import play.api.libs.json.{JsError, JsSuccess, _}
 
-case class EnvelopeId(value :String) extends AnyVal
+import scala.concurrent.Future
+
+case class EnvelopeId(value: String) extends AnyVal
+
+object EnvelopeId {
+  implicit val writes = new Writes[EnvelopeId] {
+    def writes(id: EnvelopeId): JsValue = JsString(id.value)
+  }
+  implicit val reads = new Reads[EnvelopeId] {
+    def reads(json: JsValue): JsResult[EnvelopeId] = json match {
+      case JsString(value) => JsSuccess(EnvelopeId(value))
+      case _ => JsError("invalid envelopeId")
+    }
+  }
+}
 
 case class FileId(value: String) extends AnyVal
 
-case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId)
+object FileId {
+  implicit val writes = new Writes[FileId] {
+    def writes(id: FileId): JsValue = JsString(id.value)
+  }
+  implicit val reads = new Reads[FileId] {
+    def reads(json: JsValue): JsResult[FileId] = json match {
+      case JsString(value) => JsSuccess(FileId(value))
+      case _ => JsError("invalid fileId")
+    }
+  }
+}
+
+case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId) {
+  def streamTo[A](iteratee: Iteratee[Array[Byte], A]):  Future[A] = {
+    data.run(iteratee)
+  }
+}
 

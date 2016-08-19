@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
+import play.api.Play
 import play.api.Play.{configuration, current}
 import uk.gov.hmrc.play.config.ServicesConfig
 
@@ -40,4 +41,10 @@ object FrontendAppConfig extends AppConfig with ServicesConfig {
   override lazy val analyticsHost = "" //loadConfig(s"google-analytics.host")
   override lazy val reportAProblemPartialUrl = s"$contactHost/contact/problem_reports_ajax?service=$contactFormServiceIdentifier"
   override lazy val reportAProblemNonJSUrl = s"$contactHost/contact/problem_reports_nonjs?service=$contactFormServiceIdentifier"
+}
+
+object ServiceConfig extends ServicesConfig {
+  lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
+  lazy val appName = getString("appName")
+  lazy val clamAvConfig = Play.current.configuration.getConfig(s"$env.clam.antivirus")
 }
