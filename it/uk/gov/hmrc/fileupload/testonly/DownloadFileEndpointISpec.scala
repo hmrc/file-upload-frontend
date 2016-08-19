@@ -18,7 +18,7 @@ class DownloadFileEndpointISpec extends UnitSpec with ScalaFutures with WithFake
   lazy val controller = FrontendGlobal.getControllerInstance[TestOnlyController](classOf[TestOnlyController])
 
   "Downloading a file" should {
-    "delegate to the backend" in {
+    "delegate to the backend to download file" in {
       val envelopeId = anyEnvelopeId
       val fileId = anyFileId
       val body = "fileBody"
@@ -30,6 +30,18 @@ class DownloadFileEndpointISpec extends UnitSpec with ScalaFutures with WithFake
 
       status(response) shouldBe Status.OK
       bodyOf(response) shouldBe body
+    }
+
+    "informs if file not found" in {
+      val envelopeId = anyEnvelopeId
+      val fileId = anyFileId
+
+      val request = FakeRequest("GET", s"/test-only/download-file/envelope/${envelopeId.value}/file/${fileId.value}/content")
+      responseToDownloadFile(envelopeId, fileId, status = Status.NOT_FOUND)
+
+      val response = controller.downloadFile(envelopeId.value, fileId.value)(request).futureValue
+
+      status(response) shouldBe Status.NOT_FOUND
     }
   }
 

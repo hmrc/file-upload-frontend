@@ -74,12 +74,12 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
         .build())
   }
 
-  def responseToDownloadFile(envelopeId: EnvelopeId, fileId: FileId, textBody: String) = {
+  def responseToDownloadFile(envelopeId: EnvelopeId, fileId: FileId, textBody: String = "", status: Int = Status.OK) = {
     server.addStubMapping(
       get(urlPathMatching(fileContentUrl(envelopeId, fileId)))
         .willReturn(new ResponseDefinitionBuilder()
           .withBody(textBody)
-          .withStatus(Status.OK))
+          .withStatus(status))
         .build())
   }
 
