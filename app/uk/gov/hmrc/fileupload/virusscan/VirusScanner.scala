@@ -18,8 +18,8 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import cats.data.Xor
 import play.api.libs.iteratee.Iteratee
-import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
 import uk.gov.hmrc.clamav.config.ClamAvConfig
+import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
 import uk.gov.hmrc.fileupload.ServiceConfig
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._

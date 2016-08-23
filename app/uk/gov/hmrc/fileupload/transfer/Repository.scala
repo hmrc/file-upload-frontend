@@ -17,11 +17,11 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
+import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
-import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.EnvelopeId
-import play.api.Play.current
+import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 
 import scala.concurrent.{ExecutionContext, Future}

@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.notifier
 import cats.data.Xor
 import play.api.Play.current
 import play.api.http.Status
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
