@@ -25,7 +25,7 @@ class FileUploadISpec extends UnitSpec with ScalaFutures with WithFakeApplicatio
       responseToUpload(file.envelopeId, file.fileId)
       respondToEnvelopeCheck(file.envelopeId)
 
-      controller.upload()(request).futureValue
+      controller.upload(envelopeId = file.envelopeId, fileId = file.fileId)(request).futureValue
 
       uploadedFile(file.envelopeId, file.fileId).map(_.getBodyAsString) shouldBe Some(fileContents)
     }

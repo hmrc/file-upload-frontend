@@ -17,9 +17,7 @@
 package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
-import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineUploadResult
 import uk.gov.hmrc.fileupload.transfer.TransferService._
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.ScanResult
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,9 +33,7 @@ object UploadService {
   case class UploadServiceEnvelopeNotFoundError(id: EnvelopeId) extends UploadError
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
-             transfer: File => Future[TransferResult],
-             quarantine: File => QuarantineUploadResult,
-             scan: _ => ScanResult)(file: File)
+             transfer: File => Future[TransferResult])(file: File)
             (implicit executionContext: ExecutionContext): Future[UploadResult] = {
 
     val envelopeId = file.envelopeId

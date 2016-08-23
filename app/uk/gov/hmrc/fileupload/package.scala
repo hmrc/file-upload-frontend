@@ -16,12 +16,18 @@
 
 package uk.gov.hmrc.fileupload
 
+import java.util.UUID
+
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsError, JsSuccess, _}
+import play.api.mvc.PathBindable
+import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 import scala.concurrent.Future
 
-case class EnvelopeId(value: String) extends AnyVal
+case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal{
+  override def toString = value
+}
 
 object EnvelopeId {
   implicit val writes = new Writes[EnvelopeId] {
@@ -33,9 +39,13 @@ object EnvelopeId {
       case _ => JsError("invalid envelopeId")
     }
   }
+  implicit val binder: PathBindable[EnvelopeId] =
+    new SimpleObjectBinder[EnvelopeId](EnvelopeId.apply, _.value)
 }
 
-case class FileId(value: String) extends AnyVal
+case class FileId(value: String = UUID.randomUUID().toString) extends AnyVal{
+  override def toString = value
+}
 
 object FileId {
   implicit val writes = new Writes[FileId] {
@@ -47,6 +57,8 @@ object FileId {
       case _ => JsError("invalid fileId")
     }
   }
+  implicit val binder: PathBindable[FileId] =
+    new SimpleObjectBinder[FileId](FileId.apply, _.value)
 }
 
 case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId) {

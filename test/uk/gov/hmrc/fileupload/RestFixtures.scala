@@ -43,9 +43,12 @@ object RestFixtures {
   }
 
   def validUploadRequest(file: File = anyFile()) = {
-    uploadRequest(MultipartFormData(Map("envelopeId" -> Seq(file.envelopeId.value), "fileId" -> Seq(file.fileId.value)),
+    uploadRequest(MultipartFormData(Map(),
       Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType,
         Future.successful(TestJsonReadFile(id = JsString(file.fileId.value), filename = Some(file.filename))))),
       Seq.empty, Seq.empty))
   }
+
+  def multipartFormData(dataParts: Map[String, Seq[String]]) =
+    uploadRequest(MultipartFormData(dataParts, files = List(), badParts = List(), missingFileParts = List()))
 }

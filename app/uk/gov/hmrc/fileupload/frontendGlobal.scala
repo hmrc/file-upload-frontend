@@ -27,6 +27,7 @@ import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.{NotifierActor, NotifierRepository}
+import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.AvScanIteratee
 import uk.gov.hmrc.fileupload.virusscan.{ScanningService, VirusScanner}
@@ -81,6 +82,7 @@ object FrontendGlobal
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
   lazy val retrieveFile = quarantineRepository.retrieveFile _
+  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(retrieveFile) _
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
@@ -93,10 +95,11 @@ object FrontendGlobal
 
   // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
-  lazy val uploadFile = upload.UploadService.upload(envelopeAvailable, streamTransferCall, null, null) _
+  lazy val uploadFile = upload.UploadService.upload(envelopeAvailable, streamTransferCall) _
 
   lazy val scanner: () => AvScanIteratee = VirusScanner.scanIteratee
   lazy val scanBinaryData = ScanningService.scanBinaryData(scanner)(publish) _
+  lazy val sendMetadata = transfer.Repository.sendMetadata(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   // notifier
   //TODO: inject proper toConsumerUrl function
@@ -104,9 +107,10 @@ object FrontendGlobal
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser,
     transferToTransient = uploadFile,
-    retrieveFile = retrieveFile,
+    getFileFromQuarantine = getFileFromQuarantine,
     scanBinaryData = scanBinaryData,
-    publish = publish)
+    publish = publish,
+    sendMetadata = sendMetadata)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 
