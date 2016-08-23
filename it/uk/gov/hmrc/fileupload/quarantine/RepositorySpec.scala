@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.file
+package uk.gov.hmrc.fileupload.quarantine
 
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
@@ -22,7 +22,6 @@ import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsString
 import uk.gov.hmrc.fileupload.fileupload.{ByteStream, JSONReadFile}
-import uk.gov.hmrc.fileupload.quarantine.Repository
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 

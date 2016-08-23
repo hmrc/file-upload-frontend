@@ -17,15 +17,27 @@
 package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
-import uk.gov.hmrc.fileupload.EnvelopeId
+import play.api.libs.json.JsString
+import uk.gov.hmrc.fileupload.fileupload._
+import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 object QuarantineService {
 
-  type QuarantineUploadResult = Xor[QuarantineUploadError, EnvelopeId]
+  type QuarantineDownloadResult = Xor[QuarantineDownloadFileNotFound.type, File]
+  case object QuarantineDownloadFileNotFound
 
-  sealed trait QuarantineUploadError
-  case class QuarantineUploadServiceError(filename: String, message: String) extends QuarantineUploadError
-
-
+  def getFileFromQuarantine(retrieveFile: (String) => Future[Option[FileData]])
+                           (envelopeId: EnvelopeId,fileId: FileId, eventualJsonReadFile: Future[JSONReadFile])
+                           (implicit executionContext: ExecutionContext): Future[QuarantineDownloadResult] = {
+    for {
+      jrf <- eventualJsonReadFile
+      maybeFileData <- retrieveFile(jrf.id.asInstanceOf[JsString].value)
+    } yield
+      Xor.fromOption(maybeFileData, ifNone = QuarantineDownloadFileNotFound).map { fd =>
+        File(fd.data, fd.length, jrf.filename.getOrElse(""), jrf.contentType, envelopeId, fileId)
+      }
+  }
 
 }

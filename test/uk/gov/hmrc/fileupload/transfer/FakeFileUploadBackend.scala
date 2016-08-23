@@ -24,6 +24,7 @@ import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.http.Status
+import play.api.libs.json.JsObject
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 import scala.collection.JavaConverters._
@@ -83,11 +84,26 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
         .build())
   }
 
+  def stubResponseForSendMetadata(envelopeId: EnvelopeId, fileId: FileId, metadata: JsObject, status: Int, body: String = "") = {
+    server.addStubMapping(
+      put(urlMatching(metadataContentUrl(envelopeId, fileId)))
+        .willReturn(
+          new ResponseDefinitionBuilder()
+            .withStatus(status)
+            .withBody(body)
+        ).build()
+    )
+  }
+
   def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] = {
     server.findAll(putRequestedFor(urlPathMatching(fileContentUrl(envelopeId, fileId)))).asScala.headOption
   }
 
   private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) = {
-    s"/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/content"
+    s"/file-upload/envelope/$envelopeId/file/$fileId/content"
+  }
+
+  private def metadataContentUrl(envelopId: EnvelopeId, fileId: FileId) = {
+    s"/file-upload/envelope/$envelopId/file/$fileId/metadata"
   }
 }

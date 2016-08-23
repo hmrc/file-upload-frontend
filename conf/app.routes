@@ -1,3 +1,3 @@
 # microservice specific routes
 
-POST        /file-upload/upload             @uk.gov.hmrc.fileupload.controllers.FileUploadController.upload
+POST        /file-upload/upload/envelopeId/:envelopeId/fileId/:fileId             @uk.gov.hmrc.fileupload.controllers.FileUploadController.upload(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId)

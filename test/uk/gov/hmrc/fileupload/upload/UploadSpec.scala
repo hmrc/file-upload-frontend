@@ -46,7 +46,7 @@ class UploadSpec extends UnitSpec with ScalaFutures {
       case File(_, _, _, _, validEnvelopeId, _) => Future.successful(Xor.right(file.envelopeId))
     }
 
-    val upload = UploadService.upload(envelopeCheck, transfer, null, null) _
+    val upload = UploadService.upload(envelopeCheck, transfer) _
 
     "success if the envelope exists and can transfer" in {
       val validEnvelopeId = anyEnvelopeId
