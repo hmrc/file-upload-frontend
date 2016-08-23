@@ -21,7 +21,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
 import play.api.libs.json.{JsString, JsValue}
-import play.api.mvc.{BodyParser, MultipartFormData}
+import play.api.mvc.{Request, BodyParser, MultipartFormData}
 import reactivemongo.json.JSONSerializationPack
 import reactivemongo.json.JSONSerializationPack._
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
@@ -55,7 +55,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   def parse = () => UploadParser.parse(null) _
 
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
-                    uploadFile: File => Future[UploadResult] = _ => failed,
+                    uploadFile: (File, Request[_]) => Future[UploadResult] = (_,_) => failed,
                     retrieveFile: (String) => Future[Option[FileData]] = _ => Future.successful(Some(FileData(0, null))),
                     scanBinaryData: File => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean)),
                     publish: (AnyRef) => Unit = _ => Unit) =
@@ -67,8 +67,8 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
 
       val request = validUploadRequest(file)
 
-      val uploadFile: (File) => Future[UploadResult] = {
-        case File(_, _, _, _, file.envelopeId, file.fileId) => Future.successful(Xor.right(file.envelopeId))
+      val uploadFile: (File, Request[_]) => Future[UploadResult] = {
+        case (File(_, _, _, _, file.envelopeId, file.fileId),_) => Future.successful(Xor.right(file.envelopeId))
         case unknownFile => fail(s"Trying to upload wrong file data [$unknownFile] expected [$file]")
       }
 
@@ -81,7 +81,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     "return INTERNAL_SERVER_ERROR response if service error when uploading files" in {
       val request = validUploadRequest()
 
-      val controller = newController(uploadFile = file => Future.successful(Xor.left(UploadServiceDownstreamError(file.envelopeId, "something went wrong"))))
+      val controller = newController(uploadFile = (file, req) => Future.successful(Xor.left(UploadServiceDownstreamError(file.envelopeId, "something went wrong"))))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR
@@ -90,7 +90,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     "return NOT_FOUND response if envelope is not found" in {
       val request = validUploadRequest()
 
-      val controller = newController(uploadFile = file => Future.successful(Xor.left(UploadServiceEnvelopeNotFoundError(file.envelopeId))))
+      val controller = newController(uploadFile = (file, req) => Future.successful(Xor.left(UploadServiceEnvelopeNotFoundError(file.envelopeId))))
       val result = controller.upload()(request).futureValue
 
       status(result) shouldBe Status.NOT_FOUND
@@ -106,7 +106,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
               Future.successful(TestJsonReadFile()))),
             Seq.empty, Seq.empty)
 
-          val controller = newController(uploadFile = _ => Future.successful(Xor.right(file.envelopeId)))
+          val controller = newController(uploadFile = (_,_) => Future.successful(Xor.right(file.envelopeId)))
           val result = controller.upload()(uploadRequest(bodyMissingParameter)).futureValue
 
           status(result) shouldBe Status.BAD_REQUEST

@@ -18,6 +18,8 @@ package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
+import play.api.mvc.Request
+import play.api.test.FakeRequest
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError, TransferServiceError}
 import uk.gov.hmrc.fileupload.upload.UploadService.{UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
@@ -41,31 +43,34 @@ class UploadSpec extends UnitSpec with ScalaFutures {
       case validEnvelopeId => Future.successful(Xor.right(envelopeId))
     }
 
-    val transfer = (file: File) => file match {
+    val transfer = (file: File, req: Request[_]) => file match {
       case File(_, _, _, _, CannotTransferEnvelopeId, _) => Future.successful(Xor.left(TransferServiceError(file.envelopeId, "someErrorTransferring")))
       case File(_, _, _, _, validEnvelopeId, _) => Future.successful(Xor.right(file.envelopeId))
     }
 
     val upload = UploadService.upload(envelopeCheck, transfer, null, null) _
 
+    val r = FakeRequest("POST", "/test-only/create-envelope")
+
+
     "success if the envelope exists and can transfer" in {
       val validEnvelopeId = anyEnvelopeId
 
-      upload(anyFileFor(validEnvelopeId)).futureValue shouldBe Xor.right(validEnvelopeId)
+      upload(anyFileFor(validEnvelopeId), r).futureValue shouldBe Xor.right(validEnvelopeId)
     }
 
     "error if the envelope does not exist" in {
-      upload(anyFileFor(UnknownEnvelopeId)).futureValue shouldBe
+      upload(anyFileFor(UnknownEnvelopeId), r).futureValue shouldBe
         Xor.left(UploadServiceEnvelopeNotFoundError(UnknownEnvelopeId))
     }
 
     "error if the envelope existence causes an error" in {
-      upload(anyFileFor(ErrorCausingEnvelopeId)).futureValue shouldBe
+      upload(anyFileFor(ErrorCausingEnvelopeId), r).futureValue shouldBe
         Xor.left(UploadServiceDownstreamError(ErrorCausingEnvelopeId, "someEnvelopeExistsError"))
     }
 
     "error if the cannot transfer" in {
-      upload(anyFileFor(CannotTransferEnvelopeId)).futureValue shouldBe
+      upload(anyFileFor(CannotTransferEnvelopeId), r).futureValue shouldBe
         Xor.left(UploadServiceDownstreamError(CannotTransferEnvelopeId, "someErrorTransferring"))
     }
   }

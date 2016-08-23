@@ -17,6 +17,8 @@
 package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
+import play.api.libs.ws.WSRequestHolder
+import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineUploadResult
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.ScanResult
@@ -35,16 +37,16 @@ object UploadService {
   case class UploadServiceEnvelopeNotFoundError(id: EnvelopeId) extends UploadError
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
-             transfer: File => Future[TransferResult],
+             transfer: (File, Request[_]) => Future[TransferResult],
              quarantine: File => QuarantineUploadResult,
-             scan: _ => ScanResult)(file: File)
+             scan: _ => ScanResult)(file: File, request: Request[_])
             (implicit executionContext: ExecutionContext): Future[UploadResult] = {
 
     val envelopeId = file.envelopeId
 
     for {
       envelopeAvailableResult <- envelopeAvailable(envelopeId)
-      transferResult <- transfer(file)
+      transferResult <- transfer(file, request)
     } yield {
       (for {
         _ <- envelopeAvailableResult

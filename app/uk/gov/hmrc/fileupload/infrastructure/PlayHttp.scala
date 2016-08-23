@@ -22,9 +22,9 @@ import java.net.{HttpURLConnection, URL}
 import cats.data.Xor
 import play.api.libs.iteratee.{Done, Input, Iteratee, Step}
 import play.api.libs.ws.{WSRequestHolder, WSResponse}
-import play.api.mvc.Headers
+import play.api.mvc.{Request, Headers}
 import uk.gov.hmrc.play.audit.AuditExtensions._
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.play.audit.http.connector.{AuditResult, AuditConnector}
 import uk.gov.hmrc.play.audit.model.{DataEvent, EventTypes}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -33,6 +33,23 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 object PlayHttp {
+
+  def audit(connector: AuditConnector, appName: String, errorLogger: Option[(Throwable => Unit)])
+           (success: Boolean, status: Int, body: String)
+           (request: Request[_])
+             (implicit ec: ExecutionContext): Future[AuditResult] = {
+
+    val hc = HeaderCarrier.fromHeadersAndSession(new Headers {
+      override protected val data: Seq[(String, Seq[String])] = request.headers.toMap.toSeq
+    })
+
+    connector.sendEvent(
+      DataEvent(appName, if (success) EventTypes.Succeeded else EventTypes.Failed,
+        tags = Map("method" -> request.method, "statusCode" -> s"${ status }", "responseBody" -> "")
+          ++ hc.toAuditTags(request.path, request.path),
+        detail = hc.toAuditDetails())
+    )
+  }
 
   case class PlayHttpError(message: String)
 

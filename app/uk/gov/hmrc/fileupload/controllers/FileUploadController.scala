@@ -19,18 +19,19 @@ package uk.gov.hmrc.fileupload.controllers
 import cats.data.Xor
 import play.api.Logger
 import play.api.libs.json.JsString
+import play.api.libs.ws.WSRequestHolder
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.quarantine.{FileData, Quarantined}
 import uk.gov.hmrc.fileupload.upload.UploadService.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultVirusDetected}
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
+import uk.gov.hmrc.fileupload.{fileupload, EnvelopeId, File, FileId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
-                           transferToTransient: File => Future[UploadResult],
+                           transferToTransient: (File, Request[_]) => Future[UploadResult],
                            retrieveFile: (String) => Future[Option[FileData]],
                            scanBinaryData: File => Future[ScanResult],
                            publish: (AnyRef) => Unit)
@@ -58,7 +59,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
              for {
                 maybeFile <- getFileFromQuarantine(retrieveFile, p.envelopeId, p.fileId, fileInsideRequest.ref)
                 file = maybeFile.getOrElse(throw new RuntimeException("File not found in quarantine"))
-                transferResult <- transferToTransient(file)
+                transferResult <- transferToTransient(file, request)
               } yield {
                 transferResult match {
                   case Xor.Left(UploadServiceDownstreamError(_, message)) => Results.InternalServerError(message)

@@ -19,8 +19,11 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
+import play.api.libs.ws.WSRequestHolder
+import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
+import uk.gov.hmrc.play.audit.http.connector.AuditResult
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,8 +45,8 @@ object TransferService {
     isEnvelopeAvailable(envelopeId)
   }
 
-  def stream(baseUrl: String, publish: (AnyRef) => Unit)(file: File)
-            (implicit executionContext: ExecutionContext) = {
+  def stream(baseUrl: String, publish: (AnyRef) => Unit, audit: (Boolean, Int, String) => (Request[_]) => Future[AuditResult])
+            (file: File, request: Request[_])(implicit executionContext: ExecutionContext) = {
     val iterator: Iteratee[Array[Byte], HttpStreamingBody.Result] = HttpStreamingBody(
       url = s"$baseUrl/file-upload/envelope/${ file.envelopeId.value }/file/${ file.fileId.value }/content",
       method = "PUT")
@@ -52,9 +55,11 @@ object TransferService {
       r.status match {
         case Status.OK =>
           publish(ToTransientMoved(file.envelopeId, file.fileId))
+          audit(true, r.status, "")(request)
           Xor.Right(file.envelopeId)
         case _ =>
           publish(MovingToTransientFailed(file.envelopeId, file.fileId, r.response))
+          audit(false, r.status, "")
           Xor.Left(TransferServiceError(file.envelopeId, r.response))
       })
   }

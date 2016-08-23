@@ -20,6 +20,7 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
+import play.api.libs.ws.WSRequestHolder
 import play.api.mvc.Request
 import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
@@ -31,9 +32,12 @@ import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.AvScanIteratee
 import uk.gov.hmrc.fileupload.virusscan.{ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
+import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
+
+import scala.concurrent.Future
 
 object FrontendGlobal
   extends DefaultFrontendGlobal {
@@ -84,12 +88,14 @@ object FrontendGlobal
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
+  lazy val auditF: (Boolean, Int, String) => (Request[_]) => Future[AuditResult] =
+    PlayHttp.audit(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t)))
 
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
-  lazy val streamTransferCall = transfer.TransferService.stream(ServiceConfig.fileUploadBackendBaseUrl, publish) _
+  lazy val streamTransferCall = transfer.TransferService.stream(ServiceConfig.fileUploadBackendBaseUrl, publish, auditF) _
 
   // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
