@@ -1,0 +1,18 @@
+#%RAML 1.0
+title: file-upload
+protocols: [ HTTPS ]
+description: Uploading files to the Tax Platform
+
+/file-upload/:
+  /upload:
+    post:
+      description: Upload a file to the tax platform
+      responses:
+        200:
+          description: Successful
+        400:
+          description: Invalid request
+        404:
+          description: Specified envelopeId does not exist
+        500:
+          description: Unanticipated downstream system error

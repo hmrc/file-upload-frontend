@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.{Xor, XorT}
-import cats.std.future._
+import cats.instances.future._
 import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.Results._

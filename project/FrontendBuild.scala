@@ -47,7 +47,7 @@ private object AppDependencies {
   private val playReactivemongoVersion = "4.8.0"
   private val simpleReactivemongoVersion = "4.8.0"
   private val clamAvClientVersion = "2.2.0"
-  private val catsVersion = "0.6.0"
+  private val catsVersion = "0.7.0"
   private val playAuditingVersion = "1.8.0"
   private val playUrlBindersVersion = "1.1.0"
 
