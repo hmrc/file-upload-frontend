@@ -1,23 +1,20 @@
 package uk.gov.hmrc.fileupload
 
-import java.net.URL
-
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Second, Span}
+import play.api.libs.ws.WS
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.RestFixtures.validUploadRequest
-import uk.gov.hmrc.fileupload.controllers.FileUploadController
+import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions, IntegrationSpec}
 import uk.gov.hmrc.fileupload.transfer.FakeFileUploadBackend
-import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
-class FileUploadISpec extends UnitSpec with ScalaFutures with WithFakeApplication with FakeFileUploadBackend {
+/**
+  * Integration tests for FILE-100
+  * Update FileMetadata
+  *
+  */
+class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with FakeFileUploadBackend {
 
-  override lazy val fileUploadBackendPort = new URL(ServiceConfig.fileUploadBackendBaseUrl).getPort
-
-  val controller = FrontendGlobal.getControllerInstance[FileUploadController](classOf[FileUploadController])
-
-  "File upload front-end" should {
-    "transfer a file to the back-end" ignore {
+  feature("File upload front-end") {
+    ignore("transfer a file to the back-end") {
       val fileContents = "someTextContents"
       val tempFile = temporaryTexFile(Some(fileContents))
       val file = anyFileFor(file = tempFile)
@@ -25,11 +22,16 @@ class FileUploadISpec extends UnitSpec with ScalaFutures with WithFakeApplicatio
       responseToUpload(file.envelopeId, file.fileId)
       respondToEnvelopeCheck(file.envelopeId)
 
-      controller.upload(envelopeId = file.envelopeId, fileId = file.fileId)(request).futureValue
+      WS
+        .url(s"http://localhost:9000/file-upload-frontend/envelope/$file.envelopeId/file/${file.fileId}/metadata" )
+        .withHeaders("Content-Type" -> "application/json")
+        .put(fileContents.getBytes())
+        .futureValue
 
       uploadedFile(file.envelopeId, file.fileId).map(_.getBodyAsString) shouldBe Some(fileContents)
+
+      eventTriggered()
     }
   }
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(1, Second))
 }
+
