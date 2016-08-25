@@ -22,9 +22,9 @@ import java.net.{HttpURLConnection, URL}
 import cats.data.Xor
 import play.api.libs.iteratee.{Done, Input, Iteratee, Step}
 import play.api.libs.ws.{WSRequestHolder, WSResponse}
-import play.api.mvc.Headers
+import play.api.mvc.{Request, Headers}
 import uk.gov.hmrc.play.audit.AuditExtensions._
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.play.audit.http.connector.{AuditResult, AuditConnector}
 import uk.gov.hmrc.play.audit.model.{DataEvent, EventTypes}
 import uk.gov.hmrc.play.http.HeaderCarrier
 
@@ -33,6 +33,23 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 object PlayHttp {
+
+  def audit(connector: AuditConnector, appName: String, errorLogger: Option[(Throwable => Unit)])
+           (success: Boolean, status: Int, body: String)
+           (request: Request[_])
+           (implicit ec: ExecutionContext): Future[AuditResult] = {
+
+    val hc = HeaderCarrier.fromHeadersAndSession(new Headers {
+      override protected val data: Seq[(String, Seq[String])] = request.headers.toMap.toSeq
+    })
+
+    connector.sendEvent(
+      DataEvent(appName, if (success) EventTypes.Succeeded else EventTypes.Failed,
+        tags = Map("method" -> request.method, "statusCode" -> s"${ status }", "responseBody" -> "")
+          ++ hc.toAuditTags(request.path, request.path),
+        detail = hc.toAuditDetails())
+    )
+  }
 
   case class PlayHttpError(message: String)
 
@@ -69,17 +86,13 @@ object HttpStreamingBody {
 
   case class Result(response: String, status: Int)
 
-  def apply(url: String,
-            contentType: String = "application/octet-stream",
-            method: String = "POST",
-            contentLength: Option[Long] = None,
-            debug: Boolean = true): HttpStreamingBody =
-    new HttpStreamingBody(url, contentType, method, contentLength, debug)
 }
 
 class HttpStreamingBody(url: String,
                         contentType: String = "application/octet-stream",
                         method: String = "POST",
+                        auditer: (Boolean, Int, String) => (Request[_]) => Future[AuditResult],
+                        request: Request[_],
                         contentLength: Option[Long] = None,
                         debug: Boolean = true) extends Iteratee[Array[Byte], HttpStreamingBody.Result] {
 
@@ -115,6 +128,7 @@ class HttpStreamingBody(url: String,
 
 
   def fold[B](folder: (Step[Array[Byte], HttpStreamingBody.Result]) => Future[B])(implicit ec: ExecutionContext): Future[B] = {
+    val successful = true
     if (mayBeResult.isDefined) {
       folder(Step.Done(mayBeResult.get, Input.Empty))
     } else {
@@ -124,16 +138,20 @@ class HttpStreamingBody(url: String,
             HttpStreamingBody.Result(con.getResponseMessage, con.getResponseCode)
           }
           mayBeConnection foreach (_.disconnect())
+          auditer(successful, mayBeResult.map(_.status).get, "")(request)
           Done(mayBeResult.get, Input.EOF)
+
         case Input.Empty => this
         case Input.El(data) =>
+
           Try(mayBeOutput foreach (_.write(data))) match {
             case Failure(NonFatal(e)) =>
               logError(e)
               mayBeResult = Some(HttpStreamingBody.Result(e.getMessage, 400))
+              auditer(!successful, 400, "")(request)
             case _ => ()
           }
-          this
+          this  //@todo this suggests we carry on consuming. is this what we want?
       })
     }
   }

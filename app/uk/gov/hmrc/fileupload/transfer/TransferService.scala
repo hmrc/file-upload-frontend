@@ -19,8 +19,9 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
+import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
-import uk.gov.hmrc.fileupload.{EnvelopeId, File}
+import uk.gov.hmrc.fileupload.{FileId, EnvelopeId, File}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,11 +43,12 @@ object TransferService {
     isEnvelopeAvailable(envelopeId)
   }
 
-  def stream(baseUrl: String, publish: (AnyRef) => Unit)(file: File)
+  def stream(baseUrl: String, publish: (AnyRef) => Unit,
+             toHttpBodyStreamer: (String, EnvelopeId, FileId, Request[_]) => Iteratee[Array[Byte], HttpStreamingBody.Result])
+            (file: File, request: Request[_])
             (implicit executionContext: ExecutionContext) = {
-    val iterator: Iteratee[Array[Byte], HttpStreamingBody.Result] = HttpStreamingBody(
-      url = s"$baseUrl/file-upload/envelope/${ file.envelopeId.value }/file/${ file.fileId.value }/content",
-      method = "PUT")
+
+    val iterator = toHttpBodyStreamer(baseUrl, file.envelopeId, file.fileId, request)
 
     (file.data |>>> iterator).map( r =>
       r.status match {

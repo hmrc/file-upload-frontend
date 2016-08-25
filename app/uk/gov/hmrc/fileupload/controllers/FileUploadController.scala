@@ -34,7 +34,7 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
-                           transferToTransient: File => Future[UploadResult],
+                           transferToTransient: (File, Request[_]) => Future[UploadResult],
                            getFileFromQuarantine: (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult],
                            scanBinaryData: File => Future[ScanResult],
                            publish: AnyRef => Unit,
@@ -49,7 +49,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
       fileForScanning <- xorT(getFileFromQuarantine(envelopeId, fileId, fileRef))
       _               <- xorT(scanBinaryData(fileForScanning))
       fileForTransfer <- xorT(getFileFromQuarantine(envelopeId, fileId, fileRef))
-      _               <- xorT(transferToTransient(fileForTransfer))
+      _               <- xorT(transferToTransient(fileForTransfer, request))
     } yield {
       ()
     }).value.map {

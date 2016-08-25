@@ -21,7 +21,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
 import play.api.libs.json.{JsObject, JsString, JsValue, Json}
-import play.api.mvc.{BodyParser, MultipartFormData}
+import play.api.mvc.{Request, BodyParser, MultipartFormData}
 import reactivemongo.json.JSONSerializationPack
 import reactivemongo.json.JSONSerializationPack._
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
@@ -59,7 +59,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   type GetFileFromQuarantine = (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult]
 
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
-                    transferToTransient: File => Future[UploadResult] = _ => failed,
+                    transferToTransient: (File, Request[_]) => Future[UploadResult] = (_, _) => failed,
                     getFileFromQuarantine: GetFileFromQuarantine =
                     (_, _, _) => Future.successful(Xor.right(File(null, 1, "", None, EnvelopeId(), FileId()))),
                     scanBinaryData: File => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean)),
@@ -71,7 +71,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     "return OK response if successfully upload files" in {
       val file = anyFile()
       val request = validUploadRequest(file)
-      val controller = newController(transferToTransient = _ => Future.successful(Xor.right(file.envelopeId)) )
+      val controller = newController(transferToTransient = (_, _) => Future.successful(Xor.right(file.envelopeId)) )
 
       val result = controller.upload(file.envelopeId, file.fileId)(request).futureValue
 
@@ -83,7 +83,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val request = validUploadRequest()
 
       val controller = newController(transferToTransient =
-        file => Future.successful(Xor.left(UploadServiceDownstreamError(file.envelopeId, "something went wrong"))))
+        (file, req) => Future.successful(Xor.left(UploadServiceDownstreamError(file.envelopeId, "something went wrong"))))
       val result = controller.upload(file.envelopeId, file.fileId)(request).futureValue
 
       status(result) shouldBe Status.INTERNAL_SERVER_ERROR
@@ -93,7 +93,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val file = anyFile()
       val request = validUploadRequest()
 
-      val controller = newController(transferToTransient = file => Future.successful(Xor.left(UploadServiceEnvelopeNotFoundError(file.envelopeId))))
+      val controller = newController(transferToTransient = (file, req) => Future.successful(Xor.left(UploadServiceEnvelopeNotFoundError(file.envelopeId))))
       val result = controller.upload(file.envelopeId, file.fileId)(request).futureValue
 
       status(result) shouldBe Status.NOT_FOUND
