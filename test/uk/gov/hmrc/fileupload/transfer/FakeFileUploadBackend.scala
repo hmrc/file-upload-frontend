@@ -24,7 +24,7 @@ import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.http.Status
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 import scala.collection.JavaConverters._
@@ -34,22 +34,22 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
 
   lazy val fileUploadBackendPort = 8080
 
-  lazy val server = new WireMockServer(wireMockConfig().port(fileUploadBackendPort))
+  lazy val backend = new WireMockServer(wireMockConfig().port(fileUploadBackendPort))
 
   final lazy val fileUploadBackendBaseUrl = s"http://localhost:$fileUploadBackendPort"
 
   override def beforeAll() = {
     super.beforeAll()
-    server.start()
+    backend.start()
   }
 
   override def afterAll() = {
     super.afterAll()
-    server.stop()
+    backend.stop()
   }
 
   def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = Status.OK, body: String = "") = {
-    server.addStubMapping(
+    backend.addStubMapping(
       get(urlPathMatching(s"/file-upload/envelope/${envelopeId.value}"))
         .willReturn(new ResponseDefinitionBuilder()
           .withBody(body)
@@ -58,7 +58,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   }
 
   def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = Status.OK, body: String = "") = {
-    server.addStubMapping(
+    backend.addStubMapping(
       put(urlPathMatching(fileContentUrl(envelopeId, fileId)))
         .willReturn(new ResponseDefinitionBuilder()
           .withBody(body)
@@ -67,7 +67,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   }
 
   def respondToCreateEnvelope(envelopeIdOfCreated: EnvelopeId) = {
-    server.addStubMapping(
+    backend.addStubMapping(
       post(urlPathMatching(s"/file-upload/envelope"))
         .willReturn(new ResponseDefinitionBuilder()
             .withHeader("Location", s"$fileUploadBackendBaseUrl/file-upload/envelope/${envelopeIdOfCreated.value}")
@@ -76,7 +76,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   }
 
   def responseToDownloadFile(envelopeId: EnvelopeId, fileId: FileId, textBody: String = "", status: Int = Status.OK) = {
-    server.addStubMapping(
+    backend.addStubMapping(
       get(urlPathMatching(fileContentUrl(envelopeId, fileId)))
         .willReturn(new ResponseDefinitionBuilder()
           .withBody(textBody)
@@ -84,8 +84,9 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
         .build())
   }
 
-  def stubResponseForSendMetadata(envelopeId: EnvelopeId, fileId: FileId, metadata: JsObject, status: Int, body: String = "") = {
-    server.addStubMapping(
+  def stubResponseForSendMetadata(envelopeId: EnvelopeId, fileId: FileId, metadata: JsObject = Json.obj("foo" -> "bar"),
+                                  status: Int = Status.OK, body: String = "") = {
+    backend.addStubMapping(
       put(urlMatching(metadataContentUrl(envelopeId, fileId)))
         .willReturn(
           new ResponseDefinitionBuilder()
@@ -96,11 +97,11 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   }
 
   def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] = {
-    server.findAll(putRequestedFor(urlPathMatching(fileContentUrl(envelopeId, fileId)))).asScala.headOption
+    backend.findAll(putRequestedFor(urlPathMatching(fileContentUrl(envelopeId, fileId)))).asScala.headOption
   }
 
   def eventTriggered() = {
-    server.verify(postRequestedFor(urlEqualTo("/events/quarantined")).withHeader("Content-Type", equalTo("application/json")))
+    backend.verify(postRequestedFor(urlEqualTo("/events/quarantined")).withHeader("Content-Type", equalTo("application/json")))
   }
 
   private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) = {
