@@ -97,7 +97,7 @@ object FrontendGlobal
       url = s"$baseUrl/file-upload/envelope/${ envelopeId.value }/file/${ fileId.value }/content",
       contentType = "application/octet-stream",
       method = "PUT",
-      auditer = Some(auditF),
+      auditer = auditF,
       request,
       contentLength = None,
       debug = true

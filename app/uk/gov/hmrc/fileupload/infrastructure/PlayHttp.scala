@@ -91,7 +91,7 @@ object HttpStreamingBody {
 class HttpStreamingBody(url: String,
                         contentType: String = "application/octet-stream",
                         method: String = "POST",
-                        auditer: Option[(Boolean, Int, String) => (Request[_]) => Future[AuditResult]],
+                        auditer: (Boolean, Int, String) => (Request[_]) => Future[AuditResult],
                         request: Request[_],
                         contentLength: Option[Long] = None,
                         debug: Boolean = true) extends Iteratee[Array[Byte], HttpStreamingBody.Result] {
@@ -128,6 +128,7 @@ class HttpStreamingBody(url: String,
 
 
   def fold[B](folder: (Step[Array[Byte], HttpStreamingBody.Result]) => Future[B])(implicit ec: ExecutionContext): Future[B] = {
+    val successful = true
     if (mayBeResult.isDefined) {
       folder(Step.Done(mayBeResult.get, Input.Empty))
     } else {
@@ -137,7 +138,7 @@ class HttpStreamingBody(url: String,
             HttpStreamingBody.Result(con.getResponseMessage, con.getResponseCode)
           }
           mayBeConnection foreach (_.disconnect())
-          auditer.map(af => af(true, mayBeResult.map(r => r.status).get, "")(request))
+          auditer(successful, mayBeResult.map(_.status).get, "")(request)
           Done(mayBeResult.get, Input.EOF)
 
         case Input.Empty => this
@@ -147,10 +148,10 @@ class HttpStreamingBody(url: String,
             case Failure(NonFatal(e)) =>
               logError(e)
               mayBeResult = Some(HttpStreamingBody.Result(e.getMessage, 400))
-              auditer.map(af => af(false, 400, "")(request))
+              auditer(!successful, 400, "")(request)
             case _ => ()
           }
-          this
+          this  //@todo this suggests we carry on consuming. is this what we want?
       })
     }
   }
