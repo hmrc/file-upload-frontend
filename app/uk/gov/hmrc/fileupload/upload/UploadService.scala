@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
+import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 
@@ -33,14 +34,14 @@ object UploadService {
   case class UploadServiceEnvelopeNotFoundError(id: EnvelopeId) extends UploadError
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
-             transfer: File => Future[TransferResult])(file: File)
+             transfer: (File, Request[_]) => Future[TransferResult])(file: File, request: Request[_])
             (implicit executionContext: ExecutionContext): Future[UploadResult] = {
 
     val envelopeId = file.envelopeId
 
     for {
       envelopeAvailableResult <- envelopeAvailable(envelopeId)
-      transferResult <- transfer(file)
+      transferResult <- transfer(file, request)
     } yield {
       (for {
         _ <- envelopeAvailableResult
