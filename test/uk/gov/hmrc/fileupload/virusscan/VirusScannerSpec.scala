@@ -21,6 +21,7 @@ import java.net.SocketException
 import cats.data.Xor
 import org.scalatest.Matchers
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Second, Span}
 import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
@@ -97,7 +98,7 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures {
 
       result shouldBe Xor.Left(ScanResultFailureSendingChunks(exception))
     }
-
   }
 
+  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(5, Second))
 }
