@@ -17,9 +17,13 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
+import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
+import com.github.tomakehurst.wiremock.http.{Request, RequestListener, Response}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
+import play.api.http.Status
 
 trait FakeAuditer extends BeforeAndAfterAll with ScalaFutures {
   this: Suite =>
@@ -31,6 +35,12 @@ trait FakeAuditer extends BeforeAndAfterAll with ScalaFutures {
   override def beforeAll() = {
     super.beforeAll()
     fakeAuditer.start()
+
+    fakeAuditer.addStubMapping(
+      post(urlPathMatching("/*"))
+        .willReturn(new ResponseDefinitionBuilder()
+          .withStatus(Status.OK)).build())
+
   }
 
   override def afterAll() = {

@@ -1,17 +1,9 @@
 package uk.gov.hmrc.fileupload
 
-import play.api.libs.Files
-import play.api.libs.Files.TemporaryFile
 import play.api.libs.ws.WS
-import play.api.mvc.MultipartFormData
-import play.api.mvc.MultipartFormData.{BadPart, FilePart, MissingFilePart}
-import play.api.test.{FakeHeaders, FakeRequest}
 import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions, IntegrationSpec}
 import uk.gov.hmrc.fileupload.transfer.{FakeAuditer, FakeFileUploadBackend}
-
-import scala.concurrent.Future
 
 /**
   * Integration tests for FILE-100
@@ -21,23 +13,25 @@ import scala.concurrent.Future
 class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with FakeFileUploadBackend with FakeAuditer {
 
   feature("File upload front-end") {
-    ignore("transfer a file to the back-end") {
-      val fileContents = "someTextContents"
-      val tempFile = temporaryTexFile(Some(fileContents))
-      val file = anyFileFor(file = tempFile)
+    scenario("transfer a file to the back-end") {
+      val fileId = anyFileId
+      val envelopeId = anyEnvelopeId
 
-      responseToUpload(file.envelopeId, file.fileId)
-      stubResponseForSendMetadata(file.envelopeId, file.fileId)
-      respondToEnvelopeCheck(file.envelopeId)
+      responseToUpload(envelopeId, fileId)
+      stubResponseForSendMetadata(envelopeId, fileId)
+      respondToEnvelopeCheck(envelopeId)
 
-      val files = Seq[FilePart[TemporaryFile]](FilePart("file1", tempFile.getName, Some("text/plain"), TemporaryFile(tempFile)))
-      val multipartBody = MultipartFormData(Map[String, Seq[String]](), files, Seq[BadPart](), Seq[MissingFilePart]())
-      val fakeRequest = FakeRequest[MultipartFormData[Files.TemporaryFile]]("POST",
-        s"/file-upload/upload/envelope/${file.envelopeId.value}/file/${file.fileId.value}", FakeHeaders(), multipartBody)
+      val result = WS.url(s"http://localhost:$port/file-upload/upload/envelope/${envelopeId.value}/file/${fileId.value}")
+          .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
+            "X-Request-ID" -> "someId",
+            "X-Session-ID" -> "someId",
+            "X-Requested-With" -> "someId")
+          .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.txt\"\r\nContent-Type: text/plain\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
+          .futureValue
 
-      val uploadRequest: FakeRequest[MultipartFormData[Future[JSONReadFile]]] = RestFixtures.validUploadRequest(file)
+      result.status should be(200)
 
-      uploadedFile(file.envelopeId, file.fileId).map(_.getBodyAsString) shouldBe Some(fileContents)
+      uploadedFile(envelopeId, fileId).map(_.getBodyAsString) shouldBe Some("someTextContents")
 
       eventTriggered()
     }
