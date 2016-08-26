@@ -29,6 +29,7 @@ import play.api.http.Status
 import play.api.libs.json.{JsSuccess, Json}
 import play.api.libs.ws.WS
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
+import uk.gov.hmrc.fileupload.transfer.FakeAuditer
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
@@ -36,7 +37,7 @@ import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with WithFakeApplication with Eventually {
+class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with WithFakeApplication with Eventually with FakeAuditer {
   this: Suite =>
 
   private lazy val fakeDownstreamSystemConfig = wireMockConfig().port(8900)
@@ -44,10 +45,7 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
   private val downstreamPath = "/test"
   private val downstreamUrl = s"http://localhost:${fakeDownstreamSystemConfig.portNumber()}$downstreamPath"
 
-  private lazy val fakeAuditConsumerConfig = wireMockConfig().port(8901)
-  private lazy val fakeAuditConsumer = new WireMockServer(fakeAuditConsumerConfig)
-
-  private val consumer = Consumer(BaseUri("localhost", fakeAuditConsumerConfig.portNumber(), "http"))
+  private val consumer = Consumer(BaseUri("localhost", auditerPort, "http"))
   private val testAppName = "test-app"
   private val auditConnector = AuditConnector(AuditingConfig(Some(consumer), enabled = true, traceRequests = true))
   private var loggedErrors = ListBuffer.empty[Throwable]
@@ -58,25 +56,18 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
   override def beforeAll() = {
     super.beforeAll()
     fakeDownstreamSystem.start()
-    fakeAuditConsumer.start()
-
-    fakeAuditConsumer.addStubMapping(
-      post(urlPathMatching("/*"))
-        .willReturn(new ResponseDefinitionBuilder()
-          .withStatus(Status.OK)).build())
   }
 
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
 
-    fakeAuditConsumer.resetRequests()
+    resetAuditRequests()
   }
 
   override def afterAll() = {
     super.afterAll()
     fakeDownstreamSystem.stop()
-    fakeAuditConsumer.stop()
   }
 
   "Executor" should {
@@ -109,10 +100,6 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
       (json \ "tags" \ "statusCode").validate[String] shouldBe JsSuccess[String](s"$statusCode")
       (json \ "tags" \ "responseBody").validate[String] shouldBe JsSuccess[String]("someResponseBody")
     }
-
-    def getAudits = fakeAuditConsumer.findAll(
-      postRequestedFor(urlPathMatching("/*"))
-    )
 
     "logs errors" in {
       fakeDownstreamSystem.addStubMapping(
