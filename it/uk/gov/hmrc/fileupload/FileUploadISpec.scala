@@ -33,7 +33,7 @@ class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActi
 
       uploadedFile(envelopeId, fileId).map(_.getBodyAsString) shouldBe Some("someTextContents")
 
-      eventTriggered()
+      eventQuarantinedTriggered()
     }
   }
 }
