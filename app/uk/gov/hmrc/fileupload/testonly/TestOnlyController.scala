@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.testonly
 
 import play.api.Play.current
+import play.api.libs.iteratee.{Enumeratee, Enumerator}
 import play.api.libs.json.Json
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Action
@@ -43,6 +44,10 @@ class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionCo
   }
 
   def downloadFile(envelopeId: String, fileId: String) = Action.async { request =>
-    WS.url(s"$baseUrl/file-upload/envelope/$envelopeId/file/$fileId/content").get().map(response => Status(response.status)(response.body))
+    WS.url(s"$baseUrl/file-upload/envelope/$envelopeId/file/$fileId/content").getStream().map {
+      case (headers, enumerator) => Ok.feed(enumerator).withHeaders(
+        "Content-Length" -> headers.headers("Content-Length").head,
+        "Content-Disposition" -> headers.headers("Content-Disposition").head)
+    }
   }
 }
