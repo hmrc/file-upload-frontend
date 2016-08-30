@@ -22,10 +22,11 @@ import play.api.libs.json.Json
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Action
 import play.api.mvc.Results._
+import uk.gov.hmrc.fileupload.quarantine.Repository
 
 import scala.concurrent.ExecutionContext
 
-class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionContext) {
+class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) {
 
   def createEnvelope() = Action.async { request =>
     def extractEnvelopeId(response: WSResponse): String =
@@ -50,4 +51,18 @@ class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionCo
         "Content-Disposition" -> headers.headers("Content-Disposition").head)
     }
   }
+
+  def cleanup() = Action.async { request =>
+    for {
+      cleaningQuarantine  <- quarantineRepo.removeAll().map(_.forall(_.ok))
+      cleaningTransient   <- WS.url(s"$baseUrl/file-upload/test-only/cleanup-transient").post(Json.obj()).map { _.status == 200 }
+    } yield {
+      if (cleaningQuarantine && cleaningTransient) {
+        Ok
+      } else {
+        InternalServerError(s"cleaningQuarantine=$cleaningQuarantine, cleaningTransient=$cleaningTransient")
+      }
+    }
+  }
+
 }

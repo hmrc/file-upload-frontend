@@ -12,6 +12,7 @@
 
 POST        /file-upload/test-only/create-envelope                                          @uk.gov.hmrc.fileupload.testonly.TestOnlyController.createEnvelope
 GET         /file-upload/test-only/download-file/envelope/:envelopeId/file/:fileId/content  @uk.gov.hmrc.fileupload.testonly.TestOnlyController.downloadFile(envelopeId: String, fileId: String)
+POST        /file-upload/test-only/cleanup                                                  @uk.gov.hmrc.fileupload.testonly.TestOnlyController.cleanup
 
 # Add all the application routes to the prod.routes file
 ->          /                                                 prod.Routes
