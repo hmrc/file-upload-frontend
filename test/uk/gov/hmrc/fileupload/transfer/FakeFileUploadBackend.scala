@@ -101,7 +101,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   }
 
   def eventQuarantinedTriggered() = {
-    backend.verify(postRequestedFor(urlEqualTo("/events/Quarantined")))
+    backend.verify(postRequestedFor(urlEqualTo("/file-upload/events/Quarantined")))
   }
 
   private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) = {
