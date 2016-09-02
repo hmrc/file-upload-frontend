@@ -17,7 +17,6 @@
 package uk.gov.hmrc.fileupload.testonly
 
 import play.api.Play.current
-import play.api.libs.iteratee.{Enumeratee, Enumerator}
 import play.api.libs.json.Json
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Action
@@ -52,6 +51,26 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
+  def transferGetEnvelopes() = Action.async { request =>
+    WS.url(s"$baseUrl/file-transfer/envelopes").get().map { response =>
+      Ok(Json.parse(response.body))
+    }
+  }
+
+  def transferDownloadEnvelope(envelopeId: String) = Action.async { request =>
+    WS.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").getStream().map {
+      case (headers, enumerator) => Ok.feed(enumerator).withHeaders(
+        "Content-Type" -> headers.headers("Content-Type").head,
+        "Content-Length" -> headers.headers("Content-Length").head)
+    }
+  }
+
+  def transferDeleteEnvelope(envelopeId: String) = Action.async { request =>
+    WS.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").delete().map { response =>
+      new Status(response.status)(response.body)
+    }
+  }
+
   def cleanup() = Action.async { request =>
     for {
       cleaningQuarantine  <- quarantineRepo.removeAll().map(_.forall(_.ok))
@@ -64,5 +83,4 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
       }
     }
   }
-
 }
