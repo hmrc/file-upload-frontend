@@ -25,7 +25,7 @@ import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 import scala.concurrent.Future
 
-case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal{
+case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString = value
 }
 
@@ -43,7 +43,7 @@ object EnvelopeId {
     new SimpleObjectBinder[EnvelopeId](EnvelopeId.apply, _.value)
 }
 
-case class FileId(value: String = UUID.randomUUID().toString) extends AnyVal{
+case class FileId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString = value
 }
 
@@ -61,9 +61,27 @@ object FileId {
     new SimpleObjectBinder[FileId](FileId.apply, _.value)
 }
 
-case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId) {
-  def streamTo[A](iteratee: Iteratee[Array[Byte], A]):  Future[A] = {
+case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String]) {
+  def streamTo[A](iteratee: Iteratee[Array[Byte], A]): Future[A] = {
     data.run(iteratee)
   }
+}
+
+case class FileReferenceId(value: String = UUID.randomUUID().toString) extends AnyVal {
+  override def toString = value
+}
+
+object FileReferenceId {
+  implicit val writes = new Writes[FileReferenceId] {
+    def writes(id: FileReferenceId): JsValue = JsString(id.value)
+  }
+  implicit val reads = new Reads[FileReferenceId] {
+    def reads(json: JsValue): JsResult[FileReferenceId] = json match {
+      case JsString(value) => JsSuccess(FileReferenceId(value))
+      case _ => JsError("invalid fileId")
+    }
+  }
+  implicit val binder: PathBindable[FileReferenceId] =
+    new SimpleObjectBinder[FileReferenceId](FileReferenceId.apply, _.value)
 }
 

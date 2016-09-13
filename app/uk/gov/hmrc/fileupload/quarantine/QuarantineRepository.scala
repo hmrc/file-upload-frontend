@@ -29,7 +29,7 @@ import reactivemongo.json._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
-case class FileData(length: Long = 0, data: Enumerator[Array[Byte]] = null)
+case class FileData(length: Long = 0, filename: String, contentType: Option[String], data: Enumerator[Array[Byte]] = null)
 
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -57,9 +57,9 @@ class Repository(mongo: () => DB with DBMetaCommands) {
     gfs.iteratee(JSONFileToSave(filename = Some(filename), contentType = contentType))
   }
 
-  def retrieveFile(id: String)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
-    gfs.find[BSONDocument, JSONReadFile](BSONDocument("_id" -> id)).headOption.map { file =>
-      file.map( f => FileData(f.length, gfs.enumerate(f)))
+  def retrieveFile(id: FileReferenceId)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
+    gfs.find[BSONDocument, JSONReadFile](BSONDocument("_id" -> id.value)).headOption.map { file =>
+      file.map(f => FileData(length = f.length, filename = f.filename.getOrElse("data"), contentType = f.contentType, data = gfs.enumerate(f)))
     }
   }
 

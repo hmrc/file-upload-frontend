@@ -29,9 +29,10 @@ import uk.gov.hmrc.fileupload.quarantine.Quarantined
 import uk.gov.hmrc.fileupload.transfer.Repository.{SendMetadataEnvelopeNotFound, SendMetadataResult}
 import uk.gov.hmrc.fileupload.upload.UploadService.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultVirusDetected}
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId, FileReferenceId}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
 
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            transferToTransient: (File, Request[_]) => Future[UploadResult],
@@ -42,7 +43,9 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
                           (implicit executionContext: ExecutionContext) {
 
   def upload(envelopeId: EnvelopeId, fileId: FileId) = Action.async(uploadParser()) { implicit request =>
-    publish(Quarantined(envelopeId, fileId))
+    val fileReferenceId = FileReferenceId(Await.result(request.body.files.head.ref.map(_.id.toString()), 5 seconds))
+    publish(Quarantined(fileReferenceId, envelopeId, fileId))
+
     (for {
       _               <- xorT(sendMetadata(envelopeId, fileId, metadataAsJson))
       fileRef         <- XorT.fromXor(getFileRefFromRequest)
