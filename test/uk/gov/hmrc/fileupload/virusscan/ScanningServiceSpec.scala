@@ -56,7 +56,7 @@ class ScanningServiceSpec extends UnitSpec with Matchers with ScalaFutures {
         Iteratee.fold[Array[Byte], Future[ScanResult]](Future.successful(Xor.Right(ScanResultFileClean))) { (result, bytes) => result }
       }
 
-      ScanningService.scanBinaryData(scanner)(publisher)(file).futureValue
+//      ScanningService.scanBinaryData(scanner)(publisher)(file).futureValue
 
       collector shouldNot equal(null)
       collector.isInstanceOf[NoVirusDetected] shouldBe true
@@ -79,7 +79,7 @@ class ScanningServiceSpec extends UnitSpec with Matchers with ScalaFutures {
         Iteratee.fold[Array[Byte], Future[ScanResult]](Future.successful(Xor.Left(ScanResultVirusDetected))) { (result, bytes) => result }
       }
 
-      ScanningService.scanBinaryData(scanner)(publisher)(file).futureValue
+//      ScanningService.scanBinaryData(scanner)(publisher)(file).futureValue
 
       collector shouldNot equal(null)
       collector.isInstanceOf[VirusDetected] shouldBe true

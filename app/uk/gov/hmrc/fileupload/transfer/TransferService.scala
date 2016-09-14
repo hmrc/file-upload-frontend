@@ -21,9 +21,11 @@ import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
 import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
-import uk.gov.hmrc.fileupload.{FileId, EnvelopeId, File}
+import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
+import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId, FileReferenceId}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 object TransferService {
 
@@ -44,20 +46,25 @@ object TransferService {
   }
 
   def stream(baseUrl: String, publish: (AnyRef) => Unit,
-             toHttpBodyStreamer: (String, EnvelopeId, FileId, Request[_]) => Iteratee[Array[Byte], HttpStreamingBody.Result])
-            (file: File, request: Request[_])
-            (implicit executionContext: ExecutionContext) = {
+             toHttpBodyStreamer: (String, EnvelopeId, FileId, Request[_]) => Iteratee[Array[Byte], HttpStreamingBody.Result],
+             getFile: (FileReferenceId) => Future[QuarantineDownloadResult])
+            (fileReferenceId: FileReferenceId, request: Request[_])
+            (implicit executionContext: ExecutionContext): Future[TransferResult] = {
 
-    val iterator = toHttpBodyStreamer(baseUrl, file.envelopeId, file.fileId, request)
+    getFile(fileReferenceId) flatMap {
+      case Xor.Right(file) =>
+        val iterator = toHttpBodyStreamer(baseUrl, file.envelopeId, file.fileId, request)
 
-    (file.data |>>> iterator).map( r =>
-      r.status match {
-        case Status.OK =>
-          publish(ToTransientMoved(file.envelopeId, file.fileId))
-          Xor.Right(file.envelopeId)
-        case _ =>
-          publish(MovingToTransientFailed(file.envelopeId, file.fileId, r.response))
-          Xor.Left(TransferServiceError(file.envelopeId, r.response))
-      })
+        (file.data |>>> iterator).map(r =>
+          r.status match {
+            case Status.OK =>
+              Xor.Right(file.envelopeId)
+            case _ =>
+              Xor.Left(TransferServiceError(file.envelopeId, r.response))
+          })
+
+      case Xor.Left(QuarantineDownloadFileNotFound) => Future.failed(throw new Exception("unexpected exception")) // TODO return XOR left
+    }
+
   }
 }
