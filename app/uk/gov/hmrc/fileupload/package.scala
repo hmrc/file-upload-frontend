@@ -61,7 +61,7 @@ object FileId {
     new SimpleObjectBinder[FileId](FileId.apply, _.value)
 }
 
-case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String]) {
+case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId = EnvelopeId(null), fileId: FileId = FileId(null)) {
   def streamTo[A](iteratee: Iteratee[Array[Byte], A]): Future[A] = {
     data.run(iteratee)
   }
@@ -70,7 +70,6 @@ case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, c
 case class FileReferenceId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString = value
 }
-
 object FileReferenceId {
   implicit val writes = new Writes[FileReferenceId] {
     def writes(id: FileReferenceId): JsValue = JsString(id.value)

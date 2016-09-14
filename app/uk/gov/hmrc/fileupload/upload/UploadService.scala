@@ -18,8 +18,9 @@ package uk.gov.hmrc.fileupload.upload
 
 import cats.data.Xor
 import play.api.mvc.Request
+import uk.gov.hmrc.fileupload.quarantine.QuarantineService._
 import uk.gov.hmrc.fileupload.transfer.TransferService._
-import uk.gov.hmrc.fileupload.{EnvelopeId, File}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileReferenceId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,27 +31,33 @@ object UploadService {
   sealed trait UploadError
 
   case class UploadServiceDownstreamError(id: EnvelopeId, message: String) extends UploadError
-
   case class UploadServiceEnvelopeNotFoundError(id: EnvelopeId) extends UploadError
 
   def upload(envelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult],
-             transfer: (File, Request[_]) => Future[TransferResult])(file: File, request: Request[_])
+             transfer: (FileReferenceId, Request[_]) => Future[TransferResult],
+             getFile: (FileReferenceId) => Future[QuarantineDownloadResult] )
+            (fileReferenceId: FileReferenceId, request: Request[_])
             (implicit executionContext: ExecutionContext): Future[UploadResult] = {
 
-    val envelopeId = file.envelopeId
+    getFile(fileReferenceId) flatMap {
+      case Xor.Right(file) =>
+        val envelopeId = file.envelopeId
 
-    for {
-      envelopeAvailableResult <- envelopeAvailable(envelopeId)
-      transferResult <- transfer(file, request)
-    } yield {
-      (for {
-        _ <- envelopeAvailableResult
-        _ <- transferResult
-      } yield envelopeId).leftMap {
-        case EnvelopeNotFoundError(_) => UploadServiceEnvelopeNotFoundError(envelopeId)
-        case EnvelopeAvailableServiceError(_, message) => UploadServiceDownstreamError(envelopeId, message)
-        case TransferServiceError(_, message) => UploadServiceDownstreamError(envelopeId, message)
-      }
+        for {
+          envelopeAvailableResult <- envelopeAvailable(envelopeId)
+          transferResult <- transfer(fileReferenceId, request)
+        } yield {
+          (for {
+            _ <- envelopeAvailableResult
+            _ <- transferResult
+          } yield envelopeId).leftMap {
+            case EnvelopeNotFoundError(_) => UploadServiceEnvelopeNotFoundError(envelopeId)
+            case EnvelopeAvailableServiceError(_, message) => UploadServiceDownstreamError(envelopeId, message)
+            case TransferServiceError(_, message) => UploadServiceDownstreamError(envelopeId, message)
+          }
+        }
+
+      case Xor.Left(QuarantineDownloadFileNotFound) => Future.failed(throw new Exception("unexpected exception"))
     }
   }
 }

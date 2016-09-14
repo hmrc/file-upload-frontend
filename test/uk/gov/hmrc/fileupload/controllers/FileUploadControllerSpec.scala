@@ -59,13 +59,13 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   type GetFileFromQuarantine = (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult]
 
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
-                    transferToTransient: (File, Request[_]) => Future[UploadResult] = (_, _) => failed,
+                    transferToTransient: (FileReferenceId, Request[_]) => Future[UploadResult] = (_, _) => failed,
                     getFileFromQuarantine: GetFileFromQuarantine =
                     (_, _, _) => Future.successful(Xor.right(File(null, 1, "", None, EnvelopeId(), FileId()))),
                     scanBinaryData: File => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean)),
                     publish: AnyRef => Unit = _ => Unit,
                     sendMetadata: SendMetadata = (_, _, _) => Future.successful(Xor.right(SendMetadataSuccess))) =
-    new FileUploadController(uploadParser, transferToTransient, getFileFromQuarantine, scanBinaryData, publish, sendMetadata)
+    new FileUploadController(uploadParser, transferToTransient, publish, sendMetadata)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
@@ -76,27 +76,6 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val result = controller.upload(file.envelopeId, file.fileId)(request).futureValue
 
       status(result) shouldBe Status.OK
-    }
-
-    "return INTERNAL_SERVER_ERROR response if service error when uploading files" in {
-      val file = anyFile()
-      val request = validUploadRequest()
-
-      val controller = newController(transferToTransient =
-        (file, req) => Future.successful(Xor.left(UploadServiceDownstreamError(file.envelopeId, "something went wrong"))))
-      val result = controller.upload(file.envelopeId, file.fileId)(request).futureValue
-
-      status(result) shouldBe Status.INTERNAL_SERVER_ERROR
-    }
-
-    "return NOT_FOUND response if envelope is not found" in {
-      val file = anyFile()
-      val request = validUploadRequest()
-
-      val controller = newController(transferToTransient = (file, req) => Future.successful(Xor.left(UploadServiceEnvelopeNotFoundError(file.envelopeId))))
-      val result = controller.upload(file.envelopeId, file.fileId)(request).futureValue
-
-      status(result) shouldBe Status.NOT_FOUND
     }
 
     "return 400 Bad Request if file was not found in the request" in {

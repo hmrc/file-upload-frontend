@@ -43,16 +43,4 @@ object ScanningService {
       case Xor.Right(file) => file.streamTo(scanner()).flatMap(identity)
       case Xor.Left(e) => Future.successful(Xor.Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
     }
-
-//
-//    file.streamTo(scanner()).flatMap(identity).andThen {
-//      case Success(result) => result match {
-//        case Xor.Right(ScanResultFileClean) => publish(NoVirusDetected(envelopeId = file.envelopeId, fileId = file.fileId))
-//        case Xor.Left(ScanResultVirusDetected) => publish(VirusDetected(envelopeId = file.envelopeId, fileId = file.fileId, "virus detected"))
-//        case Xor.Left(ScanResultFailureSendingChunks(t)) =>
-//        case Xor.Left(ScanResultUnexpectedResult) =>
-//        case Xor.Left(ScanResultError(t)) =>
-//      }
-//      case Failure(f) =>
-//    }
 }

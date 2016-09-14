@@ -17,48 +17,37 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.{Xor, XorT}
-import cats.std.future._
 import play.api.Logger
-import play.api.libs.json.{JsObject, JsString, Json}
+import play.api.libs.json.{JsObject, JsString, JsSuccess, Json}
 import play.api.mvc.Results._
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
-import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.fileupload.quarantine.Quarantined
 import uk.gov.hmrc.fileupload.transfer.Repository.{SendMetadataEnvelopeNotFound, SendMetadataResult}
 import uk.gov.hmrc.fileupload.upload.UploadService.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultVirusDetected}
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId, FileReferenceId}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.ScanResultVirusDetected
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileReferenceId}
 
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
-                           transferToTransient: (File, Request[_]) => Future[UploadResult],
-                           getFileFromQuarantine: (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult],
-                           scanBinaryData: File => Future[ScanResult],
+                           transferToTransient: (FileReferenceId, Request[_]) => Future[UploadResult],
                            publish: AnyRef => Unit,
                            sendMetadata: (EnvelopeId, FileId, JsObject) => Future[SendMetadataResult])
                           (implicit executionContext: ExecutionContext) {
 
   def upload(envelopeId: EnvelopeId, fileId: FileId) = Action.async(uploadParser()) { implicit request =>
-    val fileReferenceId = FileReferenceId(Await.result(request.body.files.head.ref.map(_.id.toString()), 5 seconds))
-    publish(Quarantined(fileReferenceId, envelopeId, fileId))
-
-    (for {
-      _               <- xorT(sendMetadata(envelopeId, fileId, metadataAsJson))
-      fileRef         <- XorT.fromXor(getFileRefFromRequest)
-      fileForScanning <- xorT(getFileFromQuarantine(envelopeId, fileId, fileRef))
-      _               <- xorT(scanBinaryData(fileForScanning))
-      fileForTransfer <- xorT(getFileFromQuarantine(envelopeId, fileId, fileRef))
-      _               <- xorT(transferToTransient(fileForTransfer, request))
-    } yield {
-      ()
-    }).value.map {
-      case Xor.Right(_) => Ok
-      case Xor.Left(error) => errorToResult(error)
+    request.body.files.headOption.map { file =>
+      file.ref.map { fileRef =>
+        val fileReferenceId = fileRef.id match {
+          case JsString(value) => FileReferenceId(value)
+          case _ => throw new Exception("invalid reference")
+        }
+        publish(Quarantined(envelopeId, fileId, fileReferenceId, name = file.filename, contentType = file.contentType.getOrElse(""), metadata = metadataAsJson))
+      }
     }
+    Future.successful(Ok)
   }
 
   private def xorT[T](v: Future[Xor[Any, T]]) = XorT.apply[Future, Any, T](v)
