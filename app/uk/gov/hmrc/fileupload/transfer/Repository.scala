@@ -19,11 +19,10 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.Play.current
 import play.api.http.Status
-import play.api.libs.json.JsObject
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.TransferService._
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import uk.gov.hmrc.fileupload.EnvelopeId
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,29 +40,4 @@ object Repository {
       }
     }
   }
-
-  type SendMetadataResult = Xor[SendMetadataError, SendMetadataSuccess.type]
-  case object SendMetadataSuccess
-  sealed trait SendMetadataError
-  case class SendMetadataOtherError(message: String) extends SendMetadataError
-  case class SendMetadataEnvelopeNotFound(envelopeId: EnvelopeId) extends SendMetadataError
-
-  def sendMetadata(auditedHttpCall: WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]], baseUrl: String)
-                  (envelopeId: EnvelopeId, fileId: FileId, metadata: JsObject)
-                  (implicit ec: ExecutionContext) = {
-
-    auditedHttpCall(
-      WS.url(s"$baseUrl/file-upload/envelope/$envelopeId/file/$fileId/metadata")
-      .withMethod("PUT")
-      .withBody(metadata)
-    ).map {
-      case Xor.Left(error) => Xor.left(SendMetadataOtherError(error.message))
-      case Xor.Right(response) => response.status match {
-        case Status.OK => Xor.right(SendMetadataSuccess)
-        case Status.NOT_FOUND => Xor.left(SendMetadataEnvelopeNotFound(envelopeId))
-        case _ => Xor.left(SendMetadataOtherError(s"Status: ${response.status}, body: ${response.body}"))
-      }
-    }
-  }
-
 }

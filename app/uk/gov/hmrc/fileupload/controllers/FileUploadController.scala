@@ -16,70 +16,38 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import cats.data.{Xor, XorT}
-import cats.std.future._
-import play.api.Logger
+import cats.data.Xor
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.Results._
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
-import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
-import uk.gov.hmrc.fileupload.quarantine.Quarantined
-import uk.gov.hmrc.fileupload.transfer.Repository.{SendMetadataEnvelopeNotFound, SendMetadataResult}
-import uk.gov.hmrc.fileupload.upload.UploadService.{UploadResult, UploadServiceDownstreamError, UploadServiceEnvelopeNotFoundError}
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultVirusDetected}
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId}
+import uk.gov.hmrc.fileupload.notifier.NotifierService._
+import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
-                           transferToTransient: (File, Request[_]) => Future[UploadResult],
-                           getFileFromQuarantine: (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult],
-                           scanBinaryData: File => Future[ScanResult],
-                           publish: AnyRef => Unit,
-                           sendMetadata: (EnvelopeId, FileId, JsObject) => Future[SendMetadataResult])
+                           notify: AnyRef => Future[NotifyResult])
                           (implicit executionContext: ExecutionContext) {
 
   def upload(envelopeId: EnvelopeId, fileId: FileId) = Action.async(uploadParser()) { implicit request =>
-    publish(Quarantined(envelopeId, fileId))
-    (for {
-      _               <- xorT(sendMetadata(envelopeId, fileId, metadataAsJson))
-      fileRef         <- XorT.fromXor(getFileRefFromRequest)
-      fileForScanning <- xorT(getFileFromQuarantine(envelopeId, fileId, fileRef))
-      _               <- xorT(scanBinaryData(fileForScanning))
-      fileForTransfer <- xorT(getFileFromQuarantine(envelopeId, fileId, fileRef))
-      _               <- xorT(transferToTransient(fileForTransfer, request))
-    } yield {
-      ()
-    }).value.map {
-      case Xor.Right(_) => Ok
-      case Xor.Left(error) => errorToResult(error)
-    }
+    request.body.files.headOption.map { file =>
+      file.ref.flatMap { fileRef =>
+        val fileRefId = fileRef.id match {
+          case JsString(value) => FileRefId(value)
+          case _ => throw new Exception("invalid reference")
+        }
+        notify(FileInQuarantineStored(
+          envelopeId, fileId, fileRefId, created = 0, name = file.filename, contentType = file.contentType.getOrElse(""), metadata = metadataAsJson)) map {
+            case Xor.Right(_) => Ok
+            case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
+        }
+      }
+    }.getOrElse(Future.successful(NotImplemented))
   }
-
-  private def xorT[T](v: Future[Xor[Any, T]]) = XorT.apply[Future, Any, T](v)
-
-  private def getFileRefFromRequest(implicit request: Request[MultipartFormData[Future[JSONReadFile]]]) =
-    Xor.fromOption(request.body.files.headOption.map(_.ref), ifNone = FileNotFoundInRequest)
-
-  private def errorToResult(error: Any): Result =
-    error match {
-      case UploadServiceDownstreamError(_, message) => InternalServerError(msgAsJson(message))
-      case UploadServiceEnvelopeNotFoundError(_) => NotFound(msgAsJson("Envelope not found"))
-      case SendMetadataEnvelopeNotFound(_) => NotFound(msgAsJson("Envelope not found"))
-      case FileNotFoundInRequest => BadRequest(msgAsJson("File not found in request"))
-      case ScanResultVirusDetected =>
-        Logger.warn(s"Virus found!")
-        Ok
-      case otherProblem =>
-        Logger.warn(s"Error while uploading a file: $otherProblem")
-        InternalServerError
-    }
-
-  private def msgAsJson(msg: String) = Json.toJson(Json.obj("message" -> msg))
-
-  case object FileNotFoundInRequest
 }
 
 object FileUploadController {

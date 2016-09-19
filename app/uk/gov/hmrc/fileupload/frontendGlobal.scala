@@ -20,18 +20,19 @@ import akka.actor.ActorRef
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
-import play.api.libs.iteratee.Iteratee
 import play.api.mvc.Request
 import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
-import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, DefaultMongoConnection, PlayHttp}
-import uk.gov.hmrc.fileupload.notifier.{NotifierActor, NotifierRepository}
+import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
+import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
+import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
+import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.AvScanIteratee
-import uk.gov.hmrc.fileupload.virusscan.{ScanningService, VirusScanner}
+import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
@@ -51,6 +52,8 @@ object FrontendGlobal
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
+  var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
+
 
   override def onStart(app: Application) {
     super.onStart(app)
@@ -63,8 +66,11 @@ object FrontendGlobal
     subscribe = eventStream.subscribe
     publish = eventStream.publish
 
-    // notifier
-    Akka.system.actorOf(NotifierActor.props(subscribe, sendNotification), "notifierActor")
+    notifyAndPublish = NotifierService.notify(sendNotification, publish) _
+
+    // scanner
+    Akka.system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
+    Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
 
     fileUploadController
     testOnlyController
@@ -86,15 +92,15 @@ object FrontendGlobal
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
   lazy val retrieveFile = quarantineRepository.retrieveFile _
-  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(retrieveFile) _
+  lazy val getFileFromQuarantine= QuarantineService.getFileFromQuarantine(retrieveFile) _
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
   lazy val auditF: (Boolean, Int, String) => (Request[_]) => Future[AuditResult] =
     PlayHttp.audit(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t)))
-  val auditedHttpBodyStreamer = (baseUrl: String, envelopeId: EnvelopeId, fileId: FileId, request: Request[_]) =>
+  val auditedHttpBodyStreamer = (baseUrl: String, envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, request: Request[_]) =>
     new HttpStreamingBody(
-      url = s"$baseUrl/file-upload/envelope/${ envelopeId.value }/file/${ fileId.value }/content",
+      url = s"$baseUrl/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/${fileRefId.value}",
       contentType = "application/octet-stream",
       method = "PUT",
       auditer = auditF,
@@ -107,26 +113,20 @@ object FrontendGlobal
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
-  lazy val streamTransferCall = transfer.TransferService.stream(ServiceConfig.fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer) _
+  lazy val streamTransferCall = transfer.TransferService.stream(
+    ServiceConfig.fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
 
   // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
-  lazy val uploadFile = upload.UploadService.upload(envelopeAvailable, streamTransferCall) _
 
   lazy val scanner: () => AvScanIteratee = VirusScanner.scanIteratee
-  lazy val scanBinaryData = ScanningService.scanBinaryData(scanner)(publish) _
-  lazy val sendMetadata = transfer.Repository.sendMetadata(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val scanBinaryData = ScanningService.scanBinaryData(scanner, getFileFromQuarantine) _
 
   // notifier
   //TODO: inject proper toConsumerUrl function
-  lazy val sendNotification = NotifierRepository.notify(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser,
-    transferToTransient = uploadFile,
-    getFileFromQuarantine = getFileFromQuarantine,
-    scanBinaryData = scanBinaryData,
-    publish = publish,
-    sendMetadata = sendMetadata)
+  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 

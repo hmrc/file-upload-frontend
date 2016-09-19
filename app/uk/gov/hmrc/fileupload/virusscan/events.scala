@@ -17,16 +17,10 @@
 package uk.gov.hmrc.fileupload.virusscan
 
 import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
-case class NoVirusDetected(envelopeId: EnvelopeId, fileId: FileId)
+case class FileScanned(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, hasVirus: Boolean)
 
-object NoVirusDetected {
-  implicit val noVirusDetectedFormats: Format[NoVirusDetected] = Json.format[NoVirusDetected]
-}
-
-case class VirusDetected(envelopeId: EnvelopeId, fileId: FileId, reason: String)
-
-object VirusDetected {
-  implicit val virusDetectedFormats: Format[VirusDetected] = Json.format[VirusDetected]
+object FileScanned {
+  implicit val fileScannedFormats: Format[FileScanned] = Json.format[FileScanned]
 }

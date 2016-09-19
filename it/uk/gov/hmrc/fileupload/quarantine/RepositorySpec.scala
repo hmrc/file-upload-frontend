@@ -21,6 +21,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsString
+import uk.gov.hmrc.fileupload.FileRefId
 import uk.gov.hmrc.fileupload.fileupload.{ByteStream, JSONReadFile}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
@@ -52,7 +53,7 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
         case _ => fail("expected JsString here")
       }
 
-      val fileResult = repository.retrieveFile(fsId).futureValue.get
+      val fileResult = repository.retrieveFile(FileRefId(fsId)).futureValue.get
 
       fileResult.length shouldBe text.getBytes.length
       val resultAsString = {
@@ -63,7 +64,7 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
     }
 
     "returns a fileNotFound error" in {
-      val nonexistentId = "wrongid"
+      val nonexistentId = FileRefId("wrongid")
 
       val fileResult = repository.retrieveFile(nonexistentId).futureValue
 

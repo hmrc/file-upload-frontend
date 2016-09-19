@@ -13,6 +13,7 @@ import uk.gov.hmrc.fileupload.transfer.{FakeAuditer, FakeFileUploadBackend}
 class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with FakeFileUploadBackend with FakeAuditer {
 
   feature("File upload front-end") {
+    pending
     scenario("transfer a file to the back-end") {
       val fileId = anyFileId
       val envelopeId = anyEnvelopeId

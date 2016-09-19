@@ -21,11 +21,13 @@ import java.util.UUID
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsError, JsSuccess, _}
 import play.api.mvc.PathBindable
+import reactivemongo.api.gridfs.{GridFS, ReadFile}
+import reactivemongo.json.JSONSerializationPack
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 import scala.concurrent.Future
 
-case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal{
+case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString = value
 }
 
@@ -43,7 +45,7 @@ object EnvelopeId {
     new SimpleObjectBinder[EnvelopeId](EnvelopeId.apply, _.value)
 }
 
-case class FileId(value: String = UUID.randomUUID().toString) extends AnyVal{
+case class FileId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString = value
 }
 
@@ -61,9 +63,31 @@ object FileId {
     new SimpleObjectBinder[FileId](FileId.apply, _.value)
 }
 
-case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String], envelopeId: EnvelopeId, fileId: FileId) {
-  def streamTo[A](iteratee: Iteratee[Array[Byte], A]):  Future[A] = {
+case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String]) {
+  def streamTo[A](iteratee: Iteratee[Array[Byte], A]): Future[A] = {
     data.run(iteratee)
   }
 }
 
+case class FileRefId(value: String = UUID.randomUUID().toString) extends AnyVal {
+  override def toString = value
+}
+object FileRefId {
+  implicit val writes = new Writes[FileRefId] {
+    def writes(id: FileRefId): JsValue = JsString(id.value)
+  }
+  implicit val reads = new Reads[FileRefId] {
+    def reads(json: JsValue): JsResult[FileRefId] = json match {
+      case JsString(value) => JsSuccess(FileRefId(value))
+      case _ => JsError("invalid fileId")
+    }
+  }
+  implicit val binder: PathBindable[FileRefId] =
+    new SimpleObjectBinder[FileRefId](FileRefId.apply, _.value)
+}
+
+package object fileupload {
+  type ByteStream = Array[Byte]
+  type JSONGridFS = GridFS[JSONSerializationPack.type]
+  type JSONReadFile = ReadFile[JSONSerializationPack.type, JsValue]
+}

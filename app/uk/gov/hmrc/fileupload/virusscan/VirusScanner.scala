@@ -37,7 +37,7 @@ object VirusScanner {
 
   private[virusscan] def scanIteratee(sendChunk: Array[Byte] => Future[Unit], checkForVirus: () => Future[Try[Boolean]])
                                      (implicit ec: ExecutionContext): AvScanIteratee =
-    Iteratee.fold[Array[Byte],Future[Unit]](Future.successful(())) { (previousResult, chunk) =>
+    Iteratee.fold[Array[Byte], Future[Unit]](Future.successful(())) { (previousResult, chunk) =>
       previousResult.flatMap(_ => sendChunk(chunk))
     }.map {
       resultOfSendingChunks => resultOfSendingChunks.flatMap { _ =>

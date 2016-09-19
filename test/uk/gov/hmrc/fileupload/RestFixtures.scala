@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.fileupload
 
+import java.util.UUID
+
 import play.api.libs.json.{JsString, JsValue}
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
@@ -45,7 +47,7 @@ object RestFixtures {
   def validUploadRequest(file: File = anyFile()) = {
     uploadRequest(MultipartFormData(Map(),
       Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType,
-        Future.successful(TestJsonReadFile(id = JsString(file.fileId.value), filename = Some(file.filename))))),
+        Future.successful(TestJsonReadFile(id = JsString(UUID.randomUUID().toString), filename = Some(file.filename))))),
       Seq.empty, Seq.empty))
   }
 

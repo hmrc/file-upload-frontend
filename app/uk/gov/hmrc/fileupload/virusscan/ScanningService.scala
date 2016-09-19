@@ -18,10 +18,10 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import cats.data.Xor
 import play.api.libs.iteratee.Iteratee
-import uk.gov.hmrc.fileupload.File
+import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
+import uk.gov.hmrc.fileupload.FileRefId
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 object ScanningService {
 
@@ -36,16 +36,11 @@ object ScanningService {
 
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
-  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]])(publish: (AnyRef) => Unit)(file: File)
+  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]], getFile: (FileRefId) => Future[QuarantineDownloadResult])
+                    (fileRefId: FileRefId)
                     (implicit ec: ExecutionContext): Future[ScanResult] =
-    file.streamTo(scanner()).flatMap(identity).andThen {
-      case Success(result) => result match {
-        case Xor.Right(ScanResultFileClean) => publish(NoVirusDetected(envelopeId = file.envelopeId, fileId = file.fileId))
-        case Xor.Left(ScanResultVirusDetected) => publish(VirusDetected(envelopeId = file.envelopeId, fileId = file.fileId, "virus detected"))
-        case Xor.Left(ScanResultFailureSendingChunks(t)) =>
-        case Xor.Left(ScanResultUnexpectedResult) =>
-        case Xor.Left(ScanResultError(t)) =>
-      }
-      case Failure(f) =>
+    getFile(fileRefId).flatMap {
+      case Xor.Right(file) => file.streamTo(scanner()).flatMap(identity)
+      case Xor.Left(e) => Future.successful(Xor.Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
     }
 }
