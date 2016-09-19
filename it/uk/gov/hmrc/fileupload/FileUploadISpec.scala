@@ -22,7 +22,7 @@ class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActi
       stubResponseForSendMetadata(envelopeId, fileId)
       respondToEnvelopeCheck(envelopeId)
 
-      val result = WS.url(s"http://localhost:$port/file-upload/upload/envelope/${envelopeId.value}/file/${fileId.value}")
+      val result = WS.url(s"http://localhost:$port/file-upload/upload/envelopes/${envelopeId.value}/files/${fileId.value}")
           .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
             "X-Request-ID" -> "someId",
             "X-Session-ID" -> "someId",

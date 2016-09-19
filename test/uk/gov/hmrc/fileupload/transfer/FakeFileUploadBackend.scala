@@ -50,7 +50,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
 
   def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = Status.OK, body: String = "") = {
     backend.addStubMapping(
-      get(urlPathMatching(s"/file-upload/envelope/${envelopeId.value}"))
+      get(urlPathMatching(s"/file-upload/envelopes/${envelopeId.value}"))
         .willReturn(new ResponseDefinitionBuilder()
           .withBody(body)
           .withStatus(status))
@@ -68,9 +68,9 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
 
   def respondToCreateEnvelope(envelopeIdOfCreated: EnvelopeId) = {
     backend.addStubMapping(
-      post(urlPathMatching(s"/file-upload/envelope"))
+      post(urlPathMatching(s"/file-upload/envelopes"))
         .willReturn(new ResponseDefinitionBuilder()
-            .withHeader("Location", s"$fileUploadBackendBaseUrl/file-upload/envelope/${envelopeIdOfCreated.value}")
+            .withHeader("Location", s"$fileUploadBackendBaseUrl/file-upload/envelopes/${envelopeIdOfCreated.value}")
           .withStatus(Status.CREATED))
         .build())
   }
@@ -105,10 +105,10 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   }
 
   private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) = {
-    s"/file-upload/envelope/$envelopeId/file/$fileId/content"
+    s"/file-upload/envelopes/$envelopeId/files/$fileId/content"
   }
 
   private def metadataContentUrl(envelopId: EnvelopeId, fileId: FileId) = {
-    s"/file-upload/envelope/$envelopId/file/$fileId/metadata"
+    s"/file-upload/envelopes/$envelopId/files/$fileId/metadata"
   }
 }

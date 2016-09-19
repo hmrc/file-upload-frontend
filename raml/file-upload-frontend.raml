@@ -43,7 +43,7 @@ description: Upload files to the Tax Platform
           body:
             application/json:
               example: { "envelopeId": "1234567890" }
-  /download-file/envelope/{envelopeId}/file/{fileId}/content:
+  /download-file/envelopes/{envelopeId}/files/{fileId}/content:
     get:
       description: Test endpoint for downloading a file
       responses:

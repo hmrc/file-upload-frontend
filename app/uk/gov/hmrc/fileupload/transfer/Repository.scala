@@ -31,7 +31,7 @@ object Repository {
   def envelopeAvailable(auditedHttpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
 
-    auditedHttpCall(WS.url(s"$baseUrl/file-upload/envelope/${ envelopeId.value }").withMethod("GET")).map {
+    auditedHttpCall(WS.url(s"$baseUrl/file-upload/envelopes/${ envelopeId.value }").withMethod("GET")).map {
       case Xor.Left(error) => Xor.left(EnvelopeAvailableServiceError(envelopeId, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right(envelopeId)

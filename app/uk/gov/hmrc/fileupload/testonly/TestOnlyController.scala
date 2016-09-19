@@ -38,13 +38,13 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
 
     val payload = Json.obj()
 
-    WS.url(s"$baseUrl/file-upload/envelope").post(payload).map { response =>
+    WS.url(s"$baseUrl/file-upload/envelopes").post(payload).map { response =>
       Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
     }
   }
 
   def downloadFile(envelopeId: String, fileId: String) = Action.async { request =>
-    WS.url(s"$baseUrl/file-upload/envelope/$envelopeId/file/$fileId/content").getStream().map {
+    WS.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").getStream().map {
       case (headers, enumerator) => Ok.feed(enumerator).withHeaders(
         "Content-Length" -> headers.headers("Content-Length").head,
         "Content-Disposition" -> headers.headers("Content-Disposition").head)

@@ -23,7 +23,7 @@ trait EnvelopeActions extends ActionsSupport {
 
   def getEnvelopeFor(id: EnvelopeId): WSResponse =
     WS
-      .url(s"$url/envelope/$id")
+      .url(s"$url/envelopes/$id")
       .get()
       .futureValue
 
@@ -40,7 +40,7 @@ trait EnvelopeActions extends ActionsSupport {
 
   def deleteEnvelopFor(id: EnvelopeId): WSResponse =
     WS
-      .url(s"$url/envelope/$id")
+      .url(s"$url/envelopes/$id")
       .delete()
       .futureValue
 

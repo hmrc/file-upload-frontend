@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/file-upload/envelope/fea8cc15-f2d1-4eb5-b10e-b892bcbe94f8/file/1/content"
+    "url": "/file-upload/envelopes/fea8cc15-f2d1-4eb5-b10e-b892bcbe94f8/files/1/content"
   },
   "response": {
     "status": 200,

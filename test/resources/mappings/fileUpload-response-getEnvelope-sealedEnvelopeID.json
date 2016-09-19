@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/file-upload/envelope/2f816e24-1316-408d-aa2c-ba188c2090d9"
+    "url": "/file-upload/envelopes/2f816e24-1316-408d-aa2c-ba188c2090d9"
   },
   "response": {
     "status": 400,

@@ -100,7 +100,7 @@ object FrontendGlobal
     PlayHttp.audit(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t)))
   val auditedHttpBodyStreamer = (baseUrl: String, envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, request: Request[_]) =>
     new HttpStreamingBody(
-      url = s"$baseUrl/file-upload/envelope/${envelopeId.value}/file/${fileId.value}/${fileRefId.value}",
+      url = s"$baseUrl/file-upload/envelopes/${envelopeId.value}/files/${fileId.value}/${fileRefId.value}",
       contentType = "application/octet-stream",
       method = "PUT",
       auditer = auditF,

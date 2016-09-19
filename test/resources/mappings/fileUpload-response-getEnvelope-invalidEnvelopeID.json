@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/file-upload/envelope/invalidId"
+    "url": "/file-upload/envelopes/invalidId"
   },
   "response": {
     "status": 404,
