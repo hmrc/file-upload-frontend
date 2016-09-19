@@ -28,21 +28,27 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object NotifierRepository {
 
-  type NotifyResult = Xor[NotifyError, EnvelopeId]
+  type Result = Xor[NotificationError, EnvelopeId]
 
   case class Notification(envelopeId: EnvelopeId, fileId: FileId, eventType: String, event: JsValue)
 
-  sealed trait NotifyError
-  case class NotificationFailedError(envelopeId: EnvelopeId, fileId: FileId, reason: String) extends NotifyError
+  sealed trait NotificationError {
+    def statusCode: Int
+    def reason: String
+  }
+  case class NotificationFailedError(envelopeId: EnvelopeId,
+                                     fileId: FileId,
+                                     override val statusCode: Int,
+                                     override val reason: String) extends NotificationError
 
-  def notify(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)
-            (notification: Notification)
-            (implicit executionContext: ExecutionContext): Future[NotifyResult] =
+  def send(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)
+          (notification: Notification)
+          (implicit executionContext: ExecutionContext): Future[Result] =
     httpCall(WS.url(s"$baseUrl/file-upload/events/${notification.eventType}").withBody(Json.stringify(notification.event)).withMethod("POST")).map {
-      case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, error.message))
+      case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, 500, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right(notification.envelopeId)
-        case _ => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, response.body))
+        case _ => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, response.status, response.body))
       }
     }
 }

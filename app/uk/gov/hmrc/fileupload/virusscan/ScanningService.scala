@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.virusscan
 import cats.data.Xor
 import play.api.libs.iteratee.Iteratee
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
-import uk.gov.hmrc.fileupload.FileReferenceId
+import uk.gov.hmrc.fileupload.FileRefId
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,10 +36,10 @@ object ScanningService {
 
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
-  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]], getFile: (FileReferenceId) => Future[QuarantineDownloadResult])
-                    (fileReferenceId: FileReferenceId)
+  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]], getFile: (FileRefId) => Future[QuarantineDownloadResult])
+                    (fileRefId: FileRefId)
                     (implicit ec: ExecutionContext): Future[ScanResult] =
-    getFile(fileReferenceId).flatMap {
+    getFile(fileRefId).flatMap {
       case Xor.Right(file) => file.streamTo(scanner()).flatMap(identity)
       case Xor.Left(e) => Future.successful(Xor.Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
     }

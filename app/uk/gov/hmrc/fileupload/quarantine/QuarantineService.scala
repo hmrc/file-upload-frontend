@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.quarantine
 import cats.data.Xor
 import play.api.libs.json.JsString
 import uk.gov.hmrc.fileupload.fileupload._
-import uk.gov.hmrc.fileupload.{EnvelopeId, File, FileId, FileReferenceId}
+import uk.gov.hmrc.fileupload._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -28,11 +28,11 @@ object QuarantineService {
   type QuarantineDownloadResult = Xor[QuarantineDownloadFileNotFound.type, File]
   case object QuarantineDownloadFileNotFound
 
-  def getFileFromQuarantine(retrieveFile: (FileReferenceId) => Future[Option[FileData]])
-                           (fileReferenceId: FileReferenceId)
+  def getFileFromQuarantine(retrieveFile: (FileRefId) => Future[Option[FileData]])
+                           (fileRefId: FileRefId)
                            (implicit executionContext: ExecutionContext): Future[QuarantineDownloadResult] =
     for {
-      maybeFileData <- retrieveFile(fileReferenceId)
+      maybeFileData <- retrieveFile(fileRefId)
     } yield
       Xor.fromOption(maybeFileData, ifNone = QuarantineDownloadFileNotFound).map { fd =>
         File(data = fd.data, length = fd.length, filename = fd.filename, contentType = fd.contentType)

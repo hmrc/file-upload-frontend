@@ -18,29 +18,28 @@ package uk.gov.hmrc.fileupload.transfer
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import cats.data.Xor
-import play.api.mvc.Request
-import uk.gov.hmrc.fileupload.FileReferenceId
-import uk.gov.hmrc.fileupload.upload.UploadService.{UploadResult, UploadServiceEnvelopeNotFoundError}
-import uk.gov.hmrc.fileupload.virusscan.NoVirusDetected
+import uk.gov.hmrc.fileupload.transfer.TransferService.{TransferResult, TransferServiceError}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
+import uk.gov.hmrc.fileupload.virusscan.FileScanned
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                    uploadFile: (FileReferenceId, Request[_]) => Future[UploadResult],
-                    publish: (AnyRef) => Unit)
+                    transferFile: (EnvelopeId, FileId, FileRefId) => Future[TransferResult])
                    (implicit executionContext: ExecutionContext) extends Actor with ActorLogging {
 
   override def preStart = {
-    subscribe(self, classOf[NoVirusDetected])
+    subscribe(self, classOf[FileScanned])
   }
 
   def receive = {
-    case e: NoVirusDetected =>
-      log.info("No virus detected event received for {} and {}", e.envelopeId, e.fileId)
-      uploadFile(e.fileReferenceId, null).map {
-        case Xor.Right(envelopeId) => publish(ToTransientMoved(e.fileReferenceId, e.envelopeId, e.fileId))
-        case Xor.Left(UploadServiceEnvelopeNotFoundError(id)) => publish(MovingToTransientFailed(e.fileReferenceId, e.envelopeId, e.fileId, reason = s"Envelope ${e.envelopeId} not found"))
-        case Xor.Left(_) => publish(MovingToTransientFailed(e.fileReferenceId, e.envelopeId, e.fileId, reason = "unexpected error"))
+    case e: FileScanned =>
+      log.info("FileScanned received for {} and {}", e.envelopeId, e.fileId)
+      transferFile(e.envelopeId, e.fileId, e.fileRefId).map {
+        case Xor.Right(envelopeId) => log.info("File successful transferred {} and {}", e.envelopeId, e.fileId)
+        case Xor.Left(TransferServiceError(id, m)) =>
+          log.info("Envelope not found successful transferred {} and {}", e.envelopeId, e.fileId)
+        case Xor.Left(_) => log.info("File not transferred {} and {}", e.envelopeId, e.fileId)
       }
     case _ =>
   }
@@ -48,7 +47,7 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
 object TransferActor {
 
-  def props(subscribe: (ActorRef, Class[_]) => Boolean, uploadFile: (FileReferenceId, Request[_]) => Future[UploadResult], publish: (AnyRef) => Unit)
+  def props(subscribe: (ActorRef, Class[_]) => Boolean, transferFile: (EnvelopeId, FileId, FileRefId) => Future[TransferResult])
            (implicit executionContext: ExecutionContext) =
-    Props(new TransferActor(subscribe = subscribe, uploadFile = uploadFile, publish = publish))
+    Props(new TransferActor(subscribe = subscribe, transferFile = transferFile))
 }

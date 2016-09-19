@@ -57,7 +57,7 @@ class Repository(mongo: () => DB with DBMetaCommands) {
     gfs.iteratee(JSONFileToSave(filename = Some(filename), contentType = contentType))
   }
 
-  def retrieveFile(id: FileReferenceId)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
+  def retrieveFile(id: FileRefId)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
     gfs.find[BSONDocument, JSONReadFile](BSONDocument("_id" -> id.value)).headOption.map { file =>
       file.map(f => FileData(length = f.length, filename = f.filename.getOrElse("data"), contentType = f.contentType, data = gfs.enumerate(f)))
     }

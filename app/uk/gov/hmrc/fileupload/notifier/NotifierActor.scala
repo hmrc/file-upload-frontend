@@ -18,40 +18,27 @@ package uk.gov.hmrc.fileupload.notifier
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import play.api.libs.json.Json
-import uk.gov.hmrc.fileupload.notifier.NotifierRepository.{Notification, NotifyResult}
-import uk.gov.hmrc.fileupload.quarantine.Quarantined
-import uk.gov.hmrc.fileupload.transfer.{MovingToTransientFailed, ToTransientMoved}
-import uk.gov.hmrc.fileupload.virusscan.{NoVirusDetected, VirusDetected}
+import uk.gov.hmrc.fileupload.notifier.NotifierRepository.{Notification, Result}
+import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
+import uk.gov.hmrc.fileupload.virusscan.FileScanned
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class NotifierActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                    notify: (Notification) => Future[NotifyResult])
+                    notify: (Notification) => Future[Result])
                    (implicit executionContext: ExecutionContext) extends Actor with ActorLogging {
   
   override def preStart = {
-    subscribe(self, classOf[Quarantined])
-    subscribe(self, classOf[NoVirusDetected])
-    subscribe(self, classOf[VirusDetected])
-    subscribe(self, classOf[ToTransientMoved])
-    subscribe(self, classOf[MovingToTransientFailed])
+    subscribe(self, classOf[FileInQuarantineStored])
+    subscribe(self, classOf[FileScanned])
   }
   
   def receive = {
-    case e: Quarantined =>
-      log.info("Quarantined event received for {} and {}", e.envelopeId, e.fileId)
+    case e: FileInQuarantineStored =>
+      log.info("FileInQuarantineStored event received for {} and {}", e.envelopeId, e.fileId)
       notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
-    case e: NoVirusDetected =>
-      log.info("NoVirusDetected event received for {} and {}", e.envelopeId, e.fileId)
-      notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
-    case e: VirusDetected =>
-      log.info("VirusDetected event received for {} and {} and reason = {}", e.envelopeId, e.fileId, e.reason)
-      notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
-    case e: ToTransientMoved =>
-      log.info("ToTransientMoved event received for {} and {}", e.envelopeId, e.fileId)
-      notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
-    case e: MovingToTransientFailed =>
-      log.info("MovingToTransientFailed event received for {} and {} and {}", e.envelopeId, e.fileId, e.reason)
+    case e: FileScanned =>
+      log.info("FileScanned event received for {} and {} and hasVirus {}", e.envelopeId, e.fileId, e.hasVirus)
       notify(Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
   }
 }
@@ -59,7 +46,7 @@ class NotifierActor(subscribe: (ActorRef, Class[_]) => Boolean,
 object NotifierActor {
 
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
-            notify: (Notification) => Future[NotifyResult])
+            notify: (Notification) => Future[Result])
            (implicit executionContext: ExecutionContext) =
     Props(new NotifierActor(subscribe = subscribe, notify = notify))
 }

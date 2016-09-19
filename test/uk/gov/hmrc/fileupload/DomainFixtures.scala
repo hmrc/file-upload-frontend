@@ -38,8 +38,8 @@ object DomainFixtures {
     temporaryFile
   }
 
-  def anyFileFor(envelopeId: EnvelopeId = anyEnvelopeId, fileId: FileId = anyFileId, file: java.io.File = temporaryTexFile()) = {
-    File(null, 0, file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)), envelopeId, fileId)
+  def anyFileFor(file: java.io.File = temporaryTexFile()) = {
+    File(null, 0, file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)))
   }
 
   private def randomUUID = UUID.randomUUID().toString

@@ -20,18 +20,16 @@ import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
-import play.api.libs.json.{JsObject, JsString, JsValue, Json}
-import play.api.mvc.{Request, BodyParser, MultipartFormData}
+import play.api.libs.json.{JsString, JsValue, Json}
+import play.api.mvc.{BodyParser, MultipartFormData}
 import reactivemongo.json.JSONSerializationPack
 import reactivemongo.json.JSONSerializationPack._
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload._
+import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyResult, NotifySuccess}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
-import uk.gov.hmrc.fileupload.transfer.Repository.{SendMetadataResult, SendMetadataSuccess}
-import uk.gov.hmrc.fileupload.upload.UploadService._
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
@@ -55,30 +53,25 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
 
   def parse = () => UploadParser.parse(null) _
 
-  type SendMetadata = (EnvelopeId, FileId, JsObject) => Future[SendMetadataResult]
   type GetFileFromQuarantine = (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult]
 
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
-                    transferToTransient: (FileReferenceId, Request[_]) => Future[UploadResult] = (_, _) => failed,
-                    getFileFromQuarantine: GetFileFromQuarantine =
-                    (_, _, _) => Future.successful(Xor.right(File(null, 1, "", None, EnvelopeId(), FileId()))),
-                    scanBinaryData: File => Future[ScanResult] = _ => Future.successful(Xor.right(ScanResultFileClean)),
-                    publish: AnyRef => Unit = _ => Unit,
-                    sendMetadata: SendMetadata = (_, _, _) => Future.successful(Xor.right(SendMetadataSuccess))) =
-    new FileUploadController(uploadParser, transferToTransient, publish, sendMetadata)
+                    notify: AnyRef => Future[NotifyResult] = _ => Future.successful(Xor.right(NotifySuccess))) =
+    new FileUploadController(uploadParser, notify)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
       val file = anyFile()
       val request = validUploadRequest(file)
-      val controller = newController(transferToTransient = (_, _) => Future.successful(Xor.right(file.envelopeId)) )
+      val controller = newController()
 
-      val result = controller.upload(file.envelopeId, file.fileId)(request).futureValue
+      val result = controller.upload(EnvelopeId(), FileId())(request).futureValue
 
       status(result) shouldBe Status.OK
     }
 
     "return 400 Bad Request if file was not found in the request" in {
+      pending
       val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty))
       val controller = newController()
 
