@@ -30,7 +30,8 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
-                           notify: AnyRef => Future[NotifyResult])
+                           notify: AnyRef => Future[NotifyResult],
+                           now: () => Long)
                           (implicit executionContext: ExecutionContext) {
 
   def upload(envelopeId: EnvelopeId, fileId: FileId) = Action.async(uploadParser()) { implicit request =>
@@ -41,7 +42,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
           case _ => throw new Exception("invalid reference")
         }
         notify(FileInQuarantineStored(
-          envelopeId, fileId, fileRefId, created = 0, name = file.filename, contentType = file.contentType.getOrElse(""), metadata = metadataAsJson)) map {
+          envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename, contentType = file.contentType.getOrElse(""), metadata = metadataAsJson)) map {
             case Xor.Right(_) => Ok
             case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
         }

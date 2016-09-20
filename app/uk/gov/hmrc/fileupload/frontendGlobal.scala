@@ -53,7 +53,7 @@ object FrontendGlobal
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
   var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
-
+  val now: () => Long = () => System.currentTimeMillis()
 
   override def onStart(app: Application) {
     super.onStart(app)
@@ -126,7 +126,7 @@ object FrontendGlobal
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish)
+  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 

@@ -56,8 +56,9 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   type GetFileFromQuarantine = (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult]
 
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
-                    notify: AnyRef => Future[NotifyResult] = _ => Future.successful(Xor.right(NotifySuccess))) =
-    new FileUploadController(uploadParser, notify)
+                    notify: AnyRef => Future[NotifyResult] = _ => Future.successful(Xor.right(NotifySuccess)),
+                    now: () => Long = () => 10) =
+    new FileUploadController(uploadParser, notify, now)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
