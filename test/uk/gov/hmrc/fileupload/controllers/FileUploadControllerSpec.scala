@@ -89,7 +89,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
 
       val result = FileUploadController.metadataAsJson(req)
 
-      result shouldBe Json.obj("metadata" -> Json.obj("foo" -> "1", "bar" -> "2"))
+      result shouldBe Json.obj("foo" -> "1", "bar" -> "2")
     }
     "work for an empty set of params" in {
       val params: Map[String, Seq[String]] = Map()
@@ -113,18 +113,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
 
       val result = FileUploadController.metadataAsJson(req)
 
-      result shouldBe Json.obj("metadata" -> Json.obj("foo" -> List("bar", "baz")))
-    }
-    "include file name and contentType directly from a file part and rename `filename` -> `name`" in {
-      val expectedFileName = "foo"
-      val expectedContentType = Some("bar")
-      val requestWithFileNameAndContentType = uploadRequest(MultipartFormData(Map(),
-        Seq(MultipartFormData.FilePart("key", expectedFileName, expectedContentType, Future.successful(TestJsonReadFile()))),
-        Seq.empty, Seq.empty))
-
-      val result = FileUploadController.metadataAsJson(requestWithFileNameAndContentType)
-
-      result shouldBe Json.obj("name" -> expectedFileName, "contentType" -> expectedContentType)
+      result shouldBe Json.obj("foo" -> List("bar", "baz"))
     }
   }
 }

@@ -54,22 +54,17 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
 object FileUploadController {
 
   def metadataAsJson(implicit request: Request[MultipartFormData[Future[JSONReadFile]]]): JsObject = {
-    val fileNameAndContentType = request.body.files.headOption.map { file =>
-      Json.obj("name" -> file.filename) ++
-        file.contentType.map(ct => Json.obj("contentType" -> ct)).getOrElse(Json.obj())
-    }.getOrElse(Json.obj())
-
-    val otherParams = request.body.dataParts.collect {
+    val metadataParams = request.body.dataParts.collect {
       case (key, singleValue :: Nil) => key -> JsString(singleValue)
       case (key, values: Seq[String]) if values.nonEmpty => key -> Json.toJson(values)
     }
 
-    val metadata = if(otherParams.nonEmpty) {
-      Json.obj("metadata" -> Json.toJson(otherParams))
+    val metadata = if(metadataParams.nonEmpty) {
+      Json.toJson(metadataParams).as[JsObject]
     } else {
       Json.obj()
     }
 
-    fileNameAndContentType ++ metadata
+    metadata
   }
 }
