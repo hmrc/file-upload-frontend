@@ -37,7 +37,7 @@ POST    /file-upload/upload/envelopes/:envelopeId/files/:fileId
 | Not Found | 404   |  Envelope ID not found. |
 | Internal Server Error  | 500   |  Unanticipated downstream system error |
 
-[RAML definition](raml/file-upload-frontend.raml)
+Alternatively look in [RAML definition](raml/file-upload-frontend.raml)
             
 ## License
 
