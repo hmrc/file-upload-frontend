@@ -23,11 +23,11 @@ sm --start FILE_UPLOAD_ALL
 ## Endpoint
 
 ### Upload File
-Upload files to the corrosponding envelope. The file ID is auto generated upon successful upload to the envelope. |
+Upload files to the corresponding envelope. The file ID is auto generated upon successful upload to the envelope.
 
 
 ```
-POST    /file-upload/upload/envelopes/:envelopeId/files/:fileId
+POST    /file-upload/upload/envelopes/{envelopeId}/files/{fileId}
 ```
 ## Responses
 | Responses    | Status    | Description |
