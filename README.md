@@ -29,13 +29,14 @@ Upload files to the corresponding envelope. The file ID is auto generated upon s
 ```
 POST    /file-upload/upload/envelopes/{envelopeId}/files/{fileId}
 ```
-## Responses
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Ok  | 200   | File Successfully uploaded  |
 | Bad Request  | 400   |  Invalid Request. File not uploaded. |
 | Not Found | 404   |  Envelope ID not found. |
 | Internal Server Error  | 500   |  Unanticipated downstream system error |
+
+
 
 Alternatively look in [RAML definition](raml/file-upload-frontend.raml)
             
