@@ -16,13 +16,16 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
+import akka.actor.Status.Failure
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.pattern.pipe
 import cats.data.Xor
 import uk.gov.hmrc.fileupload.FileRefId
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 
+import scala.collection.immutable.Queue
 import scala.concurrent.{ExecutionContext, Future}
 
 class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
@@ -30,22 +33,62 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
                    notify: (AnyRef) => Future[NotifyResult])
                   (implicit executionContext: ExecutionContext) extends Actor with ActorLogging {
 
+  var outstandingScans = Queue.empty[FileInQuarantineStored]
+  var scanningEvent: Option[FileInQuarantineStored] = None
+
   override def preStart = {
     subscribe(self, classOf[FileInQuarantineStored])
   }
 
   def receive = {
     case e: FileInQuarantineStored =>
-      log.info("FileInQuarantineStored event received for {} and {}", e.envelopeId, e.fileId)
-      scanBinaryData(e.fileRefId).map {
-        case Xor.Right(ScanResultFileClean) => notify(FileScanned(e.envelopeId, e.fileId, e.fileRefId, hasVirus = false))
-        case Xor.Left(ScanResultVirusDetected) => notify(FileScanned(e.envelopeId, e.fileId, e.fileRefId, hasVirus = true))
-        case Xor.Left(ScanResultFailureSendingChunks(t)) =>
-        case Xor.Left(ScanResultUnexpectedResult) =>
-        case Xor.Left(ScanResultError(t)) =>
-      }
+      outstandingScans = outstandingScans enqueue e
+      scanNext()
     case _ =>
   }
+
+  def receiveWhenScanning: Receive = {
+    case e: FileInQuarantineStored =>
+      outstandingScans = outstandingScans enqueue e
+
+    case Xor.Right(ScanResultFileClean) =>
+      notify(hasVirus = false)
+      scanNext()
+
+    case Xor.Left(ScanResultVirusDetected) =>
+      notify(hasVirus = true)
+      scanNext()
+
+    case Xor.Left(_) =>
+      scanNext()
+
+    case e: Failure =>
+      scanNext()
+
+    case _ =>
+      scanNext()
+  }
+
+  def scanNext(): Unit = {
+    outstandingScans.dequeueOption match {
+      case Some((e, newQueue)) =>
+        context become receiveWhenScanning
+        outstandingScans = newQueue
+        scanningEvent = Some(e)
+
+        log.info("Scan {} {} {}", e.envelopeId, e.fileId, e.fileRefId)
+        scanBinaryData(e.fileRefId) pipeTo self
+
+      case None =>
+        context become receive
+        scanningEvent = None
+    }
+  }
+
+  def notify(hasVirus: Boolean): Unit =
+    scanningEvent.foreach { case e =>
+      notify(FileScanned(e.envelopeId, e.fileId, e.fileRefId, hasVirus = hasVirus))
+    }
 }
 
 object ScannerActor {
