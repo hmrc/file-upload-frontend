@@ -22,7 +22,9 @@ sm --start FILE_UPLOAD_ALL
 
 ## Endpoint
 
-### Upload File
+Alternatively look in [RAML definition](raml/file-upload-frontend.raml)
+
+#### Upload File
 Upload files to the corresponding envelope. The file ID is auto generated upon successful upload to the envelope.
 
 
@@ -34,11 +36,12 @@ POST    /file-upload/upload/envelopes/{envelopeId}/files/{fileId}
 | Ok  | 200   | File Successfully uploaded  |
 | Bad Request  | 400   |  Invalid Request. File not uploaded. |
 | Not Found | 404   |  Envelope ID not found. |
-| Internal Server Error  | 500   |  Unanticipated downstream system error |
+| Internal Server Error  | 500   |  Unanticipated system error |
 
-
-
-Alternatively look in [RAML definition](raml/file-upload-frontend.raml)
+#### Example
+Request (POST): localhost:8899/file-upload/upload/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/file-id-1
+         
+Response: 200
             
 ## License
 
