@@ -25,7 +25,7 @@ sm --start FILE_UPLOAD_ALL
 Alternatively look in [RAML definition](raml/file-upload-frontend.raml)
 
 #### Upload File
-Upload files to the corresponding envelope. The file ID is auto generated upon successful upload to the envelope.
+Upload files as multipart/form-data to the corresponding envelope. The file ID is auto generated upon successful upload to the envelope.
 
 
 ```
