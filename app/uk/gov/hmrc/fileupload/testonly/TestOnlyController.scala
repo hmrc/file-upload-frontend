@@ -46,7 +46,9 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
 
   def getEnvelope(envelopeId: String) = Action.async { request =>
     WS.url(s"$baseUrl/file-upload/envelopes/$envelopeId").get().map { response =>
-      new Status(response.status)(response.body)
+      new Status(response.status)(response.body).withHeaders(
+        "Content-Type" -> response.allHeaders("Content-Type").head
+      )
     }
   }
 
