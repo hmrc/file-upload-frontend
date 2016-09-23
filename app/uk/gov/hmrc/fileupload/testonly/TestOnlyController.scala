@@ -19,13 +19,14 @@ package uk.gov.hmrc.fileupload.testonly
 import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.libs.ws.{WS, WSResponse}
-import play.api.mvc.Action
+import play.api.mvc.{Action, Controller}
 import play.api.mvc.Results._
+import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.quarantine.Repository
 
 import scala.concurrent.ExecutionContext
 
-class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) {
+class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) extends Controller {
 
   def createEnvelope() = Action.async { request =>
     def extractEnvelopeId(response: WSResponse): String =
@@ -43,11 +44,23 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
+  def getEnvelope(envelopeId: String) = Action.async { request =>
+    WS.url(s"$baseUrl/file-upload/envelopes/$envelopeId").get().map { response =>
+      new Status(response.status)(response.body)
+    }
+  }
+
   def downloadFile(envelopeId: String, fileId: String) = Action.async { request =>
     WS.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").getStream().map {
       case (headers, enumerator) => Ok.feed(enumerator).withHeaders(
         "Content-Length" -> headers.headers("Content-Length").head,
         "Content-Disposition" -> headers.headers("Content-Disposition").head)
+    }
+  }
+
+  def routingRequests() = Action.async(parse.json) { request =>
+    WS.url(s"$baseUrl/file-routing/requests").post(request.body).map { response =>
+      new Status(response.status)(response.body)
     }
   }
 

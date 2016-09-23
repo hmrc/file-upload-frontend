@@ -11,12 +11,15 @@
 
 
 POST        /file-upload/test-only/create-envelope                                              @uk.gov.hmrc.fileupload.testonly.TestOnlyController.createEnvelope
+GET         /file-upload/test-only/envelopes/:envelopeId                                        @uk.gov.hmrc.fileupload.testonly.TestOnlyController.getEnvelope(envelopeId: String)
 GET         /file-upload/test-only/download-file/envelopes/:envelopeId/files/:fileId/content    @uk.gov.hmrc.fileupload.testonly.TestOnlyController.downloadFile(envelopeId: String, fileId: String)
 POST        /file-upload/test-only/cleanup                                                      @uk.gov.hmrc.fileupload.testonly.TestOnlyController.cleanup
 
-GET         /file-upload/test-only/transfer/get-envelopes                                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferGetEnvelopes
-GET         /file-upload/test-only/transfer/download-envelope/:envelopeId                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDownloadEnvelope(envelopeId: String)
-DELETE      /file-upload/test-only/transfer/delete-envelope/:envelopeId                               @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDeleteEnvelope(envelopeId: String)
+POST        /file-upload/test-only/routing/requests                                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.routingRequests
+
+GET         /file-upload/test-only/transfer/get-envelopes                                       @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferGetEnvelopes
+GET         /file-upload/test-only/transfer/download-envelope/:envelopeId                       @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDownloadEnvelope(envelopeId: String)
+DELETE      /file-upload/test-only/transfer/delete-envelope/:envelopeId                         @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDeleteEnvelope(envelopeId: String)
 
 # Add all the application routes to the prod.routes file
 ->          /                                                 prod.Routes
