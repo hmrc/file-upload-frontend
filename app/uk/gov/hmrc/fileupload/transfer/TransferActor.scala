@@ -33,7 +33,7 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
   }
 
   def receive = {
-    case e: FileScanned =>
+    case e: FileScanned if !e.hasVirus =>
       log.info("FileScanned received for {} and {}", e.envelopeId, e.fileId)
       transferFile(e.envelopeId, e.fileId, e.fileRefId).map {
         case Xor.Right(envelopeId) => log.info("File successful transferred {} and {}", e.envelopeId, e.fileId)
