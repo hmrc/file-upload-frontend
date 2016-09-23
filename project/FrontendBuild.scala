@@ -37,18 +37,18 @@ private object AppDependencies {
 
   private val playHealthVersion = "1.1.0"
   private val playJsonLoggerVersion = "2.1.1"
-  private val frontendBootstrapVersion = "6.6.0"
+  private val frontendBootstrapVersion = "6.7.0"
   private val govukTemplateVersion = "4.0.0"
-  private val playUiVersion = "4.15.0"
-  private val playPartialsVersion = "4.4.0"
-  private val playAuthorisedFrontendVersion = "5.4.0"
+  private val playUiVersion = "4.16.0"
+  private val playPartialsVersion = "4.6.0"
+  private val playAuthorisedFrontendVersion = "5.7.0"
   private val playConfigVersion = "2.1.0"
   private val hmrcTestVersion = "1.8.0"
   private val playReactivemongoVersion = "4.8.0"
   private val simpleReactivemongoVersion = "4.8.0"
   private val clamAvClientVersion = "2.2.0"
   private val catsVersion = "0.6.0"
-  private val playAuditingVersion = "1.8.0"
+  private val playAuditingVersion = "1.9.0"
   private val playUrlBindersVersion = "1.1.0"
 
 
@@ -106,7 +106,8 @@ private object AppDependencies {
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
-        "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
+        "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
+        "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope
       )
     }.test
   }
