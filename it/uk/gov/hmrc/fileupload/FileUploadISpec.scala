@@ -1,19 +1,15 @@
 package uk.gov.hmrc.fileupload
 
+import org.scalatest.concurrent.Eventually
 import play.api.libs.ws.WS
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions, IntegrationSpec}
 import uk.gov.hmrc.fileupload.transfer.{FakeAuditer, FakeFileUploadBackend}
 
-/**
-  * Integration tests for FILE-100
-  * Update FileMetadata
-  *
-  */
-class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with FakeFileUploadBackend with FakeAuditer {
+class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with FakeFileUploadBackend with FakeAuditer with Eventually{
 
   feature("File upload front-end") {
-    pending
+
     scenario("transfer a file to the back-end") {
       val fileId = anyFileId
       val envelopeId = anyEnvelopeId
@@ -32,9 +28,13 @@ class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActi
 
       result.status should be(200)
 
-      uploadedFile(envelopeId, fileId).map(_.getBodyAsString) shouldBe Some("someTextContents")
-
-      eventQuarantinedTriggered()
+      quarantinedEventTriggered()
+      eventually {
+        fileScannedEventTriggered()
+      }
+      eventually {
+        uploadedFile(envelopeId, fileId).map(_.getBodyAsString) shouldBe Some("someTextContents")
+      }
     }
   }
 }
