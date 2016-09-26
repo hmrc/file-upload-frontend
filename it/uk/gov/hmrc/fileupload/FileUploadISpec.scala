@@ -6,7 +6,7 @@ import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions, IntegrationSpec}
 import uk.gov.hmrc.fileupload.transfer.{FakeAuditer, FakeFileUploadBackend}
 
-class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with FakeFileUploadBackend with FakeAuditer with Eventually{
+class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with FakeFileUploadBackend with FakeAuditer with Eventually {
 
   feature("File upload front-end") {
 
