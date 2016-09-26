@@ -15,7 +15,6 @@ class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActi
       val envelopeId = anyEnvelopeId
 
       responseToUpload(envelopeId, fileId)
-      stubResponseForSendMetadata(envelopeId, fileId)
       respondToEnvelopeCheck(envelopeId)
 
       val result = WS.url(s"http://localhost:$port/file-upload/upload/envelopes/${envelopeId.value}/files/${fileId.value}")

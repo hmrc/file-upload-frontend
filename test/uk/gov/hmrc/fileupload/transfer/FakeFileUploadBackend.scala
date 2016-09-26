@@ -92,18 +92,6 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
         .build())
   }
 
-  def stubResponseForSendMetadata(envelopeId: EnvelopeId, fileId: FileId, metadata: JsObject = Json.obj("foo" -> "bar"),
-                                  status: Int = Status.OK, body: String = "") = {
-    backend.addStubMapping(
-      put(urlMatching(metadataContentUrl(envelopeId, fileId)))
-        .willReturn(
-          new ResponseDefinitionBuilder()
-            .withStatus(status)
-            .withBody(body)
-        ).build()
-    )
-  }
-
   def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] = {
     backend.findAll(putRequestedFor(urlPathMatching(fileContentUrl(envelopeId, fileId)))).asScala.headOption
   }
