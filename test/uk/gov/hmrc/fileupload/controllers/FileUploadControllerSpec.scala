@@ -31,6 +31,7 @@ import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyResult, NotifySuccess}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.play.test.UnitSpec
+import play.api.test.Helpers._
 
 import scala.concurrent.Future
 
@@ -72,13 +73,22 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     }
 
     "return 400 Bad Request if file was not found in the request" in {
-      pending
       val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty))
       val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
 
       status(result) shouldBe Status.BAD_REQUEST
+      contentAsString(result) should include("Request must have exactly 1 file attached")
+    }
+    "return 400 Bad Request if >1 files were found in the request" in {
+      val requestWith2Files = validUploadRequest(anyFile(), anyFile())
+      val controller = newController()
+
+      val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files)
+
+      status(result) shouldBe Status.BAD_REQUEST
+      contentAsString(result) should include("Request must have exactly 1 file attached")
     }
   }
 
