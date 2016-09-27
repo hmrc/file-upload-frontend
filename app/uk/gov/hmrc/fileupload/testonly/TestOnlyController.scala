@@ -106,6 +106,12 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
+  def stats() = Action.async {
+    WS.url(s"$baseUrl/file-upload/test-only/stats").get().map { response =>
+      new Status(response.status)(response.body)
+    }
+  }
+
   def events() = Action.async(parse.json) { request =>
     eventsChannel.push(request.body)
     Future.successful(Ok)
