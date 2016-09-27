@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import cats.data.Xor
+import play.api.Logger
 import uk.gov.hmrc.fileupload.transfer.TransferService.{TransferResult, TransferServiceError}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.virusscan.FileScanned
@@ -26,7 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
                     transferFile: (EnvelopeId, FileId, FileRefId) => Future[TransferResult])
-                   (implicit executionContext: ExecutionContext) extends Actor with ActorLogging {
+                   (implicit executionContext: ExecutionContext) extends Actor {
 
   override def preStart = {
     subscribe(self, classOf[FileScanned])
@@ -34,12 +35,13 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   def receive = {
     case e: FileScanned if !e.hasVirus =>
-      log.info("FileScanned received for {} and {}", e.envelopeId, e.fileId)
+      Logger.info(s"FileScanned received for ${e.envelopeId} and ${e.fileId}")
       transferFile(e.envelopeId, e.fileId, e.fileRefId).map {
-        case Xor.Right(envelopeId) => log.info("File successful transferred {} and {}", e.envelopeId, e.fileId)
+        case Xor.Right(envelopeId) => Logger.info(s"File successful transferred ${e.envelopeId} and ${e.fileId}")
         case Xor.Left(TransferServiceError(id, m)) =>
-          log.info("Envelope not found successful transferred {} and {}", e.envelopeId, e.fileId)
-        case Xor.Left(_) => log.info("File not transferred {} and {}", e.envelopeId, e.fileId)
+          Logger.info(s"Envelope not found successful transferred ${e.envelopeId} and ${e.fileId} with $m")
+        case Xor.Left(_) =>
+          Logger.info(s"File not transferred ${e.envelopeId} and ${e.fileId}")
       }
     case _ =>
   }
