@@ -35,19 +35,24 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
                           (implicit executionContext: ExecutionContext) {
 
   def upload(envelopeId: EnvelopeId, fileId: FileId) = Action.async(uploadParser()) { implicit request =>
-    request.body.files.headOption.map { file =>
+    val numberOfAttachedFiles = request.body.files.size
+    if (numberOfAttachedFiles == 1) {
+      val file = request.body.files.head
       file.ref.flatMap { fileRef =>
         val fileRefId = fileRef.id match {
           case JsString(value) => FileRefId(value)
           case _ => throw new Exception("invalid reference")
         }
         notify(FileInQuarantineStored(
-          envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename, contentType = file.contentType.getOrElse(""), metadata = metadataAsJson)) map {
-            case Xor.Right(_) => Ok
-            case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
+          envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
+          contentType = file.contentType.getOrElse(""), metadata = metadataAsJson)) map {
+          case Xor.Right(_) => Ok
+          case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
         }
       }
-    }.getOrElse(Future.successful(NotImplemented))
+    } else {
+      Future.successful(BadRequest(Json.parse(""" { "message" : "Request must have exactly 1 file attached." } """)))
+    }
   }
 }
 

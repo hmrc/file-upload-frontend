@@ -81,9 +81,9 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
 
   def transferDownloadEnvelope(envelopeId: String) = Action.async { request =>
     WS.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").getStream().map {
-      case (headers, enumerator) => Ok.feed(enumerator).withHeaders(
-        "Content-Type" -> headers.headers("Content-Type").head,
-        "Content-Length" -> headers.headers("Content-Length").head)
+      case (headers, enumerator) => Ok.chunked(enumerator).withHeaders(
+        CONTENT_TYPE -> headers.headers(CONTENT_TYPE).headOption.getOrElse("unknown"),
+        CONTENT_DISPOSITION -> headers.headers(CONTENT_DISPOSITION).headOption.getOrElse("unknown"))
     }
   }
 

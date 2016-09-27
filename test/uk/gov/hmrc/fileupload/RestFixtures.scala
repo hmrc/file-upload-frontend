@@ -20,10 +20,10 @@ import java.util.UUID
 
 import play.api.libs.json.{JsString, JsValue}
 import play.api.mvc.MultipartFormData
+import play.api.mvc.MultipartFormData.FilePart
 import play.api.test.{FakeHeaders, FakeRequest}
 import reactivemongo.json.JSONSerializationPack
 import reactivemongo.json.JSONSerializationPack._
-import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
 import scala.concurrent.Future
@@ -44,10 +44,14 @@ object RestFixtures {
     FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
   }
 
-  def validUploadRequest(file: File = anyFile()) = {
+  def filePart(key: String, filename: String, contentType: Option[String]): FilePart[Future[JSONReadFile]] = {
+    MultipartFormData.FilePart(key, filename, contentType,
+      Future.successful(TestJsonReadFile(id = JsString(UUID.randomUUID().toString), filename = Some(filename))))
+  }
+
+  def validUploadRequest(files: File*) = {
     uploadRequest(MultipartFormData(Map(),
-      Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType,
-        Future.successful(TestJsonReadFile(id = JsString(UUID.randomUUID().toString), filename = Some(file.filename))))),
+      files.map(file => filePart(file.filename, file.filename, file.contentType)),
       Seq.empty, Seq.empty))
   }
 
