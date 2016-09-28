@@ -33,7 +33,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
-  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 10
+  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
 
   def upload(envelopeId: EnvelopeId, fileId: FileId) =
     Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
