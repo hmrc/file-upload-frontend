@@ -19,7 +19,6 @@ package uk.gov.hmrc.fileupload.controllers
 import cats.data.Xor
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsString, Json}
-import play.api.mvc.Results._
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
@@ -32,34 +31,41 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)
-                          (implicit executionContext: ExecutionContext) {
+                          (implicit executionContext: ExecutionContext) extends Controller {
 
-  def upload(envelopeId: EnvelopeId, fileId: FileId) = Action.async(uploadParser()) { implicit request =>
-    val numberOfAttachedFiles = request.body.files.size
-    if (numberOfAttachedFiles == 1) {
-      val file = request.body.files.head
-      file.ref.flatMap { fileRef =>
-        val fileRefId = fileRef.id match {
-          case JsString(value) => FileRefId(value)
-          case _ => throw new Exception("invalid reference")
+  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 10
+
+  def upload(envelopeId: EnvelopeId, fileId: FileId) =
+    Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
+    request.body match {
+      case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
+      case Right(formData) =>
+        val numberOfAttachedFiles = formData.files.size
+        if (numberOfAttachedFiles == 1) {
+          val file = formData.files.head
+          file.ref.flatMap { fileRef =>
+            val fileRefId = fileRef.id match {
+              case JsString(value) => FileRefId(value)
+              case _ => throw new Exception("invalid reference")
+            }
+            notify(FileInQuarantineStored(
+              envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
+              contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
+              case Xor.Right(_) => Ok
+              case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
+            }
+          }
+        } else {
+          Future.successful(BadRequest(Json.parse(""" { "message" : "Request must have exactly 1 file attached." } """)))
         }
-        notify(FileInQuarantineStored(
-          envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
-          contentType = file.contentType.getOrElse(""), metadata = metadataAsJson)) map {
-          case Xor.Right(_) => Ok
-          case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
-        }
-      }
-    } else {
-      Future.successful(BadRequest(Json.parse(""" { "message" : "Request must have exactly 1 file attached." } """)))
     }
   }
 }
 
 object FileUploadController {
 
-  def metadataAsJson(implicit request: Request[MultipartFormData[Future[JSONReadFile]]]): JsObject = {
-    val metadataParams = request.body.dataParts.collect {
+  def metadataAsJson(formData: MultipartFormData[Future[JSONReadFile]]): JsObject = {
+    val metadataParams = formData.dataParts.collect {
       case (key, singleValue :: Nil) => key -> JsString(singleValue)
       case (key, values: Seq[String]) if values.nonEmpty => key -> Json.toJson(values)
     }

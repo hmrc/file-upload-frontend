@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload
 import java.util.UUID
 
 import play.api.libs.json.{JsString, JsValue}
-import play.api.mvc.MultipartFormData
+import play.api.mvc.{MaxSizeExceeded, MultipartFormData, Request}
 import play.api.mvc.MultipartFormData.FilePart
 import play.api.test.{FakeHeaders, FakeRequest}
 import reactivemongo.json.JSONSerializationPack
@@ -40,8 +40,18 @@ object RestFixtures {
     val metadata: Document = null
   }
 
-  def uploadRequest(multipartBody: MultipartFormData[Future[JSONReadFile]]) = {
-    FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
+  type Multipart = MultipartFormData[Future[JSONReadFile]]
+
+  def withSizeChecking(multipartBody: Multipart, sizeExceeded: Boolean): Either[MaxSizeExceeded, Multipart] = {
+    if (sizeExceeded) {
+      Left(MaxSizeExceeded(0))
+    } else {
+      Right(multipartBody)
+    }
+  }
+
+  def uploadRequest(multipartBody: Multipart, sizeExceeded: Boolean) = {
+    FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = withSizeChecking(multipartBody, sizeExceeded))
   }
 
   def filePart(key: String, filename: String, contentType: Option[String]): FilePart[Future[JSONReadFile]] = {
@@ -49,12 +59,12 @@ object RestFixtures {
       Future.successful(TestJsonReadFile(id = JsString(UUID.randomUUID().toString), filename = Some(filename))))
   }
 
-  def validUploadRequest(files: File*) = {
+  def validUploadRequest(files: Seq[File], sizeExceeded: Boolean = false): Request[scala.Either[MaxSizeExceeded, Multipart]] = {
     uploadRequest(MultipartFormData(Map(),
       files.map(file => filePart(file.filename, file.filename, file.contentType)),
-      Seq.empty, Seq.empty))
+      Seq.empty, Seq.empty), sizeExceeded)
   }
 
   def multipartFormData(dataParts: Map[String, Seq[String]]) =
-    uploadRequest(MultipartFormData(dataParts, files = List(), badParts = List(), missingFileParts = List()))
+    uploadRequest(MultipartFormData(dataParts, files = List(), badParts = List(), missingFileParts = List()), sizeExceeded = false)
 }

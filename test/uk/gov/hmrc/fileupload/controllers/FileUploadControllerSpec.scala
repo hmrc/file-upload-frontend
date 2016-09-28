@@ -64,7 +64,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   "POST /upload" should {
     "return OK response if successfully upload files" in {
       val file = anyFile()
-      val request = validUploadRequest(file)
+      val request = validUploadRequest(List(file))
       val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(request).futureValue
@@ -73,7 +73,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     }
 
     "return 400 Bad Request if file was not found in the request" in {
-      val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty))
+      val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty), sizeExceeded = false)
       val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
@@ -82,7 +82,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       contentAsString(result) should include("Request must have exactly 1 file attached")
     }
     "return 400 Bad Request if >1 files were found in the request" in {
-      val requestWith2Files = validUploadRequest(anyFile(), anyFile())
+      val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
       val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files)
@@ -90,38 +90,46 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) should include("Request must have exactly 1 file attached")
     }
+    "return 413 Entity To Large if file size exceeds 10 mb" in {
+      val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
+      val controller = newController()
+
+      val result = controller.upload(EnvelopeId(), FileId())(tooLargeRequest)
+
+      status(result) shouldBe Status.REQUEST_ENTITY_TOO_LARGE
+    }
   }
 
   "function metadataToJson" should {
     "convert params of a multipart/form-data request to a Json Object" in {
       val params = Map("foo" -> Seq("1"), "bar" -> Seq("2"))
-      val req = multipartFormData(params)
+      val formData = multipartFormData(params).body.right.get
 
-      val result = FileUploadController.metadataAsJson(req)
+      val result = FileUploadController.metadataAsJson(formData)
 
       result shouldBe Json.obj("foo" -> "1", "bar" -> "2")
     }
     "work for an empty set of params" in {
       val params: Map[String, Seq[String]] = Map()
-      val req = multipartFormData(params)
+      val formData = multipartFormData(params).body.right.get
 
-      val result = FileUploadController.metadataAsJson(req)
+      val result = FileUploadController.metadataAsJson(formData)
 
       result shouldBe Json.obj()
     }
     "work for keys with no corresponding values" in {
       val params: Map[String, Seq[String]] = Map("foo" -> Seq())
-      val req = multipartFormData(params)
+      val formData = multipartFormData(params).body.right.get
 
-      val result = FileUploadController.metadataAsJson(req)
+      val result = FileUploadController.metadataAsJson(formData)
 
       result shouldBe Json.obj()
     }
     "work for keys with multiple values" in {
       val params: Map[String, Seq[String]] = Map("foo" -> Seq("bar", "baz"))
-      val req = multipartFormData(params)
+      val formData = multipartFormData(params).body.right.get
 
-      val result = FileUploadController.metadataAsJson(req)
+      val result = FileUploadController.metadataAsJson(formData)
 
       result shouldBe Json.obj("foo" -> List("bar", "baz"))
     }
