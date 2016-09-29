@@ -64,7 +64,7 @@ object TransferService {
               Xor.Left(TransferServiceError(envelopeId, r.response))
           })
 
-      case Xor.Left(QuarantineDownloadFileNotFound) => Future.failed(throw new Exception("unexpected exception")) // TODO return XOR left
+      case Xor.Left(QuarantineDownloadFileNotFound) => Future.failed(throw new Exception("unexpected exception"))
     }
 
   }
