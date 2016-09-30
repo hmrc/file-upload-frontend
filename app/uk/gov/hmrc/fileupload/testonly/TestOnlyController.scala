@@ -117,6 +117,14 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     Future.successful(Ok)
   }
 
+  def getEvents(streamId: String) = Action.async { request =>
+    WS.url(s"$baseUrl/file-upload/events/$streamId").get().map { response =>
+      new Status(response.status)(response.body).withHeaders {
+        "Content-Type" -> response.allHeaders("Content-Type").head
+      }
+    }
+  }
+
   def connDeathWatch(addr: String): Enumeratee[JsValue, JsValue] =
     Enumeratee.onIterateeDone{ () => println(addr + " - SSE disconnected") }
 
