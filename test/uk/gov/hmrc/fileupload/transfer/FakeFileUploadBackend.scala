@@ -17,14 +17,12 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.http.Status
-import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 import scala.collection.JavaConverters._
@@ -32,11 +30,9 @@ import scala.collection.JavaConverters._
 trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   this: Suite =>
 
-  lazy val fileUploadBackendPort = 8080
+  lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
 
-  lazy val backend = new WireMockServer(wireMockConfig().port(fileUploadBackendPort))
-
-  final lazy val fileUploadBackendBaseUrl = s"http://localhost:$fileUploadBackendPort"
+  final lazy val fileUploadBackendBaseUrl = s"http://localhost:${backend.port()}"
 
   override def beforeAll() = {
     super.beforeAll()

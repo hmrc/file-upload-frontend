@@ -1,12 +1,12 @@
 package uk.gov.hmrc.fileupload
 
+import org.scalatest.Matchers
 import org.scalatest.concurrent.Eventually
 import play.api.libs.ws.WS
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions, IntegrationSpec}
-import uk.gov.hmrc.fileupload.transfer.{FakeAuditer, FakeFileUploadBackend}
 
-class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with FakeFileUploadBackend with FakeAuditer with Eventually {
+class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with Eventually with Matchers {
 
   feature("File upload front-end") {
 
