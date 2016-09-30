@@ -19,11 +19,11 @@ package uk.gov.hmrc.fileupload
 import java.util.UUID
 
 import play.api.libs.json.{JsString, JsValue}
-import play.api.mvc.MultipartFormData
+import play.api.mvc.{MaxSizeExceeded, MultipartFormData, Request}
+import play.api.mvc.MultipartFormData.FilePart
 import play.api.test.{FakeHeaders, FakeRequest}
 import reactivemongo.json.JSONSerializationPack
 import reactivemongo.json.JSONSerializationPack._
-import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
 import scala.concurrent.Future
@@ -40,17 +40,31 @@ object RestFixtures {
     val metadata: Document = null
   }
 
-  def uploadRequest(multipartBody: MultipartFormData[Future[JSONReadFile]]) = {
-    FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = multipartBody)
+  type Multipart = MultipartFormData[Future[JSONReadFile]]
+
+  def withSizeChecking(multipartBody: Multipart, sizeExceeded: Boolean): Either[MaxSizeExceeded, Multipart] = {
+    if (sizeExceeded) {
+      Left(MaxSizeExceeded(0))
+    } else {
+      Right(multipartBody)
+    }
   }
 
-  def validUploadRequest(file: File = anyFile()) = {
+  def uploadRequest(multipartBody: Multipart, sizeExceeded: Boolean) = {
+    FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = withSizeChecking(multipartBody, sizeExceeded))
+  }
+
+  def filePart(key: String, filename: String, contentType: Option[String]): FilePart[Future[JSONReadFile]] = {
+    MultipartFormData.FilePart(key, filename, contentType,
+      Future.successful(TestJsonReadFile(id = JsString(UUID.randomUUID().toString), filename = Some(filename))))
+  }
+
+  def validUploadRequest(files: Seq[File], sizeExceeded: Boolean = false): Request[scala.Either[MaxSizeExceeded, Multipart]] = {
     uploadRequest(MultipartFormData(Map(),
-      Seq(MultipartFormData.FilePart(file.filename, file.filename, file.contentType,
-        Future.successful(TestJsonReadFile(id = JsString(UUID.randomUUID().toString), filename = Some(file.filename))))),
-      Seq.empty, Seq.empty))
+      files.map(file => filePart(file.filename, file.filename, file.contentType)),
+      Seq.empty, Seq.empty), sizeExceeded)
   }
 
   def multipartFormData(dataParts: Map[String, Seq[String]]) =
-    uploadRequest(MultipartFormData(dataParts, files = List(), badParts = List(), missingFileParts = List()))
+    uploadRequest(MultipartFormData(dataParts, files = List(), badParts = List(), missingFileParts = List()), sizeExceeded = false)
 }

@@ -17,9 +17,10 @@
 package uk.gov.hmrc.fileupload.virusscan
 
 import akka.actor.Status.Failure
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.pipe
 import cats.data.Xor
+import play.api.Logger
 import uk.gov.hmrc.fileupload.FileRefId
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
@@ -31,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
                    scanBinaryData: (FileRefId) => Future[ScanResult],
                    notify: (AnyRef) => Future[NotifyResult])
-                  (implicit executionContext: ExecutionContext) extends Actor with ActorLogging {
+                  (implicit executionContext: ExecutionContext) extends Actor {
 
   var outstandingScans = Queue.empty[FileInQuarantineStored]
   var scanningEvent: Option[FileInQuarantineStored] = None
@@ -76,7 +77,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
         outstandingScans = newQueue
         scanningEvent = Some(e)
 
-        log.info("Scan {} {} {}", e.envelopeId, e.fileId, e.fileRefId)
+        Logger.info(s"Scan ${e.envelopeId} ${e.fileId} ${e.fileRefId}")
         scanBinaryData(e.fileRefId) pipeTo self
 
       case None =>

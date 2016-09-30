@@ -40,14 +40,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with WithFakeApplication with Eventually with FakeAuditer {
   this: Suite =>
 
-  private lazy val fakeDownstreamSystemConfig = wireMockConfig().port(8900)
+  private lazy val fakeDownstreamSystemConfig = wireMockConfig().dynamicPort()
   private lazy val fakeDownstreamSystem = new WireMockServer(fakeDownstreamSystemConfig)
-  private val downstreamPath = "/test"
-  private val downstreamUrl = s"http://localhost:${fakeDownstreamSystemConfig.portNumber()}$downstreamPath"
+  private lazy val downstreamPath = "/test"
+  private lazy val downstreamUrl = s"http://localhost:${fakeDownstreamSystem.port()}$downstreamPath"
 
-  private val consumer = Consumer(BaseUri("localhost", auditerPort, "http"))
   private val testAppName = "test-app"
-  private val auditConnector = AuditConnector(AuditingConfig(Some(consumer), enabled = true, traceRequests = true))
+  private lazy val consumer = Consumer(BaseUri("localhost", fakeAuditer.port(), "http"))
+  private lazy val auditConnector = AuditConnector(AuditingConfig(Some(consumer), enabled = true, traceRequests = true))
   private var loggedErrors = ListBuffer.empty[Throwable]
   private val testExecute = PlayHttp.execute(auditConnector, testAppName, Some(t => {
     loggedErrors += t

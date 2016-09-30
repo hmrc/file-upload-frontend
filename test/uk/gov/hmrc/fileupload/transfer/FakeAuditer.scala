@@ -27,9 +27,9 @@ import play.api.http.Status
 trait FakeAuditer extends BeforeAndAfterAll with ScalaFutures {
   this: Suite =>
 
-  val auditerPort = 8100
+  val config = wireMockConfig().dynamicPort()
 
-  lazy val fakeAuditer = new WireMockServer(wireMockConfig().port(auditerPort))
+  lazy val fakeAuditer = new WireMockServer(config)
 
   override def beforeAll() = {
     super.beforeAll()

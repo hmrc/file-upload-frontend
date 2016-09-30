@@ -138,7 +138,6 @@ class HttpStreamingBody(url: String,
             HttpStreamingBody.Result(con.getResponseMessage, con.getResponseCode)
           }
           mayBeConnection foreach (_.disconnect())
-          auditer(successful, mayBeResult.map(_.status).get, "")(request)
           Done(mayBeResult.get, Input.EOF)
 
         case Input.Empty => this
@@ -148,7 +147,6 @@ class HttpStreamingBody(url: String,
             case Failure(NonFatal(e)) =>
               logError(e)
               mayBeResult = Some(HttpStreamingBody.Result(e.getMessage, 400))
-              auditer(!successful, 400, "")(request)
             case _ => ()
           }
           this  //@todo this suggests we carry on consuming. is this what we want?
