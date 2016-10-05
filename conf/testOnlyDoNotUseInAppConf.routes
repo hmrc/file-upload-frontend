@@ -18,6 +18,7 @@ POST        /file-upload/test-only/cleanup                                      
 POST        /file-upload/test-only/events                                                       @uk.gov.hmrc.fileupload.testonly.TestOnlyController.events
 GET         /file-upload/test-only/events/:streamId                                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.getEvents(streamId: String)
 GET         /file-upload/test-only/eventsstream                                                 @uk.gov.hmrc.fileupload.testonly.TestOnlyController.eventFeed
+GET         /file-upload/test-only/files/inprogress                                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.filesInProgress
 
 POST        /file-upload/test-only/routing/requests                                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.routingRequests
 
