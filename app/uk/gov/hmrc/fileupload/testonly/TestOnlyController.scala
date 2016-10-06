@@ -21,12 +21,9 @@ import play.api.libs.EventSource
 import play.api.libs.iteratee.{Concurrent, Enumeratee}
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WS, WSResponse}
-import play.api.mvc.{Action, Controller}
-import play.api.mvc.Results._
-import uk.gov.hmrc.fileupload.EnvelopeId
+import play.api.mvc.Controller
 import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
-import play.api.mvc.BodyParsers.parse
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -130,4 +127,9 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     ).as("text/event-stream")
   }
 
+  def filesInProgress() = Action.async { request =>
+    WS.url(s"$baseUrl/file-upload/files/inprogress").get().map { response =>
+      Ok(Json.parse(response.body))
+    }
+  }
 }

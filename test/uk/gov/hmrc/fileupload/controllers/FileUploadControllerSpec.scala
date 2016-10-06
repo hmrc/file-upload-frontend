@@ -79,7 +79,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
 
       status(result) shouldBe Status.BAD_REQUEST
-      contentAsString(result) should include("Request must have exactly 1 file attached")
+      contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
     }
     "return 400 Bad Request if >1 files were found in the request" in {
       val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
@@ -88,7 +88,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files)
 
       status(result) shouldBe Status.BAD_REQUEST
-      contentAsString(result) should include("Request must have exactly 1 file attached")
+      contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
     }
     "return 413 Entity To Large if file size exceeds 10 mb" in {
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)

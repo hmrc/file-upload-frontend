@@ -24,6 +24,7 @@ import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
+import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -56,7 +57,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
             }
           }
         } else {
-          Future.successful(BadRequest(Json.parse(""" { "message" : "Request must have exactly 1 file attached." } """)))
+          Future.successful(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
         }
     }
   }
