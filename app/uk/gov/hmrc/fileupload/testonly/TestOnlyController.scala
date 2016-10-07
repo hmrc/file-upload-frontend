@@ -103,6 +103,12 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
+  def clearCollections() = Action.async {
+    WS.url(s"$baseUrl/file-upload/test-only/clear-collections").post(Json.obj()).map { response =>
+      new Status(response.status)(response.body)
+    }
+  }
+
   def events() = Action.async(parse.json) { request =>
     eventsChannel.push(request.body)
     Future.successful(Ok)
