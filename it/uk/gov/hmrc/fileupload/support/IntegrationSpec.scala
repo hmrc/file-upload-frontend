@@ -5,6 +5,7 @@ import java.util.UUID
 import org.scalatest.FeatureSpec
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.test.FakeApplication
+import uk.gov.hmrc.fileupload.FakeClam
 import uk.gov.hmrc.fileupload.transfer.FakeFileUploadBackend
 
 trait IntegrationSpec extends FeatureSpec with OneServerPerSuite with FakeFileUploadBackend {
@@ -13,10 +14,13 @@ trait IntegrationSpec extends FeatureSpec with OneServerPerSuite with FakeFileUp
 
   val nextId = () => UUID.randomUUID().toString
 
+  lazy private val clamPort = FakeClam.connect().getLocalPort
+
   implicit override lazy val app: FakeApplication =
     FakeApplication(
       additionalConfiguration = Map(
         "auditing.enabled" -> "false",
+        "Test.clam.antivirus.port" -> clamPort,
         "microservice.services.file-upload-backend.port" -> backend.port()
       )
     )
