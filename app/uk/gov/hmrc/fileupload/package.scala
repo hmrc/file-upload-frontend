@@ -86,6 +86,12 @@ object FileRefId {
     new SimpleObjectBinder[FileRefId](FileRefId.apply, _.value)
 }
 
+trait Event {
+  def envelopeId: EnvelopeId
+  def fileId: FileId
+  def fileRefId: FileRefId
+}
+
 package object fileupload {
   type ByteStream = Array[Byte]
   type JSONGridFS = GridFS[JSONSerializationPack.type]

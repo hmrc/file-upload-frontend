@@ -21,7 +21,7 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.pipe
 import cats.data.Xor
 import play.api.Logger
-import uk.gov.hmrc.fileupload.FileRefId
+import uk.gov.hmrc.fileupload.{Event, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
@@ -34,22 +34,31 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
                    notify: (AnyRef) => Future[NotifyResult])
                   (implicit executionContext: ExecutionContext) extends Actor {
 
-  var outstandingScans = Queue.empty[FileInQuarantineStored]
-  var scanningEvent: Option[FileInQuarantineStored] = None
+  var outstandingScans = Queue.empty[Event]
+  var scanningEvent: Option[Event] = None
 
   override def preStart = {
     subscribe(self, classOf[FileInQuarantineStored])
+    subscribe(self, classOf[VirusScanRequested])
   }
 
   def receive = {
     case e: FileInQuarantineStored =>
       outstandingScans = outstandingScans enqueue e
       scanNext()
+
+    case e: VirusScanRequested =>
+      outstandingScans = outstandingScans enqueue e
+      scanNext()
+
     case _ =>
   }
 
   def receiveWhenScanning: Receive = {
     case e: FileInQuarantineStored =>
+      outstandingScans = outstandingScans enqueue e
+
+    case e: VirusScanRequested =>
       outstandingScans = outstandingScans enqueue e
 
     case Xor.Right(ScanResultFileClean) =>

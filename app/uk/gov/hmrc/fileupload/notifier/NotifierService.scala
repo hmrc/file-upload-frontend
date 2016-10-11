@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.notifier
 
 import cats.data.Xor
+import play.api.Logger
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierRepository.Notification
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
@@ -40,11 +41,11 @@ object NotifierService {
     event match {
       case e: FileInQuarantineStored =>
         val result = sendNotification(send, Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
-        result.map(r => publish(event))
+        result.map(r => r.foreach(_ => publish(event)))
         result
       case e: FileScanned =>
         val result = sendNotification(send, Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
-        result.map(r => publish(event))
+        result.map(r => r.foreach(_ => publish(event)))
         result
       case _ =>
         publish(event)
@@ -56,7 +57,9 @@ object NotifierService {
                               (implicit executionContext: ExecutionContext): Future[NotifyResult] =
     send(notification).map {
       case Xor.Right(_) => Xor.right(NotifySuccess)
-      case Xor.Left(e) => Xor.left(NotifyError(e.statusCode, e.reason))
+      case Xor.Left(e) =>
+        Logger.warn(s"Sending event to external system failed ${e.statusCode} ${e.reason}")
+        Xor.left(NotifyError(e.statusCode, e.reason))
     }
 
 
