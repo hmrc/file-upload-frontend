@@ -12,7 +12,7 @@ object FakeClam {
 
   def connect() = {
     val serverSocket = new ServerSocket(0)
-    Logger.warn(s"Fake clam started on port ${serverSocket.getLocalPort}")
+    Logger.info(s"Fake clam started on port ${serverSocket.getLocalPort}")
 
     Future {
       val socket = serverSocket.accept()
@@ -31,11 +31,11 @@ object FakeClam {
       .takeWhile(a => a != 0)
       .map(_.toByte).toArray)
 
-    Logger.warn(s"Received $received")
+    Logger.info(s"Received $received")
     received match {
       case "zINSTREAM" | "" => handle(in, out)
       case _ =>
-        Logger.warn(s"Responding with $okClamAvResponse")
+        Logger.info(s"Responding with $okClamAvResponse")
         out.writeBytes(okClamAvResponse)
         out.flush()
     }
