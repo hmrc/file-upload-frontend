@@ -58,7 +58,7 @@ object NotifierService {
     send(notification).map {
       case Xor.Right(_) => Xor.right(NotifySuccess)
       case Xor.Left(e) =>
-        Logger.warn(s"Sending event to external system failed ${e.statusCode} ${e.reason}")
+        Logger.warn(s"Sending event to external system failed ${e.statusCode} ${e.reason} ${notification}")
         Xor.left(NotifyError(e.statusCode, e.reason))
     }
 
