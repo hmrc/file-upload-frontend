@@ -86,7 +86,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
         outstandingScans = newQueue
         scanningEvent = Some(e)
 
-        Logger.info(s"Scan ${e.envelopeId} ${e.fileId} ${e.fileRefId}")
+        Logger.info(s"Scan $e")
         scanBinaryData(e.fileRefId) pipeTo self
 
       case None =>
