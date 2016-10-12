@@ -14,7 +14,7 @@ trait IntegrationSpec extends FeatureSpec with OneServerPerSuite with FakeFileUp
 
   val nextId = () => UUID.randomUUID().toString
 
-  lazy private val clamPort = FakeClam.connect().getLocalPort
+  lazy private val clamPort = FakeClam.connect().fold(error => fail("Fake clam error", error.cause), _.getLocalPort)
 
   implicit override lazy val app: FakeApplication =
     FakeApplication(
