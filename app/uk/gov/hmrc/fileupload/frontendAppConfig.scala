@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.fileupload
 
+import org.joda.time.Duration
 import play.api.Play
 import play.api.Play.{configuration, current}
 import uk.gov.hmrc.play.config.ServicesConfig
+
 
 trait AppConfig {
   val assetsPrefix: String
@@ -46,4 +48,5 @@ object ServiceConfig extends ServicesConfig {
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
   lazy val appName = getString("appName")
   lazy val clamAvConfig = Play.current.configuration.getConfig(s"$env.clam.antivirus")
+  lazy val quarantineTTl = Duration.standardDays(getConfInt("quarantine.ttlInDays", 7))
 }

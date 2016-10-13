@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.testonly
 
+import org.joda.time.Duration
 import play.api.Play.current
 import play.api.libs.EventSource
 import play.api.libs.iteratee.{Concurrent, Enumeratee}
@@ -24,6 +25,7 @@ import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Controller
 import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
+import uk.gov.hmrc.fileupload.ServiceConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -117,6 +119,18 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
   def filesInProgress() = Action.async { request =>
     WS.url(s"$baseUrl/file-upload/files/inprogress").get().map { response =>
       Ok(Json.parse(response.body))
+    }
+  }
+
+  def clearQuarantine(expiryDurationInDays: Option[Int]) = Action.async { request =>
+    val expiry = expiryDurationInDays.map(Duration.standardDays(_)).getOrElse(ServiceConfig.quarantineTTl)
+    quarantineRepo.clear(Some(expiry)).map {
+      results =>
+        val errors = results.filter(_.hasErrors)
+        errors match {
+          case Nil => Ok
+          case _ => InternalServerError(errors.flatMap(_.errmsg).mkString(", "))
+        }
     }
   }
 }
