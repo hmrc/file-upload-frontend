@@ -12,8 +12,6 @@ class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActi
   feature("File upload front-end") {
 
     scenario("transfer a file to the back-end") {
-      pending
-
       val fileId = anyFileId
       val envelopeId = anyEnvelopeId
 

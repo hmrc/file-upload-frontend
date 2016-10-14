@@ -4,20 +4,22 @@ import java.io.{BufferedReader, DataOutputStream, IOException, InputStreamReader
 import java.net.ServerSocket
 
 import cats.data.Xor
-import play.api.Logger
+import org.apache.logging.log4j.LogManager
 import uk.gov.hmrc.clamav.config.ClamAvConfig._
 
 import scalaz.concurrent.Future
 
 object FakeClam {
 
+  val logger = LogManager.getLogger(FakeClam.getClass)
+
   case class FakeClamError(cause: Throwable)
 
   def connect(): Xor[FakeClamError, ServerSocket] = {
-    Logger.info("Starting fake Clam")
+    logger.info("Starting fake Clam")
     try {
       val serverSocket = new ServerSocket(0)
-      Logger.info(s"Fake Clam started on port ${ serverSocket.getLocalPort }")
+      logger.info(s"Fake Clam started on port ${ serverSocket.getLocalPort }")
       waitForClients(serverSocket)
       Xor.Right(serverSocket)
     } catch {
@@ -39,11 +41,11 @@ object FakeClam {
       .takeWhile(a => a != 0)
       .map(_.toByte).toArray)
 
-    Logger.info(s"Received $received")
+    logger.info(s"Received $received")
     received match {
       case "zINSTREAM" | "" => handle(in, out)
       case _ =>
-        Logger.info(s"Responding with $okClamAvResponse")
+        logger.info(s"Responding with $okClamAvResponse")
         out.writeBytes(okClamAvResponse)
         out.flush()
     }
