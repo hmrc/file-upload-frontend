@@ -39,7 +39,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
         .allHeaders
         .get("Location")
         .flatMap(_.headOption)
-        .map( l => l.substring(l.lastIndexOf("/") + 1) )
+        .map(l => l.substring(l.lastIndexOf("/") + 1))
         .getOrElse("missing/invalid")
 
     val callback = request.queryString.get("callbackUrl").flatMap(_.headOption)
@@ -106,7 +106,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
   }
 
   def connDeathWatch(addr: String): Enumeratee[JsValue, JsValue] =
-    Enumeratee.onIterateeDone{ () => println(addr + " - SSE disconnected") }
+    Enumeratee.onIterateeDone { () => println(addr + " - SSE disconnected") }
 
   def eventFeed() = Action { req =>
     println(req.remoteAddress + " - SSE connected")
@@ -122,7 +122,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
-  def clearQuarantine(expiryDurationInDays: Option[Int]) = Action.async { request =>
+  def expireQuarantine(expiryDurationInDays: Option[Int]) = Action.async { request =>
     val expiry = expiryDurationInDays.map(Duration.standardDays(_)).getOrElse(ServiceConfig.quarantineTTl)
     quarantineRepo.clear(Some(expiry)).map {
       results =>
@@ -131,6 +131,15 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
           case Nil => Ok
           case _ => InternalServerError(errors.flatMap(_.errmsg).mkString(", "))
         }
+    }
+  }
+
+  def expireTransient(expiryDurationInDays: Option[Int]) = Action.async { request =>
+    val url = WS.url(s"$baseUrl/file-upload/test-only/expire-transient")
+
+    expiryDurationInDays.fold(url)(duration => url.withQueryString("expiryDurationInDays" -> duration.toString))
+      .post("").map { response =>
+      new Status(response.status)(response.body)
     }
   }
 }
