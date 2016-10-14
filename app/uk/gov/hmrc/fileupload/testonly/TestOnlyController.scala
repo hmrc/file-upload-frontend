@@ -122,9 +122,8 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
-  def expireQuarantine(expiryDurationInDays: Option[Int]) = Action.async { request =>
-    val expiry = expiryDurationInDays.map(Duration.standardDays(_)).getOrElse(ServiceConfig.quarantineTTl)
-    quarantineRepo.clear(Some(expiry)).map {
+  def expireQuarantine() = Action.async { request =>
+    quarantineRepo.clear(Some(ServiceConfig.quarantineTTl)).map {
       results =>
         val errors = results.filter(_.hasErrors)
         errors match {
@@ -134,10 +133,8 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
-  def expireTransient(expiryDurationInDays: Option[Int]) = Action.async { request =>
-    val url = WS.url(s"$baseUrl/file-upload/test-only/expire-transient")
-
-    expiryDurationInDays.fold(url)(duration => url.withQueryString("expiryDurationInDays" -> duration.toString))
+  def expireTransient() = Action.async { request =>
+    WS.url(s"$baseUrl/file-upload/test-only/expire-transient")
       .post("").map { response =>
       new Status(response.status)(response.body)
     }

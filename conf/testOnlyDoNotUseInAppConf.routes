@@ -24,8 +24,8 @@ GET         /file-upload/test-only/transfer/get-envelopes                       
 GET         /file-upload/test-only/transfer/download-envelope/:envelopeId                       @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDownloadEnvelope(envelopeId: String)
 DELETE      /file-upload/test-only/transfer/delete-envelope/:envelopeId                         @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDeleteEnvelope(envelopeId: String)
 
-POST        /file-upload/test-only/expire-quarantine                                            @uk.gov.hmrc.fileupload.testonly.TestOnlyController.expireQuarantine(expiryDurationInDays: Option[Int])
-POST        /file-upload/test-only/expire-transient                                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.expireTransient(expiryDurationInDays: Option[Int])
+POST        /file-upload/test-only/expire-quarantine                                            @uk.gov.hmrc.fileupload.testonly.TestOnlyController.expireQuarantine()
+POST        /file-upload/test-only/expire-transient                                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.expireTransient()
 
 
 # Add all the application routes to the prod.routes file
