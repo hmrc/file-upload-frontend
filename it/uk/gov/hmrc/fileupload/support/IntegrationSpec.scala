@@ -1,6 +1,5 @@
 package uk.gov.hmrc.fileupload.support
 
-import java.net.InetSocketAddress
 import java.util.UUID
 
 import org.scalatest.FeatureSpec

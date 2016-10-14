@@ -33,12 +33,11 @@ object FakeClam {
     val in = new BufferedReader(new InputStreamReader(socket.getInputStream))
     handle(in, out)
     socket.close()
-    serverSocket.close()
   }.start
 
   def handle(in: BufferedReader, out: DataOutputStream): Unit = {
     val received = new String(Iterator.continually(in.read)
-      .takeWhile(a => a != 0)
+      .takeWhile(_ != 0)
       .map(_.toByte).toArray)
 
     logger.info(s"Received $received")
