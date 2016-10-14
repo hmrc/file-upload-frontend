@@ -1,5 +1,6 @@
 package uk.gov.hmrc.fileupload.support
 
+import java.net.InetSocketAddress
 import java.util.UUID
 
 import org.scalatest.FeatureSpec
@@ -20,6 +21,7 @@ trait IntegrationSpec extends FeatureSpec with OneServerPerSuite with FakeFileUp
     FakeApplication(
       additionalConfiguration = Map(
         "auditing.enabled" -> "false",
+        "Test.clam.antivirus.host" -> "127.0.0.1",
         "Test.clam.antivirus.port" -> clamPort,
         "microservice.services.file-upload-backend.port" -> backend.port()
       )
