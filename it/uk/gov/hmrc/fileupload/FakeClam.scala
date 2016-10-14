@@ -29,9 +29,12 @@ object FakeClam {
 
   def waitForClients(serverSocket: ServerSocket) = Future {
     val socket = serverSocket.accept()
-    val out = new DataOutputStream(socket.getOutputStream)
+    val outputStream = socket.getOutputStream
+    val dataOutputStream = new DataOutputStream(outputStream)
     val in = new BufferedReader(new InputStreamReader(socket.getInputStream))
-    handle(in, out)
+    handle(in, dataOutputStream)
+    dataOutputStream.close()
+    outputStream.close()
     socket.close()
   }.start
 
