@@ -5,7 +5,7 @@ import java.net.ServerSocket
 
 import cats.data.Xor
 import org.apache.logging.log4j.LogManager
-import uk.gov.hmrc.clamav.config.ClamAvConfig._
+import uk.gov.hmrc.clamav.ClamAntiVirus._
 
 import scalaz.concurrent.Future
 
