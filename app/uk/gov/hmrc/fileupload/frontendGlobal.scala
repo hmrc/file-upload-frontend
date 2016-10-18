@@ -23,6 +23,8 @@ import play.api.Mode._
 import play.api.mvc.Request
 import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
+import uk.gov.hmrc.clamav.config.ClamAvConfig
+import uk.gov.hmrc.clamav.fake.FakeClam
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
@@ -67,6 +69,12 @@ object FrontendGlobal
     publish = eventStream.publish
 
     notifyAndPublish = NotifierService.notify(sendNotification, publish) _
+
+    val config = ServiceConfig.clamAvConfig
+    val runStubClam = config.flatMap(_.getBoolean("runStub")).getOrElse(false)
+    if (runStubClam & ServiceConfig.env == "Dev") {
+      FakeClam(ClamAvConfig(config).port).start()
+    }
 
     // scanner
     Akka.system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
