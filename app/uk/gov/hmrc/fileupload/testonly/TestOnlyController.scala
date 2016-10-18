@@ -27,7 +27,7 @@ import play.api.mvc.Action
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) extends Controller {
+class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionContext) extends Controller {
 
   val (eventsEnumerator, eventsChannel) = Concurrent.broadcast[JsValue]
 
@@ -37,7 +37,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
         .allHeaders
         .get("Location")
         .flatMap(_.headOption)
-        .map( l => l.substring(l.lastIndexOf("/") + 1) )
+        .map(l => l.substring(l.lastIndexOf("/") + 1))
         .getOrElse("missing/invalid")
 
     val callback = request.queryString.get("callbackUrl").flatMap(_.headOption)
@@ -104,7 +104,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
   }
 
   def connDeathWatch(addr: String): Enumeratee[JsValue, JsValue] =
-    Enumeratee.onIterateeDone{ () => println(addr + " - SSE disconnected") }
+    Enumeratee.onIterateeDone { () => println(addr + " - SSE disconnected") }
 
   def eventFeed() = Action { req =>
     println(req.remoteAddress + " - SSE connected")

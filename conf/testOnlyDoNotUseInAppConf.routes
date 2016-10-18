@@ -24,6 +24,5 @@ GET         /file-upload/test-only/transfer/get-envelopes                       
 GET         /file-upload/test-only/transfer/download-envelope/:envelopeId                       @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDownloadEnvelope(envelopeId: String)
 DELETE      /file-upload/test-only/transfer/delete-envelope/:envelopeId                         @uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDeleteEnvelope(envelopeId: String)
 
-
 # Add all the application routes to the prod.routes file
 ->          /                                                 prod.Routes
