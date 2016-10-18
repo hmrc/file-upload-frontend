@@ -48,5 +48,4 @@ object ServiceConfig extends ServicesConfig {
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
   lazy val appName = getString("appName")
   lazy val clamAvConfig = Play.current.configuration.getConfig(s"$env.clam.antivirus")
-  lazy val quarantineTTl = Duration.standardDays(getConfInt("quarantine.ttlInDays", 7))
 }

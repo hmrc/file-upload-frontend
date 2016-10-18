@@ -64,10 +64,9 @@ class Repository(mongo: () => DB with DBMetaCommands) {
     }
   }
 
-  def clear(expireDuration: Option[Duration] = None)(implicit ec: ExecutionContext): Future[List[WriteResult]] = {
-    val query = expireDuration.fold(BSONDocument()) {
-      duration => BSONDocument("uploadDate" -> BSONDocument("$lt" -> BSONDateTime(DateTime.now().minus(duration).getMillis)))
-    }
+  def clear(expireDuration: Duration = Duration.standardDays(7), toNow: () => DateTime = () => DateTime.now())()
+           (implicit ec: ExecutionContext): Future[List[WriteResult]] = {
+    val query = BSONDocument("uploadDate" -> BSONDocument("$lt" -> BSONDateTime(toNow().minus(expireDuration).getMillis)))
     val files = gfs.files.remove[BSONDocument](query)
     val chunks = gfs.chunks.remove[BSONDocument](query)
     Future.sequence(List(files, chunks))

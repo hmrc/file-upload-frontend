@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload.testonly
 
-import org.joda.time.Duration
 import play.api.Play.current
 import play.api.libs.EventSource
 import play.api.libs.iteratee.{Concurrent, Enumeratee}
@@ -25,11 +24,10 @@ import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Controller
 import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
-import uk.gov.hmrc.fileupload.ServiceConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) extends Controller {
+class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionContext) extends Controller {
 
   val (eventsEnumerator, eventsChannel) = Concurrent.broadcast[JsValue]
 
@@ -119,24 +117,6 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
   def filesInProgress() = Action.async { request =>
     WS.url(s"$baseUrl/file-upload/files/inprogress").get().map { response =>
       Ok(Json.parse(response.body))
-    }
-  }
-
-  def expireQuarantine() = Action.async { request =>
-    quarantineRepo.clear(Some(ServiceConfig.quarantineTTl)).map {
-      results =>
-        val errors = results.filter(_.hasErrors)
-        errors match {
-          case Nil => Ok
-          case _ => InternalServerError(errors.flatMap(_.errmsg).mkString(", "))
-        }
-    }
-  }
-
-  def expireTransient() = Action.async { request =>
-    WS.url(s"$baseUrl/file-upload/test-only/expire-transient")
-      .post("").map { response =>
-      new Status(response.status)(response.body)
     }
   }
 }

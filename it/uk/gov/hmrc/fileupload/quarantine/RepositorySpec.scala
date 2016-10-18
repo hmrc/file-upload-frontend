@@ -16,12 +16,14 @@
 
 package uk.gov.hmrc.fileupload.quarantine
 
+import org.joda.time.Duration
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsString
 import uk.gov.hmrc.fileupload.FileRefId
+import uk.gov.hmrc.fileupload.ServiceConfig._
 import uk.gov.hmrc.fileupload.fileupload.{ByteStream, JSONReadFile}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
@@ -36,7 +38,7 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
   val repository = new Repository(mongo)
 
   override def beforeEach {
-    repository.clear().futureValue
+    repository.clear(Duration.standardDays(0)).futureValue
   }
 
   "repository" should {
