@@ -90,6 +90,25 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
+  def cleanup() = Action.async { request =>
+    for {
+      cleaningQuarantine  <- quarantineRepo.removeAll().map(_.forall(_.ok))
+      cleaningTransient   <- WS.url(s"$baseUrl/file-upload/test-only/cleanup-transient").post(Json.obj()).map { _.status == 200 }
+    } yield {
+      if (cleaningQuarantine && cleaningTransient) {
+        Ok
+      } else {
+        InternalServerError(s"cleaningQuarantine=$cleaningQuarantine, cleaningTransient=$cleaningTransient")
+      }
+    }
+  }
+
+  def clearCollections() = Action.async {
+    WS.url(s"$baseUrl/file-upload/test-only/clear-collections").post(Json.obj()).map { response =>
+      new Status(response.status)(response.body)
+    }
+  }
+
   def events() = Action.async(parse.json) { request =>
     eventsChannel.push(request.body)
     Future.successful(Ok)
