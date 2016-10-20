@@ -14,7 +14,7 @@ POST        /file-upload/test-only/create-envelope                              
 POST        /file-upload/test-only/clear-collections                                            @uk.gov.hmrc.fileupload.testonly.TestOnlyController.clearCollections
 GET         /file-upload/test-only/envelopes/:envelopeId                                        @uk.gov.hmrc.fileupload.testonly.TestOnlyController.getEnvelope(envelopeId: String)
 GET         /file-upload/test-only/download-file/envelopes/:envelopeId/files/:fileId/content    @uk.gov.hmrc.fileupload.testonly.TestOnlyController.downloadFile(envelopeId: String, fileId: String)
-POST        /file-upload/test-only/cleanup                                                      @uk.gov.hmrc.fileupload.testonly.TestOnlyController.cleanup
+POST        /file-upload/test-only/cleanup-quarantine                                           @uk.gov.hmrc.fileupload.testonly.TestOnlyController.cleanupQuarantine()
 POST        /file-upload/test-only/events                                                       @uk.gov.hmrc.fileupload.testonly.TestOnlyController.events
 GET         /file-upload/test-only/events/:streamId                                             @uk.gov.hmrc.fileupload.testonly.TestOnlyController.getEvents(streamId: String)
 GET         /file-upload/test-only/eventsstream                                                 @uk.gov.hmrc.fileupload.testonly.TestOnlyController.eventFeed

@@ -24,6 +24,7 @@ import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Controller
 import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
+import play.api.mvc.Results._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -90,16 +91,9 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
-  def cleanup() = Action.async { request =>
-    for {
-      cleaningQuarantine  <- quarantineRepo.removeAll().map(_.forall(_.ok))
-      cleaningTransient   <- WS.url(s"$baseUrl/file-upload/test-only/cleanup-transient").post(Json.obj()).map { _.status == 200 }
-    } yield {
-      if (cleaningQuarantine && cleaningTransient) {
-        Ok
-      } else {
-        InternalServerError(s"cleaningQuarantine=$cleaningQuarantine, cleaningTransient=$cleaningTransient")
-      }
+  def cleanupQuarantine() = Action.async { request =>
+    quarantineRepo.removeAll().map { results =>
+      if (results.forall(_.ok)) Ok else InternalServerError
     }
   }
 
