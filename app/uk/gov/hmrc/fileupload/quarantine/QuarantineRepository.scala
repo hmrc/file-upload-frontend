@@ -17,17 +17,22 @@
 package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
+import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.Json
 import play.modules.reactivemongo.GridFSController._
 import play.modules.reactivemongo.JSONFileToSave
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.gridfs.GridFS
+import reactivemongo.api.indexes.Index
+import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.api.{DB, DBMetaCommands}
 import reactivemongo.bson.BSONDocument
 import reactivemongo.json._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
+
+import scala.util.{Failure, Success}
 
 case class FileData(length: Long = 0, filename: String, contentType: Option[String], data: Enumerator[Array[Byte]] = null)
 
@@ -36,7 +41,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object Repository {
 
-  def apply(mongo: () => DB with DBMetaCommands): Repository = new Repository(mongo)
+  def apply(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionContext): Repository = new Repository(mongo)
 
   type WriteFileResult = Xor[WriteFileError, EnvelopeId]
 
@@ -44,11 +49,19 @@ object Repository {
   case class WriteFileNotPersistedError(id: EnvelopeId) extends WriteFileError
 }
 
-class Repository(mongo: () => DB with DBMetaCommands) {
+class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionContext) {
 
   import reactivemongo.json.collection._
 
   lazy val gfs = GridFS[JSONSerializationPack.type](mongo(), "quarantine")
+
+  ensureIndex()
+
+  def ensureIndex() =
+    gfs.chunks.indexesManager.ensure(Index(List("files_id" -> Ascending, "n" -> Ascending), unique = true, background = true)).onComplete {
+      case Success(result) => Logger.info(s"Index creation for chunks success $result")
+      case Failure(t) => Logger.warn(s"Index creation for chunks failed ${ t.getMessage }")
+    }
 
   private def metadata(envelopeId: EnvelopeId, fileId: FileId) =
     Json.obj("envelopeId" -> envelopeId.value, "fileId" -> fileId.value)
