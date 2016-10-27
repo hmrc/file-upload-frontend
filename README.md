@@ -1,6 +1,6 @@
 # file-upload-frontend
 
-Frontend for uploading files to the Tax Platform. Please <i>**DO NOT USE**</i> Test-Only endpoints because they are not available in production and Internal-Use-Only endpoints <i>**WITHOUT PERMISSION**</i>  
+Frontend for uploading files to the Tax Platform. Please <i>**DO NOT USE**</i> Test-Only and Internal-Use-Only endpoints <i>**WITHOUT PERMISSION**</i>  
 
 [![Build Status](https://travis-ci.org/hmrc/file-upload-frontend.svg?branch=master)](https://travis-ci.org/hmrc/file-upload-frontend) [ ![Download](https://api.bintray.com/packages/hmrc/releases/file-upload-frontend/images/download.svg) ](https://bintray.com/hmrc/releases/file-upload-frontend/_latestVersion)
 
