@@ -17,15 +17,15 @@
 package uk.gov.hmrc.fileupload.testonly
 
 import play.api.Play.current
-import play.api.libs.EventSource
-import play.api.libs.iteratee.{Concurrent, Enumeratee}
+import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Controller
 import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
+import play.api.mvc.Results._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) extends Controller {
 
@@ -84,6 +84,18 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
 
   def transferDeleteEnvelope(envelopeId: String) = Action.async { request =>
     WS.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").delete().map { response =>
+      new Status(response.status)(response.body)
+    }
+  }
+
+  def cleanupQuarantine() = Action.async { request =>
+    quarantineRepo.removeAll().map { results =>
+      if (results.forall(_.ok)) Ok else InternalServerError
+    }
+  }
+
+  def clearCollections() = Action.async {
+    WS.url(s"$baseUrl/file-upload/test-only/clear-collections").post(Json.obj()).map { response =>
       new Status(response.status)(response.body)
     }
   }

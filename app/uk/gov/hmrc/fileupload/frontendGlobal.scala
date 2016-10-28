@@ -57,6 +57,16 @@ object FrontendGlobal
   var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
   val now: () => Long = () => System.currentTimeMillis()
 
+  lazy val fakeClam = {
+    val config = ServiceConfig.clamAvConfig
+    val runStubClam = config.flatMap(_.getBoolean("runStub")).getOrElse(false)
+    if (runStubClam & ServiceConfig.env == "Dev") {
+      Some(FakeClam(ClamAvConfig(config).port))
+    } else {
+      None
+    }
+  }
+
   override def onStart(app: Application) {
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
@@ -72,9 +82,7 @@ object FrontendGlobal
 
     val config = ServiceConfig.clamAvConfig
     val runStubClam = config.flatMap(_.getBoolean("runStub")).getOrElse(false)
-    if (runStubClam & ServiceConfig.env == "Dev") {
-      FakeClam(ClamAvConfig(config).port).start()
-    }
+    fakeClam.foreach(_.start())
 
     // scanner
     Akka.system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
@@ -82,6 +90,13 @@ object FrontendGlobal
 
     fileUploadController
     testOnlyController
+  }
+
+
+  override def onStop(app: Application): Unit = {
+    super.onStop(app)
+
+    fakeClam.foreach(_.stop())
   }
 
   override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
