@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.fileupload.testonly
 
+import org.joda.time
+import org.joda.time.Duration
 import play.api.Play.current
 import play.api.libs.EventSource
 import play.api.libs.iteratee.{Concurrent, Enumeratee}
@@ -24,7 +26,6 @@ import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Controller
 import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
-import play.api.mvc.Results._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,7 +39,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
         .allHeaders
         .get("Location")
         .flatMap(_.headOption)
-        .map( l => l.substring(l.lastIndexOf("/") + 1) )
+        .map(l => l.substring(l.lastIndexOf("/") + 1))
         .getOrElse("missing/invalid")
 
     val callback = request.queryString.get("callbackUrl").flatMap(_.headOption)
@@ -92,7 +93,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
   }
 
   def cleanupQuarantine() = Action.async { request =>
-    quarantineRepo.removeAll().map { results =>
+    quarantineRepo.clear(Duration.ZERO).map { results =>
       if (results.forall(_.ok)) Ok else InternalServerError
     }
   }
@@ -117,7 +118,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
   }
 
   def connDeathWatch(addr: String): Enumeratee[JsValue, JsValue] =
-    Enumeratee.onIterateeDone{ () => println(addr + " - SSE disconnected") }
+    Enumeratee.onIterateeDone { () => println(addr + " - SSE disconnected") }
 
   def eventFeed() = Action { req =>
     println(req.remoteAddress + " - SSE connected")
