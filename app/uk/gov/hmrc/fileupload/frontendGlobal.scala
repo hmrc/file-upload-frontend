@@ -23,6 +23,8 @@ import play.api.Mode._
 import play.api.mvc.Request
 import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
+import uk.gov.hmrc.clamav.config.ClamAvConfig
+import uk.gov.hmrc.clamav.fake.FakeClam
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
@@ -55,6 +57,16 @@ object FrontendGlobal
   var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
   val now: () => Long = () => System.currentTimeMillis()
 
+  lazy val fakeClam = {
+    val config = ServiceConfig.clamAvConfig
+    val runStubClam = config.flatMap(_.getBoolean("runStub")).getOrElse(false)
+    if (runStubClam & ServiceConfig.env == "Dev") {
+      Some(FakeClam(ClamAvConfig(config).port))
+    } else {
+      None
+    }
+  }
+
   override def onStart(app: Application) {
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
@@ -68,12 +80,23 @@ object FrontendGlobal
 
     notifyAndPublish = NotifierService.notify(sendNotification, publish) _
 
+    val config = ServiceConfig.clamAvConfig
+    val runStubClam = config.flatMap(_.getBoolean("runStub")).getOrElse(false)
+    fakeClam.foreach(_.start())
+
     // scanner
     Akka.system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
     Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
 
     fileUploadController
     testOnlyController
+  }
+
+
+  override def onStop(app: Application): Unit = {
+    super.onStop(app)
+
+    fakeClam.foreach(_.stop())
   }
 
   override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {

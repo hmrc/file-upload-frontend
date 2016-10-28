@@ -31,20 +31,28 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   override def preStart = {
     subscribe(self, classOf[FileScanned])
+    subscribe(self, classOf[TransferRequested])
   }
 
   def receive = {
     case e: FileScanned if !e.hasVirus =>
       Logger.info(s"FileScanned received for ${e.envelopeId} and ${e.fileId} and ${e.fileRefId}")
-      transferFile(e.envelopeId, e.fileId, e.fileRefId).map {
-        case Xor.Right(envelopeId) => Logger.info(s"File successful transferred ${e.envelopeId} and ${e.fileId} and ${e.fileRefId}")
-        case Xor.Left(TransferServiceError(id, m)) =>
-          Logger.info(s"File not transferred: Envelope not found for ${e.envelopeId} and ${e.fileId} and ${e.fileRefId} with $m")
-        case Xor.Left(_) =>
-          Logger.info(s"File not transferred ${e.envelopeId} and ${e.fileId} and ${e.fileRefId}")
-      }
+      transfer(e.envelopeId, e.fileId, e.fileRefId)
+    case e: TransferRequested =>
+      Logger.info(s"TransferRequested received for ${e.envelopeId} and ${e.fileId} and ${e.fileRefId}")
+      transfer(e.envelopeId, e.fileId, e.fileRefId)
     case _ =>
   }
+  
+  private def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId): Unit =
+    transferFile(envelopeId, fileId, fileRefId).map {
+      case Xor.Right(envelopeId) =>
+        Logger.info(s"File successful transferred $envelopeId and $fileId and $fileRefId")
+      case Xor.Left(TransferServiceError(id, m)) =>
+        Logger.info(s"File not transferred for $envelopeId and $fileId and $fileRefId with $m")
+      case Xor.Left(_) =>
+        Logger.info(s"File not transferred for $envelopeId and $fileId and $fileRefId")
+    }
 }
 
 object TransferActor {
