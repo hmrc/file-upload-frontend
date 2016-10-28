@@ -114,6 +114,7 @@ object FrontendGlobal
 
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
+  lazy val removeAllFiles = () => quarantineRepository.removeAll()
   lazy val retrieveFile = quarantineRepository.retrieveFile _
   lazy val getFileFromQuarantine= QuarantineService.getFileFromQuarantine(retrieveFile) _
 
@@ -153,7 +154,7 @@ object FrontendGlobal
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 
-  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, quarantineRepository)
+  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, removeAllFiles)
   private val TestOnlyControllerClass = classOf[TestOnlyController]
 
   override def getControllerInstance[A](controllerClass: Class[A]): A = {

@@ -25,10 +25,11 @@ import play.api.mvc.Controller
 import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
 import play.api.mvc.Results._
+import reactivemongo.api.commands.WriteResult
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) extends Controller {
+class TestOnlyController(baseUrl: String, removeAllFiles: () => Future[List[WriteResult]])(implicit executionContext: ExecutionContext) extends Controller {
 
   val (eventsEnumerator, eventsChannel) = Concurrent.broadcast[JsValue]
 
@@ -92,7 +93,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
   }
 
   def cleanupQuarantine() = Action.async { request =>
-    quarantineRepo.removeAll().map { results =>
+    removeAllFiles().map { results =>
       if (results.forall(_.ok)) Ok else InternalServerError
     }
   }
