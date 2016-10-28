@@ -29,8 +29,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) extends Controller {
 
-  val (eventsEnumerator, eventsChannel) = Concurrent.broadcast[JsValue]
-
   def createEnvelope() = Action.async { request =>
     def extractEnvelopeId(response: WSResponse): String =
       response
@@ -90,11 +88,6 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
     }
   }
 
-  def events() = Action.async(parse.json) { request =>
-    eventsChannel.push(request.body)
-    Future.successful(Ok)
-  }
-
   def getEvents(streamId: String) = Action.async { request =>
     WS.url(s"$baseUrl/file-upload/events/$streamId").get().map { response =>
       new Status(response.status)(response.body).withHeaders {
@@ -105,14 +98,6 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
 
   def connDeathWatch(addr: String): Enumeratee[JsValue, JsValue] =
     Enumeratee.onIterateeDone{ () => println(addr + " - SSE disconnected") }
-
-  def eventFeed() = Action { req =>
-    println(req.remoteAddress + " - SSE connected")
-    Ok.feed(eventsEnumerator
-      &> connDeathWatch(req.remoteAddress)
-      &> EventSource()
-    ).as("text/event-stream")
-  }
 
   def filesInProgress() = Action.async { request =>
     WS.url(s"$baseUrl/file-upload/files/inprogress").get().map { response =>
