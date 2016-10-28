@@ -155,7 +155,7 @@ object FrontendGlobal
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 
-  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl)
+  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, quarantineRepository)
   private val TestOnlyControllerClass = classOf[TestOnlyController]
 
   override def getControllerInstance[A](controllerClass: Class[A]): A = {

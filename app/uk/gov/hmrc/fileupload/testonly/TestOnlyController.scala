@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.fileupload.testonly
 
+import org.joda.time
+import org.joda.time.Duration
 import play.api.Play.current
 import play.api.libs.EventSource
 import play.api.libs.iteratee.{Concurrent, Enumeratee}
@@ -24,11 +26,10 @@ import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Controller
 import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
-import play.api.mvc.Results._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionContext) extends Controller {
+class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) extends Controller {
 
   val (eventsEnumerator, eventsChannel) = Concurrent.broadcast[JsValue]
 
@@ -92,7 +93,7 @@ class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionCo
   }
 
   def cleanupQuarantine() = Action.async { request =>
-    quarantineRepo.removeAll().map { results =>
+    quarantineRepo.clear(Duration.ZERO).map { results =>
       if (results.forall(_.ok)) Ok else InternalServerError
     }
   }
