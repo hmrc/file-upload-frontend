@@ -32,7 +32,7 @@ sm --start FILE_UPLOAD_ALL
 Uploads a single file to the envelope via multipart form. The file should not exceed over 11MB. If a routing request has been created for an envelope, any attempts after to upload a file will be rejected.
 
 ```
-POST    /file-upload/upload/envelopes/{envelopeId}/files/{fileId}
+POST    /file-upload/upload/envelopes/{envelope-Id}/files/{file-Id}
 ```
 | Responses    | Status    | Description |
 | --------|---------|-------|
@@ -127,7 +127,7 @@ Response: Binary file which contains the selected file.
 Retreives a list of all events based on the stream Id. 
  
 ```
- GET     file-upload/test-only/events/{streamId}
+ GET     file-upload/test-only/events/{stream-Id}
 ```
  
 | Responses    | Status    | Description |
@@ -359,7 +359,7 @@ The following endpoints are for internal use. <i>**PLEASE DO NOT USE THESE ENDPO
 Scans a file if it was unsuccessfully scanned on the first attempt.
 
 ```
-POST    /file-upload/scan/envelopes/{envelopeId}/files/{fileId}/{fileRefId} 
+POST    /file-upload/scan/envelopes/{envelope-Id}/files/{file-Id}/{file-Ref-Id} 
 ```
 
 | Responses    | Status    | Description |
@@ -367,7 +367,7 @@ POST    /file-upload/scan/envelopes/{envelopeId}/files/{fileId}/{fileRefId}
 | Ok  | 200   | Successfully scanned file.  |
 
 #### EXAMPLE
-Request (POST): localhost:8899/file-upload/scan/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/file-Id-1/file-Ref-1
+Request (POST): localhost:8899/file-upload/scan/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/file-id-1/file-ref-1
 
 Response: 200
 
@@ -375,7 +375,7 @@ Response: 200
 Sends a file that is "marked clean" from Quarantine to Transient.
 
 ```
-POST    /file-upload/transfer/envelopes/{envelopeId}/files/{fileId}/{fileRefId} 
+POST    /file-upload/transfer/envelopes/{envelope-Id}/files/{file-Id}/{file-Ref-Id} 
 ```
 
 | Responses    | Status    | Description |
@@ -383,7 +383,7 @@ POST    /file-upload/transfer/envelopes/{envelopeId}/files/{fileId}/{fileRefId}
 | Ok  | 200   | Successfully sent file to Transient.  |
 
 #### EXAMPLE
-Request (POST): localhost:8899/file-upload/transfer/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/{fileId}/{fileRefId} 
+Request (POST): localhost:8899/file-upload/transfer/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/file-id-1/file-ref-1 
 
 Response: 200
 
