@@ -17,15 +17,14 @@
 package uk.gov.hmrc.fileupload
 
 import akka.actor.ActorRef
+import cats.data.Xor
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.joda.time.Duration
 import play.api.Mode._
 import play.api.mvc.Request
-import play.api.{Application, Configuration, Logger, Play}
+import play.api.{Mode => _, _}
 import play.twirl.api.Html
-import uk.gov.hmrc.clamav.config.ClamAvConfig
-import uk.gov.hmrc.clamav.fake.FakeClam
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
@@ -34,7 +33,7 @@ import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.AvScanIteratee
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
@@ -58,16 +57,6 @@ object FrontendGlobal
   var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
   val now: () => Long = () => System.currentTimeMillis()
 
-  lazy val fakeClam = {
-    val config = ServiceConfig.clamAvConfig
-    val runStubClam = config.flatMap(_.getBoolean("runStub")).getOrElse(false)
-    if (runStubClam & ServiceConfig.env == "Dev") {
-      Some(FakeClam(ClamAvConfig(config).port))
-    } else {
-      None
-    }
-  }
-
   override def onStart(app: Application) {
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
@@ -81,10 +70,6 @@ object FrontendGlobal
 
     notifyAndPublish = NotifierService.notify(sendNotification, publish) _
 
-    val config = ServiceConfig.clamAvConfig
-    val runStubClam = config.flatMap(_.getBoolean("runStub")).getOrElse(false)
-    fakeClam.foreach(_.start())
-
     // scanner
     Akka.system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
     Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
@@ -96,8 +81,6 @@ object FrontendGlobal
 
   override def onStop(app: Application): Unit = {
     super.onStop(app)
-
-    fakeClam.foreach(_.stop())
   }
 
   override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
@@ -145,7 +128,16 @@ object FrontendGlobal
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
 
   lazy val scanner: () => AvScanIteratee = VirusScanner.scanIteratee
-  lazy val scanBinaryData = ScanningService.scanBinaryData(scanner, getFileFromQuarantine) _
+  lazy val scanBinaryData: (FileRefId) => Future[ScanResult] = {
+    import play.api.Play.current
+
+    val runStubClam = ServiceConfig.clamAvConfig.flatMap(_.getBoolean("runStub")).getOrElse(false)
+    if (runStubClam & Play.isDev) {
+      (_: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
+    } else {
+      ScanningService.scanBinaryData(scanner, getFileFromQuarantine)
+    }
+  }
 
   // notifier
   //TODO: inject proper toConsumerUrl function
