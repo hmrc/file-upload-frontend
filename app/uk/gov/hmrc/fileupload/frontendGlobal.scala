@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload
 import akka.actor.ActorRef
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
+import org.joda.time.Duration
 import play.api.Mode._
 import play.api.mvc.Request
 import play.api.{Application, Configuration, Logger, Play}
@@ -114,7 +115,7 @@ object FrontendGlobal
 
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
-  lazy val removeAllFiles = () => quarantineRepository.removeAll()
+  lazy val removeAllFiles = () => quarantineRepository.clear(Duration.ZERO)
   lazy val retrieveFile = quarantineRepository.retrieveFile _
   lazy val getFileFromQuarantine= QuarantineService.getFileFromQuarantine(retrieveFile) _
 
@@ -150,7 +151,9 @@ object FrontendGlobal
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
+  lazy val clearFiles = quarantineRepository.clear() _
+
+  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now, clearFiles = clearFiles)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 
