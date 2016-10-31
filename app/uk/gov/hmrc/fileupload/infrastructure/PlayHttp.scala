@@ -39,9 +39,7 @@ object PlayHttp {
            (request: Request[_])
            (implicit ec: ExecutionContext): Future[AuditResult] = {
 
-    val hc = HeaderCarrier.fromHeadersAndSession(new Headers {
-      override protected val data: Seq[(String, Seq[String])] = request.headers.toMap.toSeq
-    })
+    val hc = HeaderCarrier.fromHeadersAndSession(request.headers)
 
     connector.sendEvent(
       DataEvent(appName, if (success) EventTypes.Succeeded else EventTypes.Failed,
@@ -76,9 +74,7 @@ object PlayHttp {
   }
 
   private def headerCarrier(request: WSRequest): HeaderCarrier = {
-    HeaderCarrier.fromHeadersAndSession(new Headers {
-      override protected val data: Seq[(String, Seq[String])] = request.headers.toSeq
-    })
+    HeaderCarrier.fromHeadersAndSession(new Headers(request.headers.toSeq.map{ case (s, seq) => (s, seq.head) }))
   }
 }
 

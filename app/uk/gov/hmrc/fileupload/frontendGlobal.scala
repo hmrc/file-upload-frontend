@@ -90,9 +90,9 @@ object FrontendGlobal
     super.onStop(app)
   }
 
-  override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
-    super.onLoadConfig(config, path, classloader, mode)
-  }
+//  override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
+//    super.onLoadConfig(config, path, classloader, mode)
+//  }
 
   override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): Html =
     uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)(rh, applicationMessages)
@@ -159,13 +159,13 @@ object FrontendGlobal
   lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, removeAllFiles)
   private val TestOnlyControllerClass = classOf[TestOnlyController]
 
-  override def getControllerInstance[A](controllerClass: Class[A]): A = {
-    controllerClass match {
-      case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
-      case TestOnlyControllerClass => testOnlyController.asInstanceOf[A]
-      case _ => super.getControllerInstance(controllerClass)
-    }
-  }
+//  override def getControllerInstance[A](controllerClass: Class[A]): A = {
+//    controllerClass match {
+//      case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
+//      case TestOnlyControllerClass => testOnlyController.asInstanceOf[A]
+//      case _ => super.getControllerInstance(controllerClass)
+//    }
+//  }
 }
 
 object ControllerConfiguration extends ControllerConfig {

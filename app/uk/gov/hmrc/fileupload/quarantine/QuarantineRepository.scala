@@ -16,15 +16,19 @@
 
 package uk.gov.hmrc.fileupload.quarantine
 
+import akka.util.ByteString
 import cats.data.Xor
 import org.joda.time.{DateTime, Duration}
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
+import play.api.libs.json.{JsValue, Json}
+import play.api.libs.streams.{Accumulator, Streams}
+import play.api.mvc.MultipartFormData
 import play.api.libs.json.{JsString, Json}
 import play.modules.reactivemongo.GridFSController._
 import play.modules.reactivemongo.JSONFileToSave
 import reactivemongo.api.commands.WriteResult
-import reactivemongo.api.gridfs.GridFS
+import reactivemongo.api.gridfs.{GridFS, ReadFile}
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.api.{DB, DBMetaCommands}
@@ -67,8 +71,11 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
   private def metadata(envelopeId: EnvelopeId, fileId: FileId) =
     Json.obj("envelopeId" -> envelopeId.value, "fileId" -> fileId.value)
 
-  def writeFile(filename: String, contentType: Option[String])(implicit ec: ExecutionContext): Iteratee[Array[Byte], Future[JSONReadFile]] = {
-    gfs.iteratee(JSONFileToSave(filename = Some(filename), contentType = contentType))
+  def writeFile(filename: String, contentType: Option[String])(implicit ec: ExecutionContext): Accumulator[ByteString, Future[JSONReadFile]] = {
+    val iteratee = gfs.iteratee(JSONFileToSave(filename = Some(filename), contentType = contentType))
+
+    val sink = Streams.iterateeToAccumulator(iteratee).toSink
+    Accumulator(sink.contramap[ByteString](_.toArray[Byte]))
   }
 
   def retrieveFile(id: FileRefId)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
