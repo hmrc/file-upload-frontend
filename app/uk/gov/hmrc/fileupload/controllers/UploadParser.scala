@@ -31,5 +31,5 @@ object UploadParser {
       case Multipart.FileInfo(partName, filename, contentType) =>
         writeFile(filename, contentType)
     })
+    }
   }
-}

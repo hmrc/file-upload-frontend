@@ -29,6 +29,8 @@ import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
+import play.api.i18n.Messages.Implicits._
+import play.api.Play.current
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -39,7 +41,6 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
                           (implicit executionContext: ExecutionContext) extends Controller {
 
   val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
-
   def upload(envelopeId: EnvelopeId, fileId: FileId) =
     Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
     request.body match {
@@ -56,7 +57,7 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
             notify(FileInQuarantineStored(
               envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
               contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
-              case Xor.Right(_) => Ok
+              case Xor.Right(_) => Ok()(request, applicationMessages)
               case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
             }
           }
@@ -68,12 +69,12 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
-    Future.successful(Ok)
+    Future.successful(Ok(request, applicationMessages))
   }
 
   def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     notify(TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
-    Future.successful(Ok)
+    Future.successful(Ok(request, applicationMessages))
   }
 
   def clear() = Action.async { request =>

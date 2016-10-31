@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import play.PlayImport.PlayKeys
+import play.routes.compiler.StaticRoutesGenerator
+import play.sbt.PlayImport.PlayKeys
+import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt.Keys._
 import sbt.Tests.{Group, SubProcess}
 import sbt._
@@ -31,7 +33,7 @@ trait MicroService {
   val appName: String
 
   lazy val appDependencies: Seq[ModuleID] = ???
-  lazy val plugins : Seq[Plugins] = Seq(play.PlayScala)
+  lazy val plugins: Seq[Plugins] = Seq(play.sbt.PlayScala)
   lazy val playSettings: Seq[Setting[_]] = Seq.empty
 
   lazy val scoverageSettings = {
@@ -50,7 +52,7 @@ trait MicroService {
   def itFilter(name: String): Boolean = name endsWith "ISpec"
 
   lazy val microservice = Project(appName, file("."))
-    .enablePlugins(Seq(play.PlayScala) ++ plugins : _*)
+    .enablePlugins(Seq(play.sbt.PlayScala) ++ plugins: _*)
     .settings(PlayKeys.playDefaultPort := 8899)
     .settings(playSettings ++ scoverageSettings: _*)
     .settings(scalaSettings: _*)
@@ -64,6 +66,7 @@ trait MicroService {
       fork in Test := false,
       retrieveManaged := true,
       evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
+      routesGenerator := StaticRoutesGenerator,
       scalacOptions += "-Xfatal-warnings",
       // -Xlint:-missing-interpolator is unfortunately necessary due to a bug in Scala which causes a warning to
       // be raised from some Play generated code with paramaterised URL paths.
@@ -80,7 +83,10 @@ trait MicroService {
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
       testOptions in IntegrationTest := Seq(Tests.Filter(itFilter)),
       parallelExecution in IntegrationTest := false)
-    .settings(resolvers += Resolver.bintrayRepo("hmrc", "releases"))
+    .settings(
+      resolvers += Resolver.bintrayRepo("hmrc", "releases"),
+      resolvers += Resolver.jcenterRepo
+    )
 }
 
 private object TestPhases {

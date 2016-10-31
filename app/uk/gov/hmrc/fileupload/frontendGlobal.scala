@@ -21,9 +21,10 @@ import cats.data.Xor
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.joda.time.Duration
-import play.api.Mode._
 import play.api.mvc.Request
 import play.api.{Mode => _, _}
+import play.api.mvc.{BodyParser, Request}
+import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
@@ -40,6 +41,12 @@ import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
+import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
+import play.api.i18n.Messages.Implicits._
+import play.api.Play.current
+import play.api.libs.streams.Streams
+import play.mvc.BodyParser.MultipartFormData
+import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
 import scala.concurrent.Future
 
@@ -88,7 +95,7 @@ object FrontendGlobal
   }
 
   override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): Html =
-    uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)
+    uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)(rh, applicationMessages)
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
@@ -165,11 +172,11 @@ object ControllerConfiguration extends ControllerConfig {
   lazy val controllerConfigs = Play.current.configuration.underlying.as[Config]("controllers")
 }
 
-object LoggingFilter extends FrontendLoggingFilter {
+object LoggingFilter extends FrontendLoggingFilter with MicroserviceFilterSupport{
   override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
 }
 
-object AuditFilter extends FrontendAuditFilter with RunMode with AppName {
+object AuditFilter extends FrontendAuditFilter with RunMode with AppName with MicroserviceFilterSupport{
 
   override lazy val maskedFormFields = Seq("password")
 
