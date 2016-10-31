@@ -16,19 +16,17 @@
 
 package uk.gov.hmrc.fileupload.testonly
 
-import org.joda.time
-import org.joda.time.Duration
 import play.api.Play.current
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Controller
-import uk.gov.hmrc.fileupload.quarantine.Repository
 import play.api.mvc.Action
+import reactivemongo.api.commands.WriteResult
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
-class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit executionContext: ExecutionContext) extends Controller {
+class TestOnlyController(baseUrl: String, removeAllFiles: () => Future[List[WriteResult]])(implicit executionContext: ExecutionContext) extends Controller {
 
   def createEnvelope() = Action.async { request =>
     def extractEnvelopeId(response: WSResponse): String =
@@ -90,7 +88,7 @@ class TestOnlyController(baseUrl: String, quarantineRepo: Repository)(implicit e
   }
 
   def cleanupQuarantine() = Action.async { request =>
-    quarantineRepo.clear(Duration.ZERO).map { results =>
+    removeAllFiles().map { results =>
       if (results.forall(_.ok)) Ok else InternalServerError
     }
   }
