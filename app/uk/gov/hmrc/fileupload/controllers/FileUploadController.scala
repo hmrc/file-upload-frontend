@@ -20,6 +20,7 @@ import cats.data.Xor
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
+import reactivemongo.api.commands.WriteResult
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
@@ -33,7 +34,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
-                           now: () => Long)
+                           now: () => Long,
+                           clearFiles: () => Future[List[WriteResult]])
                           (implicit executionContext: ExecutionContext) extends Controller {
 
   val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
@@ -72,6 +74,17 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
   def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     notify(TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
     Future.successful(Ok)
+  }
+
+  def clear() = Action.async { request =>
+    clearFiles().map {
+      results =>
+        val errors = results.filter(_.hasErrors)
+        errors match {
+          case Nil => Ok
+          case _ => InternalServerError(errors.flatMap(_.errmsg).mkString(", "))
+        }
+    }
   }
 }
 
