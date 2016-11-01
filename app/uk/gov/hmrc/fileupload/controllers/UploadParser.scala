@@ -20,24 +20,28 @@ import akka.util.ByteString
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.streams.{Accumulator, Streams}
 import play.api.mvc.MultipartFormData.FilePart
-import play.core.parsers.Multipart
 import play.api.mvc.{BodyParser, MultipartFormData}
-import play.core.parsers.Multipart.{FileInfo, FileInfoMatcher, FilePartHandler}
+import play.core.parsers.Multipart
+import play.core.parsers.Multipart.{FileInfo, FilePartHandler}
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object UploadParser {
 
-  def parse(writeFile: (String, Option[String]) => Accumulator[ByteString, Future[JSONReadFile]])
+  def parse(writeFile: (String, Option[String]) => Iteratee[Array[Byte], Future[JSONReadFile]])
            (implicit ex: ExecutionContext): BodyParser[MultipartFormData[Future[JSONReadFile]]] = {
-
 
     play.api.mvc.BodyParsers.parse.multipartFormData(handleFilePart {
       case Multipart.FileInfo(partName, filename, contentType) =>
-        writeFile(filename, contentType)
+        toAccumulator(writeFile(filename, contentType))
     })
+  }
 
+  def toAccumulator(iteratee: Iteratee[Array[Byte], Future[JSONReadFile]])
+                   (implicit ec: ExecutionContext): Accumulator[ByteString, Future[JSONReadFile]] = {
+    val sink = Streams.iterateeToAccumulator(iteratee).toSink
+    Accumulator(sink.contramap[ByteString](_.toArray[Byte]))
   }
 
   def handleFilePart[A](handler: FileInfo => Accumulator[ByteString, A]): FilePartHandler[A] = {
