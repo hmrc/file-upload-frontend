@@ -16,11 +16,14 @@
 
 package uk.gov.hmrc.fileupload.quarantine
 
+import org.joda.time.{DateTime, Duration}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsString
+import reactivemongo.bson.BSONDocument
+import reactivemongo.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.fileupload.FileRefId
 import uk.gov.hmrc.fileupload.fileupload.{ByteStream, JSONReadFile}
 import uk.gov.hmrc.mongo.MongoSpecSupport
@@ -36,7 +39,7 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
   val repository = new Repository(mongo)
 
   override def beforeEach {
-    repository.removeAll().futureValue
+    repository.clear(Duration.ZERO).futureValue
   }
 
   "repository" should {
@@ -69,6 +72,38 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
       val fileResult = repository.retrieveFile(nonexistentId).futureValue
 
       fileResult shouldBe None
+    }
+
+    "Clear files after expiry duration" in {
+      val id = insertAnyFile()
+      val imagineWeAre2DaysInTheFuture = () => DateTime.now().plusDays(3)
+      val expiryDuration = Duration.standardDays(2)
+      repository.clear(expiryDuration, imagineWeAre2DaysInTheFuture).futureValue
+
+      val fileResult = repository.retrieveFile(FileRefId(id)).futureValue
+
+      repository.gfs.files.find(BSONDocument("_id" -> id)).one[BSONDocument].futureValue.isDefined shouldBe true
+      repository.gfs.chunks.find(BSONDocument("files_id" -> id)).one[BSONDocument].futureValue.isDefined shouldBe true
+    }
+
+    "Do not clear files within expiry duration" in {
+      val id = insertAnyFile()
+      val imagineWeAre2DaysInTheFuture = () => DateTime.now().plusDays(3)
+      val expiryDuration = Duration.standardDays(4)
+      repository.clear(expiryDuration, imagineWeAre2DaysInTheFuture).futureValue
+
+      val fileResult = repository.retrieveFile(FileRefId(id)).futureValue
+
+      repository.gfs.files.find(BSONDocument("_id" -> id)).one[BSONDocument].futureValue shouldBe None
+      repository.gfs.chunks.find(BSONDocument("files_id" -> id)).one[BSONDocument].futureValue shouldBe None
+    }
+  }
+
+  def insertAnyFile(): String = {
+    val sink = repository.writeFile("fileName", None)
+    Enumerator[ByteStream]("testFile".getBytes).run[Future[JSONReadFile]](sink).futureValue.id match {
+      case JsString(id) => id
+      case _ => fail("expected JsString here")
     }
   }
 }

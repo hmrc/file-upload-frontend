@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.fileupload
 
+import org.joda.time.Duration
 import play.api.Play
 import play.api.Play.{configuration, current}
 import uk.gov.hmrc.play.config.ServicesConfig
+
 
 trait AppConfig {
   val assetsPrefix: String
