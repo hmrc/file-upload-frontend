@@ -184,6 +184,44 @@ Response (In Body):
 ]
 ```
 
+#### SHOW FILES INPROGRESS (DO NOT USE)
+Returns a list of all files that are inprogress.
+
+```
+GET     /file-upload/test-only/files/inprogress 
+```
+
+| Responses    | Status    | Description |
+| --------|---------|-------|
+| Ok  | 200   | Successfully returns a list of envelopes.
+
+#### EXAMPLE
+Request (GET): localhost:8899/file-upload/test-only/files/inprogress
+
+Response (in Body):
+```json
+[
+  {
+    "_id": "82c1e62c-ddca-468f-a1c9-ca9aa97aa0a2",
+    "envelopeId": "7e5d442a-e17d-46c7-b8ce-0d12f2176f7f",
+    "fileId": "1",
+    "startedAt": 1477490659610
+  },
+  {
+    "_id": "9b96ce3e-df86-4c6c-b737-aef1e4c98741",
+    "envelopeId": "eb5ec7d2-c6c4-4cf9-935b-9f1d4061fab5",
+    "fileId": "1",
+    "startedAt": 1477491112228
+  },
+  {
+    "_id": "bcbbc597-a8a4-4870-bd6c-cfea52ab2ced",
+    "envelopeId": "a1752950-32ab-4bdb-a918-0ee9141ac305",
+    "fileId": "1",
+    "startedAt": 1477491307267
+  }
+]
+```
+
 ### ROUTING TEST-ONLY
 
 #### CREATE FILE ROUTING REQUEST (DO NOT USE)
@@ -335,25 +373,35 @@ Response: 200
 
 #### CLEAN UP QUARANTINE (DO NOT USE)
 Removes all files and chunks in Quarantine mongo storage. Note Collections and indexes are not removed.  
-
+```
+POST    /file-upload/test-only/cleanup-quarantine
+```
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Ok  | 200   | Successfully cleaned up Quarantine.  |
+
+#### EXAMPLE
+Request (POST): localhost:8899/file-upload/test-only/cleanup-quarantine
 
 Response: 200
 
 #### CLEAR COLLECTIONS (DO NOT USE)
 Removes everything in the collections of Quarantine and Transient.
+```
+POST    /file-upload/test-only/clear-collections
+```
 
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Ok  | 200   | Successfully cleared all collections in both Quarantine and Transient.  |
 
+#### EXAMPLE
+Reques (POST): localhost:8899/file-upload/test-only/clear-collections
+
 Response: 200
 
 ## INTERNAL USE ENDPOINTS ONLY <a name="internal"></a>
 The following endpoints are for internal use. <i>**PLEASE DO NOT USE THESE ENDPOINTS WITHOUT PERMISSION**</i>.
-
 
 #### MANUALLY SCAN FILE (DO NOT USE)
 Scans a file if it was unsuccessfully scanned on the first attempt.
@@ -387,43 +435,21 @@ Request (POST): localhost:8899/file-upload/transfer/envelopes/0b215e97-11d4-4006
 
 Response: 200
 
-#### SHOW FILES INPROGRESS (DO NOT USE)
-Returns a list of all files that are inprogress.
-
-```
-GET     /file-upload/test-only/files/inprogress 
-```
+#### REMOVE EXPIRED FILES (DO NOT USE)
+Removes files and chunks that are older than 7 days in Quarantine Store. 
 
 | Responses    | Status    | Description |
 | --------|---------|-------|
-| Ok  | 200   | Successfully returns a list of envelopes.
+| Ok  | 200   | Successfully removed files and chunks from quarantine.  |
+
+```
+POST    /files/expire
+```
 
 #### EXAMPLE
-Request (GET): localhost:8899/file-upload/test-only/files/inprogress
+Request (POST): localhost:8899/file-upload/files/expire
 
-Response (in Body):
-```json
-[
-  {
-    "_id": "82c1e62c-ddca-468f-a1c9-ca9aa97aa0a2",
-    "envelopeId": "7e5d442a-e17d-46c7-b8ce-0d12f2176f7f",
-    "fileId": "1",
-    "startedAt": 1477490659610
-  },
-  {
-    "_id": "9b96ce3e-df86-4c6c-b737-aef1e4c98741",
-    "envelopeId": "eb5ec7d2-c6c4-4cf9-935b-9f1d4061fab5",
-    "fileId": "1",
-    "startedAt": 1477491112228
-  },
-  {
-    "_id": "bcbbc597-a8a4-4870-bd6c-cfea52ab2ced",
-    "envelopeId": "a1752950-32ab-4bdb-a918-0ee9141ac305",
-    "fileId": "1",
-    "startedAt": 1477491307267
-  }
-]
-```
+Response: 200
 
 ## License
 
