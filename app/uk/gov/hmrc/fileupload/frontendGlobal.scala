@@ -63,6 +63,9 @@ import Implicits._
 object FileUploadController extends FileUploadController(uploadParser = FrontendGlobal.uploadParser,
   notify = FrontendGlobal.notifyAndPublish, now = FrontendGlobal.now, clearFiles = FrontendGlobal.clearFiles)
 
+object TestOnlyController extends TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, FrontendGlobal.removeAllFiles)
+
+
 object FrontendGlobal extends DefaultFrontendGlobal {
 
   override val auditConnector = FrontendAuditConnector
@@ -92,18 +95,7 @@ object FrontendGlobal extends DefaultFrontendGlobal {
     Akka.system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
     Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
 
-    fileUploadController
-    testOnlyController
   }
-
-
-  override def onStop(app: Application): Unit = {
-    super.onStop(app)
-  }
-
-//  override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
-//    super.onLoadConfig(config, path, classloader, mode)
-//  }
 
   override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): Html =
     uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)(rh, applicationMessages)
@@ -163,20 +155,6 @@ object FrontendGlobal extends DefaultFrontendGlobal {
 
   lazy val clearFiles = quarantineRepository.clear() _
 
-  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now, clearFiles = clearFiles)
-
-  private val FileUploadControllerClass = classOf[FileUploadController]
-
-  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, removeAllFiles)
-  private val TestOnlyControllerClass = classOf[TestOnlyController]
-
-//  override def getControllerInstance[A](controllerClass: Class[A]): A = {
-//    controllerClass match {
-//      case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
-//      case TestOnlyControllerClass => testOnlyController.asInstanceOf[A]
-//      case _ => super.getControllerInstance(controllerClass)
-//    }
-//  }
 }
 
 object ControllerConfiguration extends ControllerConfig {
