@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.fileupload
 
-import akka.actor.ActorRef
 import cats.data.Xor
+import akka.actor.ActorRef
+import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.joda.time.Duration
@@ -43,21 +44,31 @@ import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
 import play.api.i18n.Messages.Implicits._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
+import play.api.libs.concurrent.Akka
 import play.api.libs.streams.Streams
 import play.mvc.BodyParser.MultipartFormData
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
 import scala.concurrent.Future
 
-object FrontendGlobal
-  extends DefaultFrontendGlobal {
+
+object Implicits {
+  implicit val system = Akka.system
+  implicit val materializer = ActorMaterializer()
+}
+import Implicits._
+
+object FileUploadController extends FileUploadController(uploadParser = FrontendGlobal.uploadParser,
+  notify = FrontendGlobal.notifyAndPublish, now = FrontendGlobal.now, clearFiles = FrontendGlobal.clearFiles)
+
+object FrontendGlobal extends DefaultFrontendGlobal {
 
   override val auditConnector = FrontendAuditConnector
   override val loggingFilter = LoggingFilter
   override val frontendAuditFilter = AuditFilter
 
-  import play.api.libs.concurrent.Execution.Implicits._
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _

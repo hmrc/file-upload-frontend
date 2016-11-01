@@ -60,11 +60,10 @@ object RestFixtures {
   }
 
   def validUploadRequest(files: Seq[File], sizeExceeded: Boolean = false): Request[scala.Either[MaxSizeExceeded, Multipart]] = {
-    uploadRequest(MultipartFormData(Map(),
-      files.map(file => filePart(file.filename, file.filename, file.contentType)),
-      Seq.empty, Seq.empty), sizeExceeded)
+    val formData = MultipartFormData(Map(), files.map(file => filePart(file.filename, file.filename, file.contentType)), Seq.empty)
+    uploadRequest(formData, sizeExceeded)
   }
 
   def multipartFormData(dataParts: Map[String, Seq[String]]) =
-    uploadRequest(MultipartFormData(dataParts, files = List(), badParts = List(), missingFileParts = List()), sizeExceeded = false)
+    uploadRequest(MultipartFormData(dataParts, files = List(), badParts = List()), sizeExceeded = false)
 }

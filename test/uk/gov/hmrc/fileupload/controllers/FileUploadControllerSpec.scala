@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.OneServerPerSuite
@@ -39,6 +41,9 @@ import scala.concurrent.Future
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServerPerSuite {
 
   import scala.concurrent.ExecutionContext.Implicits.global
+
+  implicit val actorSystem = ActorSystem()
+  implicit val materializer = ActorMaterializer()
 
   val failed = Future.failed(new Exception("not good"))
 
@@ -75,7 +80,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     }
 
     "return 400 Bad Request if file was not found in the request" in {
-      val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty), sizeExceeded = false)
+      val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty), sizeExceeded = false)
       val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
