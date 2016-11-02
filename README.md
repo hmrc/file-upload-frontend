@@ -386,7 +386,7 @@ Request (POST): localhost:8899/file-upload/test-only/cleanup-quarantine
 Response: 200
 
 #### CLEAR COLLECTIONS (DO NOT USE)
-Removes everything in the collections of Quarantine and Transient.
+Removes everything in all collections of Transient mongo storage.  Note Collections and indexes are not removed.
 ```
 POST    /file-upload/test-only/clear-collections
 ```
