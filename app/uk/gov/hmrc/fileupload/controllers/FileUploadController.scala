@@ -16,8 +16,11 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import cats.data.Xor
-import play.api.libs.iteratee.Enumerator
+import play.api.http.HttpEntity
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
 import reactivemongo.api.commands.WriteResult
@@ -36,10 +39,9 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long,
                            clearFiles: () => Future[List[WriteResult]])
-                          (implicit executionContext: ExecutionContext) extends Controller {
+                          (implicit executionContext: ExecutionContext, implicit val mat: Materializer) extends Controller {
 
   val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
-
   def upload(envelopeId: EnvelopeId, fileId: FileId) =
     Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
     request.body match {
@@ -57,7 +59,10 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
               envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
               contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
               case Xor.Right(_) => Ok
-              case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
+              case Xor.Left(e) => {
+                val source = Source.single(ByteString.fromArray(e.reason.getBytes()))
+                Result(ResponseHeader(e.statusCode), HttpEntity.Streamed(source, None, None))
+              }
             }
           }
         } else {

@@ -32,24 +32,25 @@ object FrontendBuild extends Build with MicroService {
 
 private object AppDependencies {
 
-  import play.PlayImport._
+  import play.sbt.PlayImport._
   import play.core.PlayVersion
 
-  private val playHealthVersion = "1.1.0"
-  private val playJsonLoggerVersion = "2.1.1"
-  private val frontendBootstrapVersion = "6.7.0"
-  private val govukTemplateVersion = "4.0.0"
-  private val playUiVersion = "4.16.0"
-  private val playPartialsVersion = "4.6.0"
-  private val playAuthorisedFrontendVersion = "5.7.0"
-  private val playConfigVersion = "2.1.0"
-  private val hmrcTestVersion = "1.8.0"
-  private val playReactivemongoVersion = "4.8.0"
-  private val simpleReactivemongoVersion = "4.8.0"
+  private val playHealthVersion = "2.0.0"
+  private val playJsonLoggerVersion = "3.0.0"
+
+  private val frontendBootstrapVersion = "7.5.0"
+  private val govukTemplateVersion = "5.0.0"
+  private val playUiVersion = "5.0.0"
+  private val playPartialsVersion = "5.2.0"
+  private val playAuthorisedFrontendVersion = "6.1.0"
+  private val playConfigVersion = "3.0.0"
+  private val hmrcTestVersion = "2.0.0"
+  private val playReactivemongoVersion = "5.0.0"
+  private val simpleReactivemongoVersion = "5.0.0"
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
   private val playAuditingVersion = "1.9.0"
-  private val playUrlBindersVersion = "1.1.0"
+  private val playUrlBindersVersion = "2.0.0"
 
 
   val compile = Seq(
@@ -67,7 +68,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-ui" % playUiVersion,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
     "org.typelevel" %% "cats" % catsVersion,
-    "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion
+    "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
+    "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.0"
   )
 
   trait TestDependencies {
@@ -82,12 +84,12 @@ private object AppDependencies {
         "org.scalatest" %% "scalatest" % "2.2.6" % scope,
         "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
-        "org.scalatestplus" %% "play" % "1.2.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-        "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope
+        "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope,
+        "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope
       )
     }.test
   }
@@ -101,12 +103,12 @@ private object AppDependencies {
         "org.scalatest" %% "scalatest" % "2.2.6" % scope,
         "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
-        "org.scalatestplus" %% "play" % "1.2.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-        "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope
+        "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope,
+        "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope
       )
     }.test
   }

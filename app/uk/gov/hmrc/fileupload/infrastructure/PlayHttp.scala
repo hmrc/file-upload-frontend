@@ -21,7 +21,7 @@ import java.net.{HttpURLConnection, URL}
 
 import cats.data.Xor
 import play.api.libs.iteratee.{Done, Input, Iteratee, Step}
-import play.api.libs.ws.{WSRequestHolder, WSResponse}
+import play.api.libs.ws.{WSRequest, WSResponse}
 import play.api.mvc.{Request, Headers}
 import uk.gov.hmrc.play.audit.AuditExtensions._
 import uk.gov.hmrc.play.audit.http.connector.{AuditResult, AuditConnector}
@@ -39,9 +39,7 @@ object PlayHttp {
            (request: Request[_])
            (implicit ec: ExecutionContext): Future[AuditResult] = {
 
-    val hc = HeaderCarrier.fromHeadersAndSession(new Headers {
-      override protected val data: Seq[(String, Seq[String])] = request.headers.toMap.toSeq
-    })
+    val hc = HeaderCarrier.fromHeadersAndSession(request.headers)
 
     connector.sendEvent(
       DataEvent(appName, if (success) EventTypes.Succeeded else EventTypes.Failed,
@@ -53,7 +51,7 @@ object PlayHttp {
 
   case class PlayHttpError(message: String)
 
-  def execute(connector: AuditConnector, appName: String, errorLogger: Option[(Throwable => Unit)])(request: WSRequestHolder)
+  def execute(connector: AuditConnector, appName: String, errorLogger: Option[(Throwable => Unit)])(request: WSRequest)
              (implicit ec: ExecutionContext): Future[Xor[PlayHttpError, WSResponse]] = {
     val hc = headerCarrier(request)
     val eventualResponse = request.execute()
@@ -75,10 +73,8 @@ object PlayHttp {
       }
   }
 
-  private def headerCarrier(request: WSRequestHolder): HeaderCarrier = {
-    HeaderCarrier.fromHeadersAndSession(new Headers {
-      override protected val data: Seq[(String, Seq[String])] = request.headers.toSeq
-    })
+  private def headerCarrier(request: WSRequest): HeaderCarrier = {
+    HeaderCarrier.fromHeadersAndSession(new Headers(request.headers.toSeq.map{ case (s, seq) => (s, seq.head) }))
   }
 }
 

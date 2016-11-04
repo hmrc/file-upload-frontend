@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.Play.current
 import play.api.http.Status
-import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
+import play.api.libs.ws.{WS, WSRequest, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.EnvelopeId
@@ -28,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object Repository {
 
-  def envelopeAvailable(auditedHttpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
+  def envelopeAvailable(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
 
     auditedHttpCall(WS.url(s"$baseUrl/file-upload/envelopes/${ envelopeId.value }").withMethod("GET")).map {

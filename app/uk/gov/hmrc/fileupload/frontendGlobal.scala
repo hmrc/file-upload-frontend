@@ -16,14 +16,16 @@
 
 package uk.gov.hmrc.fileupload
 
-import akka.actor.ActorRef
 import cats.data.Xor
+import akka.actor.ActorRef
+import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.joda.time.Duration
-import play.api.Mode._
 import play.api.mvc.Request
 import play.api.{Mode => _, _}
+import play.api.mvc.{BodyParser, Request}
+import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
@@ -40,17 +42,36 @@ import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
+import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
+import play.api.i18n.Messages.Implicits._
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.Play.current
+import play.api.libs.concurrent.Akka
+import play.api.libs.streams.Streams
+import play.mvc.BodyParser.MultipartFormData
+import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
 import scala.concurrent.Future
 
-object FrontendGlobal
-  extends DefaultFrontendGlobal {
+
+object Implicits {
+  implicit val system = Akka.system
+  implicit val materializer = ActorMaterializer()
+}
+import Implicits._
+
+object FileUploadController extends FileUploadController(uploadParser = FrontendGlobal.uploadParser,
+  notify = FrontendGlobal.notifyAndPublish, now = FrontendGlobal.now, clearFiles = FrontendGlobal.clearFiles)
+
+object TestOnlyController extends TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, FrontendGlobal.removeAllFiles)
+
+
+object FrontendGlobal extends DefaultFrontendGlobal {
 
   override val auditConnector = FrontendAuditConnector
   override val loggingFilter = LoggingFilter
   override val frontendAuditFilter = AuditFilter
 
-  import play.api.libs.concurrent.Execution.Implicits._
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
@@ -74,21 +95,10 @@ object FrontendGlobal
     Akka.system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
     Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
 
-    fileUploadController
-    testOnlyController
-  }
-
-
-  override def onStop(app: Application): Unit = {
-    super.onStop(app)
-  }
-
-  override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
-    super.onLoadConfig(config, path, classloader, mode)
   }
 
   override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): Html =
-    uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)
+    uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)(rh, applicationMessages)
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
@@ -145,31 +155,17 @@ object FrontendGlobal
 
   lazy val clearFiles = quarantineRepository.clear() _
 
-  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now, clearFiles = clearFiles)
-
-  private val FileUploadControllerClass = classOf[FileUploadController]
-
-  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, removeAllFiles)
-  private val TestOnlyControllerClass = classOf[TestOnlyController]
-
-  override def getControllerInstance[A](controllerClass: Class[A]): A = {
-    controllerClass match {
-      case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
-      case TestOnlyControllerClass => testOnlyController.asInstanceOf[A]
-      case _ => super.getControllerInstance(controllerClass)
-    }
-  }
 }
 
 object ControllerConfiguration extends ControllerConfig {
   lazy val controllerConfigs = Play.current.configuration.underlying.as[Config]("controllers")
 }
 
-object LoggingFilter extends FrontendLoggingFilter {
+object LoggingFilter extends FrontendLoggingFilter with MicroserviceFilterSupport{
   override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
 }
 
-object AuditFilter extends FrontendAuditFilter with RunMode with AppName {
+object AuditFilter extends FrontendAuditFilter with RunMode with AppName with MicroserviceFilterSupport{
 
   override lazy val maskedFormFields = Seq("password")
 
