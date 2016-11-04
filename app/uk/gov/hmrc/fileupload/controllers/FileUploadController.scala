@@ -20,8 +20,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.Xor
-import org.reactivestreams.Publisher
-import play.api.libs.iteratee.Enumerator
+import play.api.http.HttpEntity
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
 import reactivemongo.api.commands.WriteResult
@@ -33,11 +32,6 @@ import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
-import play.api.http.HttpEntity
-import play.api.libs.streams.Streams
-
-import play.api.i18n.Messages.Implicits._
-import play.api.Play.current
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -66,11 +60,8 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
               contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
               case Xor.Right(_) => Ok
               case Xor.Left(e) => {
-                val bodyEnumerator = Enumerator(ByteString.fromArray(e.reason.getBytes))
-                val bodyPublisher: Publisher[ByteString] = Streams.enumeratorToPublisher(bodyEnumerator)
-                val bodySource: Source[ByteString, _] = Source.fromPublisher(bodyPublisher)
-                val entity: HttpEntity = HttpEntity.Streamed(bodySource, None, None)
-                Result(ResponseHeader(e.statusCode), entity)
+                val source = Source.single(ByteString.fromArray(e.reason.getBytes()))
+                Result(ResponseHeader(e.statusCode), HttpEntity.Streamed(source, None, None))
               }
             }
           }
