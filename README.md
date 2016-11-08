@@ -4,6 +4,10 @@ Frontend for uploading files to the Tax Platform. Please <i>**DO NOT USE**</i> T
 
 [![Build Status](https://travis-ci.org/hmrc/file-upload-frontend.svg?branch=master)](https://travis-ci.org/hmrc/file-upload-frontend) [ ![Download](https://api.bintray.com/packages/hmrc/releases/file-upload-frontend/images/download.svg) ](https://bintray.com/hmrc/releases/file-upload-frontend/_latestVersion)
 
+## Software Requirements
+*   ClamAv Version 0.99 or later
+*   MongoDB Version 3.2 or later
+
 ## Run the application locally
 
 To run the application execute
