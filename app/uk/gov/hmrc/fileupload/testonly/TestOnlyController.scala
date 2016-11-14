@@ -24,7 +24,7 @@ import play.api.mvc.{Action, Controller}
 
 import scala.concurrent.ExecutionContext
 
-class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionContext) extends Controller {
+class TestOnlyController(baseUrl: String, recreateCollections: () => Unit)(implicit executionContext: ExecutionContext) extends Controller {
 
   def createEnvelope() = Action.async { request =>
     def extractEnvelopeId(response: WSResponse): String =
@@ -101,4 +101,10 @@ class TestOnlyController(baseUrl: String)(implicit executionContext: ExecutionCo
       Ok(Json.parse(response.body))
     }
   }
+
+  def recreate() = Action {
+    recreateCollections()
+    Ok
+  }
+
 }
