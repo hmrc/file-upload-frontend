@@ -61,7 +61,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
                     notify: AnyRef => Future[NotifyResult] = _ => Future.successful(Xor.right(NotifySuccess)),
                     now: () => Long = () => 10,
                     clearFiles: () => Future[List[WriteResult]] = () => Future.successful(List.empty)) =
-    new FileUploadController(uploadParser, notify, now, clearFiles)
+    new FileUploadController(uploadParser, notify, now)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {

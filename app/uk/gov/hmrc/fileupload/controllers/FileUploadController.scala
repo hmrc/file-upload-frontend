@@ -34,8 +34,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
-                           now: () => Long,
-                           clearFiles: () => Future[List[WriteResult]])
+                           now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
   val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
@@ -76,16 +75,6 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
     Future.successful(Ok)
   }
 
-  def clear() = Action.async { request =>
-    clearFiles().map {
-      results =>
-        val errors = results.filter(_.hasErrors)
-        errors match {
-          case Nil => Ok
-          case _ => InternalServerError(errors.flatMap(_.errmsg).mkString(", "))
-        }
-    }
-  }
 }
 
 object FileUploadController {

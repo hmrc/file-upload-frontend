@@ -77,26 +77,4 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
     }
   }
 
-  def clear(expireDuration: Duration = Duration.standardDays(7), toNow: () => DateTime = () => DateTime.now())()
-           (implicit ec: ExecutionContext): Future[List[WriteResult]] = {
-    def remove(fileIds: List[FileId]): Future[List[WriteResult]] = {
-      val ids = fileIds.map(id => id.value)
-      val query = BSONDocument("_id" -> BSONDocument("$in" -> ids))
-      val queryChunks = BSONDocument("files_id" -> BSONDocument("$in" -> ids))
-      val files = gfs.files.remove[BSONDocument](query)
-      val chunks = gfs.chunks.remove[BSONDocument](queryChunks)
-      Future.sequence(List(files, chunks))
-    }
-
-    for {
-      filesOlderThanExpiryDuration <- {
-        val query = BSONDocument("uploadDate" -> BSONDocument("$lt" -> BSONDateTime(toNow().minus(expireDuration).getMillis)))
-        gfs.find[BSONDocument, JSONReadFile](query).collect[List]()
-      }
-      fileIds = filesOlderThanExpiryDuration.map(_.id).collect { case JsString(v) => FileId(v) }
-      removed <- remove(fileIds)
-    } yield {
-      removed
-    }
-  }
 }

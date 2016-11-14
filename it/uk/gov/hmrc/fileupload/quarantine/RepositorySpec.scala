@@ -38,9 +38,6 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
 
   val repository = new Repository(mongo)
 
-  override def beforeEach {
-    repository.clear(Duration.ZERO).futureValue
-  }
 
   "repository" should {
     "provide an iteratee to store a stream" in {
@@ -74,29 +71,6 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
       fileResult shouldBe None
     }
 
-    "Clear files after expiry duration" in {
-      val id = insertAnyFile()
-      val imagineWeAre2DaysInTheFuture = () => DateTime.now().plusDays(3)
-      val expiryDuration = Duration.standardDays(2)
-      repository.clear(expiryDuration, imagineWeAre2DaysInTheFuture).futureValue
-
-      val fileResult = repository.retrieveFile(FileRefId(id)).futureValue
-
-      repository.gfs.files.find(BSONDocument("_id" -> id)).one[BSONDocument].futureValue.isDefined shouldBe true
-      repository.gfs.chunks.find(BSONDocument("files_id" -> id)).one[BSONDocument].futureValue.isDefined shouldBe true
-    }
-
-    "Do not clear files within expiry duration" in {
-      val id = insertAnyFile()
-      val imagineWeAre2DaysInTheFuture = () => DateTime.now().plusDays(3)
-      val expiryDuration = Duration.standardDays(4)
-      repository.clear(expiryDuration, imagineWeAre2DaysInTheFuture).futureValue
-
-      val fileResult = repository.retrieveFile(FileRefId(id)).futureValue
-
-      repository.gfs.files.find(BSONDocument("_id" -> id)).one[BSONDocument].futureValue shouldBe None
-      repository.gfs.chunks.find(BSONDocument("files_id" -> id)).one[BSONDocument].futureValue shouldBe None
-    }
   }
 
   def insertAnyFile(): String = {
