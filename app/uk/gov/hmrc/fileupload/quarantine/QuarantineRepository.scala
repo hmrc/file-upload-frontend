@@ -23,7 +23,6 @@ import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsString, Json}
 import play.modules.reactivemongo.GridFSController._
 import play.modules.reactivemongo.JSONFileToSave
-import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.gridfs.GridFS
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
@@ -33,6 +32,8 @@ import reactivemongo.json._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 case class FileData(length: Long = 0, filename: String, contentType: Option[String], data: Enumerator[Array[Byte]] = null)
@@ -75,6 +76,12 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
     gfs.find[BSONDocument, JSONReadFile](BSONDocument("_id" -> id.value)).headOption.map { file =>
       file.map(f => FileData(length = f.length, filename = f.filename.getOrElse("data"), contentType = f.contentType, data = gfs.enumerate(f)))
     }
+  }
+
+  def recreate(): Unit ={
+    Await.result(gfs.chunks.drop(), 5 seconds)
+    Await.result(gfs.files.drop(), 5 seconds)
+    ensureIndex()
   }
 
 }
