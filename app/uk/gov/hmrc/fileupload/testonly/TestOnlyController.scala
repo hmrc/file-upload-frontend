@@ -102,9 +102,15 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit)(impli
     }
   }
 
-  def recreate() = Action {
+  def recreateQuarantine() = Action {
     recreateCollections()
     Ok
+  }
+
+  def recreateTransient() = Action.async {
+    WS.url(s"$baseUrl/file-upload/test-only/recreate-collections").post(Json.obj()).map {
+      response => new Status(response.status)(response.body)
+    }
   }
 
 }
