@@ -100,6 +100,7 @@ object FrontendGlobal
   lazy val quarantineRepository = quarantine.Repository(db)
   lazy val retrieveFile = quarantineRepository.retrieveFile _
   lazy val getFileFromQuarantine= QuarantineService.getFileFromQuarantine(retrieveFile) _
+  lazy val recreateCollections = () => quarantineRepository.recreate()
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
@@ -148,7 +149,7 @@ object FrontendGlobal
   private val FileUploadControllerClass = classOf[FileUploadController]
   private val AdminAppControllerClass = classOf[AdminAppController]
 
-  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl)
+  lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, recreateCollections)
   private val TestOnlyControllerClass = classOf[TestOnlyController]
 
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
