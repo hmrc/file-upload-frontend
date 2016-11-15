@@ -25,7 +25,7 @@ import play.api.mvc.Request
 import play.api.{Mode => _, _}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
-import uk.gov.hmrc.fileupload.controllers.{AdminAppController, FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.controllers.{AdminController, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
@@ -74,7 +74,7 @@ object FrontendGlobal
     Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
 
     fileUploadController
-    AdminAppController
+    AdminController
     testOnlyController
   }
 
@@ -144,10 +144,10 @@ object FrontendGlobal
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
-  lazy val AdminAppController = new AdminAppController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
+  lazy val AdminController = new AdminController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
-  private val AdminAppControllerClass = classOf[AdminAppController]
+  private val AdminControllerClass = classOf[AdminController]
 
   lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, recreateCollections)
   private val TestOnlyControllerClass = classOf[TestOnlyController]
@@ -155,7 +155,7 @@ object FrontendGlobal
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
     controllerClass match {
       case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
-      case AdminAppControllerClass => AdminAppController.asInstanceOf[A]
+      case AdminControllerClass => AdminController.asInstanceOf[A]
       case TestOnlyControllerClass => testOnlyController.asInstanceOf[A]
       case _ => super.getControllerInstance(controllerClass)
     }
