@@ -1,0 +1,3 @@
+
+POST        /scan/envelopes/:envelopeId/files/:fileId/:fileRefId              @uk.gov.hmrc.fileupload.controllers.AdminAppController.scan(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId, fileRefId: uk.gov.hmrc.fileupload.FileRefId)
+POST        /transfer/envelopes/:envelopeId/files/:fileId/:fileRefId          @uk.gov.hmrc.fileupload.controllers.AdminAppController.transfer(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId, fileRefId: uk.gov.hmrc.fileupload.FileRefId)
