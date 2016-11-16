@@ -74,7 +74,7 @@ object FrontendGlobal
     Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
 
     fileUploadController
-    AdminController
+    adminController
     testOnlyController
   }
 
@@ -144,7 +144,7 @@ object FrontendGlobal
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
-  lazy val AdminController = new AdminController(notify = notifyAndPublish)
+  lazy val adminController = new AdminController(notify = notifyAndPublish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
   private val AdminControllerClass = classOf[AdminController]
@@ -155,7 +155,7 @@ object FrontendGlobal
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
     controllerClass match {
       case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
-      case AdminControllerClass => AdminController.asInstanceOf[A]
+      case AdminControllerClass => adminController.asInstanceOf[A]
       case TestOnlyControllerClass => testOnlyController.asInstanceOf[A]
       case _ => super.getControllerInstance(controllerClass)
     }
