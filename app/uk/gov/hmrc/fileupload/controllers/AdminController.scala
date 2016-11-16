@@ -27,8 +27,7 @@ import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import scala.concurrent.{ExecutionContext, Future}
 
 class AdminController (uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
-                          notify: AnyRef => Future[NotifyResult],
-                          now: () => Long)
+                          notify: AnyRef => Future[NotifyResult])
                          (implicit executionContext: ExecutionContext) extends Controller {
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
@@ -39,23 +38,5 @@ class AdminController (uploadParser: () => BodyParser[MultipartFormData[Future[J
   def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     notify(TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
     Future.successful(Ok)
-  }
-}
-
-object AdminController {
-
-  def metadataAsJson(formData: MultipartFormData[Future[JSONReadFile]]): JsObject = {
-    val metadataParams = formData.dataParts.collect {
-      case (key, singleValue :: Nil) => key -> JsString(singleValue)
-      case (key, values: Seq[String]) if values.nonEmpty => key -> Json.toJson(values)
-    }
-
-    val metadata = if(metadataParams.nonEmpty) {
-      Json.toJson(metadataParams).as[JsObject]
-    } else {
-      Json.obj()
-    }
-
-    metadata
   }
 }
