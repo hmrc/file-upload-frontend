@@ -16,18 +16,16 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import play.api.libs.json.{JsObject, JsString, Json}
-import play.api.mvc.{Action, BodyParser, Controller, MultipartFormData}
-import uk.gov.hmrc.fileupload.fileupload._
+import play.api.mvc.{Action, Controller}
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class AdminController (notify: AnyRef => Future[NotifyResult])
-                         (implicit executionContext: ExecutionContext) extends Controller {
+                      (implicit executionContext: ExecutionContext) extends Controller {
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
