@@ -20,26 +20,39 @@ import cats.data.Xor
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
-import reactivemongo.api.commands.WriteResult
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
+import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableResult, EnvelopeStatusResult}
 import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
+class FileUploadController(envelopeStatus:(EnvelopeId) => Future[EnvelopeStatusResult], available:(EnvelopeId) => Future[EnvelopeAvailableResult],
+                           uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
   val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
 
-  def upload(envelopeId: EnvelopeId, fileId: FileId) =
+  def checkEnvelope[A](envelopeId: EnvelopeId)(action: Action[A])= Action.async(action.parser) { implicit request =>
+    envelopeStatus(envelopeId).map {
+      case Xor.Right(s) => if (s == "OPEN"){
+        action(request)
+        Ok
+      } else {
+        Locked
+      }
+      case Xor.Left(e) => BadRequest
+    }
+  }
+
+  def upload(envelopeId: EnvelopeId, fileId: FileId) = checkEnvelope(envelopeId){
     Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
     request.body match {
       case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
@@ -62,8 +75,10 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
         } else {
           Future.successful(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
         }
+      }
     }
   }
+
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))

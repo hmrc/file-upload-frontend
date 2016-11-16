@@ -119,7 +119,12 @@ object FrontendGlobal
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
+  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute,ServiceConfig.fileUploadBackendBaseUrl) _
+
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
+
+  lazy val envelopeStatus = transfer.TransferService.envelopeStatus(status) _
+
   lazy val streamTransferCall = transfer.TransferService.stream(
     ServiceConfig.fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
 
@@ -142,7 +147,7 @@ object FrontendGlobal
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
+  lazy val fileUploadController = new FileUploadController(envelopeStatus, envelopeAvailable,  uploadParser = uploadParser, notify = notifyAndPublish, now = now)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 

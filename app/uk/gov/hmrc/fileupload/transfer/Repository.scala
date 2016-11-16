@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.Play.current
 import play.api.http.Status
+import play.api.libs.json.Json
 import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.TransferService._
@@ -37,6 +38,19 @@ object Repository {
         case Status.OK => Xor.right(envelopeId)
         case Status.NOT_FOUND => Xor.left(EnvelopeNotFoundError(envelopeId))
         case _ => Xor.left(EnvelopeAvailableServiceError(envelopeId, response.body))
+      }
+    }
+  }
+
+  def envelopeStatus(auditedHttpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
+                       (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
+
+    auditedHttpCall(WS.url(s"$baseUrl/file-upload/envelopes/${ envelopeId.value }").withMethod("GET")).map {
+      case Xor.Left(error) => Xor.left(EnvelopeStatusServiceError(envelopeId, error.message))
+      case Xor.Right(response) => response.status match {
+        case Status.OK => Xor.right((Json.parse(response.body) \ "status").as[String])
+        case Status.NOT_FOUND => Xor.left(EnvelopeStatusNotFoundError(envelopeId))
+        case _ => Xor.left(EnvelopeStatusServiceError(envelopeId, response.body))
       }
     }
   }
