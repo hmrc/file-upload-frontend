@@ -32,7 +32,7 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadController(envelopeStatus:(EnvelopeId) => Future[EnvelopeStatusResult], available:(EnvelopeId) => Future[EnvelopeAvailableResult],
+class FileUploadController(envelopeStatus:(EnvelopeId) => Future[EnvelopeStatusResult],
                            uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)

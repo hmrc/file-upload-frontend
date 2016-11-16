@@ -147,7 +147,7 @@ object FrontendGlobal
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val fileUploadController = new FileUploadController(envelopeStatus, envelopeAvailable,  uploadParser = uploadParser, notify = notifyAndPublish, now = now)
+  lazy val fileUploadController = new FileUploadController(envelopeStatus,  uploadParser = uploadParser, notify = notifyAndPublish, now = now)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 
