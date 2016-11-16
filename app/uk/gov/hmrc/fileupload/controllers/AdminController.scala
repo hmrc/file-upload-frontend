@@ -26,8 +26,7 @@ import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AdminController (uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
-                          notify: AnyRef => Future[NotifyResult])
+class AdminController (notify: AnyRef => Future[NotifyResult])
                          (implicit executionContext: ExecutionContext) extends Controller {
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
