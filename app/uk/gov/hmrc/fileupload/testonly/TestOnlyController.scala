@@ -86,7 +86,7 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit)(impli
   }
 
   def getEvents(streamId: String) = Action.async { request =>
-    WS.url(s"$baseUrl/file-upload/events/$streamId").get().map { response =>
+    WS.url(s"$baseUrl/admin/events/$streamId").get().map { response =>
       new Status(response.status)(response.body).withHeaders {
         "Content-Type" -> response.allHeaders("Content-Type").head
       }
@@ -97,11 +97,10 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit)(impli
     Enumeratee.onIterateeDone { () => println(addr + " - SSE disconnected") }
 
   def filesInProgress() = Action.async { request =>
-    WS.url(s"$baseUrl/file-upload/files/inprogress").get().map { response =>
+    WS.url(s"$baseUrl/admin/files/inprogress").get().map { response =>
       Ok(Json.parse(response.body))
     }
   }
-
 
   def recreateAllCollections() = Action.async {
     recreateCollections()
