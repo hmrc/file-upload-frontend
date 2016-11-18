@@ -17,6 +17,8 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
@@ -33,12 +35,18 @@ import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadRes
 import uk.gov.hmrc.play.test.UnitSpec
 import play.api.test.Helpers._
 import reactivemongo.api.commands.WriteResult
+import uk.gov.hmrc.fileupload.transfer.Repository
+import uk.gov.hmrc.fileupload.transfer.TransferService.EnvelopeStatusResult
 
 import scala.concurrent.Future
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServerPerSuite {
 
   import scala.concurrent.ExecutionContext.Implicits.global
+
+  lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
+
+  final lazy val fileUploadBackendBaseUrl = s"http://localhost:${backend.port()}"
 
   val failed = Future.failed(new Exception("not good"))
 
@@ -53,15 +61,18 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     val metadata: Document = null
   }
 
+  val status = Repository.envelopeStatus(_.execute().map(response => Xor.Right(response)), fileUploadBackendBaseUrl) _
+
   def parse = () => UploadParser.parse(null) _
 
   type GetFileFromQuarantine = (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult]
 
-  def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
+  def newController(envelopeStatus: (EnvelopeId) => Future[EnvelopeStatusResult] = status,
+                    uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
                     notify: AnyRef => Future[NotifyResult] = _ => Future.successful(Xor.right(NotifySuccess)),
                     now: () => Long = () => 10,
                     clearFiles: () => Future[List[WriteResult]] = () => Future.successful(List.empty)) =
-    new FileUploadController(uploadParser, notify, now)
+    new FileUploadController(envelopeStatus,uploadParser, notify, now)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
