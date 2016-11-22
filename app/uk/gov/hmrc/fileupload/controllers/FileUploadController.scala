@@ -28,7 +28,7 @@ import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, fileupload}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,8 +40,14 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
 
   val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
 
-  def upload(envelopeId: EnvelopeId, fileId: FileId) = withValidEnvelope(envelopeId) {
-    Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
+  def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
+    withValidEnvelope(envelopeId) {
+      upload(envelopeId, fileId)
+    }
+
+  def upload(envelopeId: EnvelopeId, fileId: FileId) =
+    Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) {
+      implicit request =>
       request.body match {
         case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
         case Right(formData) =>
@@ -65,7 +71,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
           }
       }
     }
-  }
+
 
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
