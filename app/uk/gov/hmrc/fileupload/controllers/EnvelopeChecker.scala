@@ -34,12 +34,12 @@ object EnvelopeChecker {
 
   def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeStatusResult])
                        (envelopeId: EnvelopeId)
-                       (block: EssentialAction)
+                       (action: EssentialAction)
                        (implicit ec: ExecutionContext) = EssentialAction { implicit rh =>
     Iteratee.flatten {
       check(envelopeId).map {
         case Xor.Right("OPEN") =>
-          block(rh)
+          action(rh)
         case Xor.Right(otherStatus) =>
           logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $otherStatus")
         case Xor.Left(EnvelopeStatusNotFoundError(_)) =>

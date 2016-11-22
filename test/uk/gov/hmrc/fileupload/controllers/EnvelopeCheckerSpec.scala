@@ -26,7 +26,6 @@ import play.api.test.Helpers._
 import play.mvc.BodyParser.AnyContent
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
-import uk.gov.hmrc.fileupload.controllers.TestFixtures._
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeStatusNotFoundError, EnvelopeStatusServiceError}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -36,7 +35,7 @@ import scala.concurrent.Future
 class EnvelopeCheckerSpec extends UnitSpec {
 
   val testRequest = FakeRequest()
-  val testEnvelopeId = testEnvelope
+  val testEnvelopeId = EnvelopeId()
 
   "When an envelope is OPEN it" should {
     "be possible to execute an Action" in {
