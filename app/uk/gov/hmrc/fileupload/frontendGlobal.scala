@@ -25,7 +25,7 @@ import play.api.mvc.Request
 import play.api.{Mode => _, _}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
-import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.controllers.{AdminController, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
@@ -74,6 +74,7 @@ object FrontendGlobal
     Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
 
     fileUploadController
+    adminController
     testOnlyController
   }
 
@@ -143,8 +144,10 @@ object FrontendGlobal
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
+  lazy val adminController = new AdminController(notify = notifyAndPublish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
+  private val AdminControllerClass = classOf[AdminController]
 
   lazy val testOnlyController = new TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, recreateCollections)
   private val TestOnlyControllerClass = classOf[TestOnlyController]
@@ -152,6 +155,7 @@ object FrontendGlobal
   override def getControllerInstance[A](controllerClass: Class[A]): A = {
     controllerClass match {
       case FileUploadControllerClass => fileUploadController.asInstanceOf[A]
+      case AdminControllerClass => adminController.asInstanceOf[A]
       case TestOnlyControllerClass => testOnlyController.asInstanceOf[A]
       case _ => super.getControllerInstance(controllerClass)
     }

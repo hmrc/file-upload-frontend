@@ -102,7 +102,6 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit)(impli
     }
   }
 
-
   def recreateAllCollections() = Action.async {
     recreateCollections()
     WS.url(s"$baseUrl/file-upload/test-only/recreate-collections").post(Json.obj()).map {
