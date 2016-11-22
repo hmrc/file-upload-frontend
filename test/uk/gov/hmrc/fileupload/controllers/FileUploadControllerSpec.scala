@@ -20,19 +20,14 @@ import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
-import play.api.libs.json.{JsString, JsValue, Json}
-import play.api.mvc.{BodyParser, MultipartFormData}
-import reactivemongo.json.JSONSerializationPack
-import reactivemongo.json.JSONSerializationPack._
+import play.api.libs.json.Json
+import play.api.mvc.MultipartFormData
+import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
-import uk.gov.hmrc.fileupload.fileupload._
-import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyResult, NotifySuccess}
-import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
+import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.play.test.UnitSpec
-import play.api.test.Helpers._
-import reactivemongo.api.commands.WriteResult
 
 import scala.concurrent.Future
 
@@ -40,43 +35,32 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val failed = Future.failed(new Exception("not good"))
+  val controller = {
+    val noEnvelopeValidation = null
+    val noParsingIsActuallyDoneHere = () => UploadParser.parse(null) _
+    val successfulNotificationFromBackend = (_: AnyRef) => Future.successful(Xor.right(NotifySuccess))
+    val fakeCurrentTime = () => 10L
 
-  case class TestJsonReadFile(id: JsValue = JsString("testid")) extends JSONReadFile {
-    val pack = JSONSerializationPack
-    val contentType: Option[String] = None
-    val filename: Option[String] = None
-    val chunkSize: Int = 0
-    val length: Long = 0
-    val uploadDate: Option[Long] = None
-    val md5: Option[String] = None
-    val metadata: Document = null
+    new FileUploadController(
+      noEnvelopeValidation,
+      noParsingIsActuallyDoneHere,
+      successfulNotificationFromBackend,
+      fakeCurrentTime
+    )
   }
-
-  def parse = () => UploadParser.parse(null) _
-
-  type GetFileFromQuarantine = (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult]
-
-  def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
-                    notify: AnyRef => Future[NotifyResult] = _ => Future.successful(Xor.right(NotifySuccess)),
-                    now: () => Long = () => 10,
-                    clearFiles: () => Future[List[WriteResult]] = () => Future.successful(List.empty)) =
-    new FileUploadController(uploadParser, notify, now)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
       val file = anyFile()
       val request = validUploadRequest(List(file))
-      val controller = newController()
 
-      val result = controller.upload(EnvelopeId(), FileId())(request).futureValue
+      val result = controller.upload(EnvelopeId(), FileId())(request)
 
       status(result) shouldBe Status.OK
     }
 
     "return 400 Bad Request if file was not found in the request" in {
       val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty), sizeExceeded = false)
-      val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
 
@@ -85,7 +69,6 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     }
     "return 400 Bad Request if >1 files were found in the request" in {
       val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
-      val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files)
 
@@ -94,7 +77,6 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     }
     "return 413 Entity To Large if file size exceeds 10 mb" in {
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
-      val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(tooLargeRequest)
 

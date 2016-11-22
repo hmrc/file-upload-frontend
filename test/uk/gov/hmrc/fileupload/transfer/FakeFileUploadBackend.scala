@@ -48,7 +48,10 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
     backend.stop()
   }
 
-  def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = Status.OK, body: String = "") = {
+  val ENVELOPE_OPEN_RESPONSE = """ { "status" : "OPEN" } """
+  val ENVELOPE_CLOSED_RESPONSE = """ { "status" : "CLOSED" } """
+
+  def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = Status.OK, body: String = ENVELOPE_OPEN_RESPONSE) = {
     backend.addStubMapping(
       get(urlPathMatching(s"/file-upload/envelopes/${envelopeId.value}"))
         .willReturn(

@@ -25,7 +25,7 @@ import play.api.mvc.Request
 import play.api.{Mode => _, _}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
-import uk.gov.hmrc.fileupload.controllers.{AdminController, FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
@@ -120,7 +120,12 @@ object FrontendGlobal
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
+  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute,ServiceConfig.fileUploadBackendBaseUrl) _
+
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
+
+  lazy val envelopeStatus = transfer.TransferService.envelopeStatus(status) _
+
   lazy val streamTransferCall = transfer.TransferService.stream(
     ServiceConfig.fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
 
@@ -143,7 +148,9 @@ object FrontendGlobal
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val fileUploadController = new FileUploadController(uploadParser = uploadParser, notify = notifyAndPublish, now = now)
+  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
+
+  lazy val fileUploadController = new FileUploadController(withValidEnvelope,  uploadParser = uploadParser, notify = notifyAndPublish, now = now)
   lazy val adminController = new AdminController(notify = notifyAndPublish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
