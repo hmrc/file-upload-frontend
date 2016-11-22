@@ -1,5 +1,3 @@
 # microservice specific routes
 
 POST        /file-upload/upload/envelopes/:envelopeId/files/:fileId                       @uk.gov.hmrc.fileupload.controllers.FileUploadController.uploadWithEnvelopeValidation(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId)
-POST        /file-upload/scan/envelopes/:envelopeId/files/:fileId/:fileRefId              @uk.gov.hmrc.fileupload.controllers.FileUploadController.scan(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId, fileRefId: uk.gov.hmrc.fileupload.FileRefId)
-POST        /file-upload/transfer/envelopes/:envelopeId/files/:fileId/:fileRefId          @uk.gov.hmrc.fileupload.controllers.FileUploadController.transfer(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId, fileRefId: uk.gov.hmrc.fileupload.FileRefId)

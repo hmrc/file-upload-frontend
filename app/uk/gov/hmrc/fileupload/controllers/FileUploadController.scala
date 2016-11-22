@@ -25,9 +25,7 @@ import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
-import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.utils.errorAsJson
-import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,41 +46,29 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
   def upload(envelopeId: EnvelopeId, fileId: FileId) =
     Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) {
       implicit request =>
-      request.body match {
-        case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
-        case Right(formData) =>
-          val numberOfAttachedFiles = formData.files.size
-          if (numberOfAttachedFiles == 1) {
-            val file = formData.files.head
-            file.ref.flatMap { fileRef =>
-              val fileRefId = fileRef.id match {
-                case JsString(value) => FileRefId(value)
-                case _ => throw new Exception("invalid reference")
+        request.body match {
+          case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
+          case Right(formData) =>
+            val numberOfAttachedFiles = formData.files.size
+            if (numberOfAttachedFiles == 1) {
+              val file = formData.files.head
+              file.ref.flatMap { fileRef =>
+                val fileRefId = fileRef.id match {
+                  case JsString(value) => FileRefId(value)
+                  case _ => throw new Exception("invalid reference")
+                }
+                notify(FileInQuarantineStored(
+                  envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
+                  contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
+                  case Xor.Right(_) => Ok
+                  case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
+                }
               }
-              notify(FileInQuarantineStored(
-                envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
-                contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
-                case Xor.Right(_) => Ok
-                case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
-              }
+            } else {
+              Future.successful(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
             }
-          } else {
-            Future.successful(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
-          }
-      }
+        }
     }
-
-
-
-  def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
-    Future.successful(Ok)
-  }
-
-  def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    notify(TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
-    Future.successful(Ok)
-  }
 
 }
 
