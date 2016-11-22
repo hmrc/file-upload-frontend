@@ -42,7 +42,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
     "be possible to execute an Action" in {
       val expectedAction = Action { req => Ok }
 
-      val wrappedAction = withExistingEnvelope(testEnvelopeId, _ => Future(Xor.right("OPEN")))(expectedAction)
+      val wrappedAction = withValidEnvelope(_ => Future(Xor.right("OPEN")))(testEnvelopeId)(expectedAction)
       val result = wrappedAction(testRequest).run // this for some reason causes exceptions when running with testOnly
 
       status(result) shouldBe 200
@@ -53,7 +53,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
     "prevent both action's body and the body parser from running and return 423 Locked" in {
       val statusClosed = "CLOSED"
 
-      val wrappedAction = withExistingEnvelope(testEnvelopeId, _ => Future(Xor.right(statusClosed)))(actionThatShouldNotExecute)
+      val wrappedAction = withValidEnvelope(_ => Future(Xor.right(statusClosed)))(testEnvelopeId)(actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 423
@@ -65,7 +65,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
     "prevent both action's body and the body parser from running and return 404 NotFound" in {
       val envNotFound = (envId: EnvelopeId) => Future(Xor.left(EnvelopeStatusNotFoundError(envId)))
 
-      val wrappedAction = withExistingEnvelope(testEnvelopeId, envNotFound)(actionThatShouldNotExecute)
+      val wrappedAction = withValidEnvelope(envNotFound)(testEnvelopeId)(actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 404
@@ -78,7 +78,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
       val errorMsg = "error happened :("
       val errorCheckingStatus = (envId: EnvelopeId) => Future(Xor.left(EnvelopeStatusServiceError(envId, errorMsg)))
 
-      val wrappedAction = withExistingEnvelope(testEnvelopeId, errorCheckingStatus)(actionThatShouldNotExecute)
+      val wrappedAction = withValidEnvelope(errorCheckingStatus)(testEnvelopeId)(actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 500

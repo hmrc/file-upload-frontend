@@ -20,19 +20,19 @@ import cats.data.Xor
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
-import uk.gov.hmrc.fileupload.transfer.TransferService.EnvelopeStatusResult
 import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, fileupload}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadController(envelopeStatus:(EnvelopeId) => Future[EnvelopeStatusResult],
+class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)
@@ -40,7 +40,7 @@ class FileUploadController(envelopeStatus:(EnvelopeId) => Future[EnvelopeStatusR
 
   val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
 
-  def upload(envelopeId: EnvelopeId, fileId: FileId) =
+  def upload(envelopeId: EnvelopeId, fileId: FileId) = withValidEnvelope(envelopeId) {
     Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
       request.body match {
         case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
@@ -65,6 +65,8 @@ class FileUploadController(envelopeStatus:(EnvelopeId) => Future[EnvelopeStatusR
           }
       }
     }
+  }
+
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))

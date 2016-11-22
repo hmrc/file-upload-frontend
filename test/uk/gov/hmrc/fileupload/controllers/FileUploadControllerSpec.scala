@@ -24,19 +24,18 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
 import play.api.libs.json.{JsString, JsValue, Json}
 import play.api.mvc.{BodyParser, MultipartFormData}
+import play.api.test.Helpers._
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.json.JSONSerializationPack
 import reactivemongo.json.JSONSerializationPack._
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyResult, NotifySuccess}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.play.test.UnitSpec
-import play.api.test.Helpers._
-import reactivemongo.api.commands.WriteResult
-import uk.gov.hmrc.fileupload.transfer.Repository
-import uk.gov.hmrc.fileupload.transfer.TransferService.EnvelopeStatusResult
 
 import scala.concurrent.Future
 
@@ -61,18 +60,20 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     val metadata: Document = null
   }
 
-  val status = Repository.envelopeStatus(_.execute().map(response => Xor.Right(response)), fileUploadBackendBaseUrl) _
+  val envelopeIsValid = (envId: EnvelopeId) => Future.successful(Xor.right("OPEN"))
+
+  val noEnvelopeValidation = EnvelopeChecker.withValidEnvelope(envelopeIsValid) _
 
   def parse = () => UploadParser.parse(null) _
 
   type GetFileFromQuarantine = (EnvelopeId, FileId, Future[JSONReadFile]) => Future[QuarantineDownloadResult]
 
-  def newController(envelopeStatus: (EnvelopeId) => Future[EnvelopeStatusResult] = status,
+  def newController(withValidEnvelope: WithValidEnvelope = noEnvelopeValidation,
                     uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
                     notify: AnyRef => Future[NotifyResult] = _ => Future.successful(Xor.right(NotifySuccess)),
                     now: () => Long = () => 10,
                     clearFiles: () => Future[List[WriteResult]] = () => Future.successful(List.empty)) =
-    new FileUploadController(envelopeStatus,uploadParser, notify, now)
+    new FileUploadController(withValidEnvelope, uploadParser, notify, now)
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
@@ -80,7 +81,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val request = validUploadRequest(List(file))
       val controller = newController()
 
-      val result = controller.upload(EnvelopeId(), FileId())(request).futureValue
+      val result = controller.upload(EnvelopeId(), FileId())(request).run
 
       status(result) shouldBe Status.OK
     }
@@ -89,7 +90,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty), sizeExceeded = false)
       val controller = newController()
 
-      val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
+      val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile).run
 
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
@@ -98,7 +99,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
       val controller = newController()
 
-      val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files)
+      val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files).run
 
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
@@ -107,7 +108,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
       val controller = newController()
 
-      val result = controller.upload(EnvelopeId(), FileId())(tooLargeRequest)
+      val result = controller.upload(EnvelopeId(), FileId())(tooLargeRequest).run
 
       status(result) shouldBe Status.REQUEST_ENTITY_TOO_LARGE
     }

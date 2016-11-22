@@ -21,8 +21,8 @@ import play.api.Logger
 import play.api.http.Status._
 import play.api.libs.iteratee.{Done, Iteratee}
 import play.api.libs.json.Json
-import play.api.mvc.{EssentialAction, RequestHeader, Result}
 import play.api.mvc.Results._
+import play.api.mvc.{EssentialAction, RequestHeader, Result}
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeStatusNotFoundError, _}
 
@@ -30,12 +30,16 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object EnvelopeChecker {
 
-  def withExistingEnvelope(envelopeId: EnvelopeId, check: (EnvelopeId) => Future[EnvelopeStatusResult])
-                          (block: EssentialAction)
-                          (implicit ec: ExecutionContext) = EssentialAction { implicit rh =>
+  type WithValidEnvelope = EnvelopeId => EssentialAction => EssentialAction
+
+  def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeStatusResult])
+                       (envelopeId: EnvelopeId)
+                       (block: EssentialAction)
+                       (implicit ec: ExecutionContext) = EssentialAction { implicit rh =>
     Iteratee.flatten {
       check(envelopeId).map {
-        case Xor.Right("OPEN") => block(rh)
+        case Xor.Right("OPEN") =>
+          block(rh)
         case Xor.Right(otherStatus) =>
           logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $otherStatus")
         case Xor.Left(EnvelopeStatusNotFoundError(_)) =>

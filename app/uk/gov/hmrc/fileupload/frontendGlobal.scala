@@ -25,7 +25,7 @@ import play.api.mvc.Request
 import play.api.{Mode => _, _}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
-import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.controllers.{EnvelopeChecker, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
@@ -147,7 +147,9 @@ object FrontendGlobal
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val fileUploadController = new FileUploadController(envelopeStatus,  uploadParser = uploadParser, notify = notifyAndPublish, now = now)
+  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
+
+  lazy val fileUploadController = new FileUploadController(withValidEnvelope,  uploadParser = uploadParser, notify = notifyAndPublish, now = now)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
 
