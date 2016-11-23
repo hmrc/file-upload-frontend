@@ -48,9 +48,7 @@ class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActi
         .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.txt\"\r\nContent-Type: text/plain\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
         .futureValue(PatienceConfig(timeout = Span(10, Seconds)))
     }
-
   }
-
 
 }
 

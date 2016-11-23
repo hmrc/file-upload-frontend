@@ -16,14 +16,11 @@
 
 package uk.gov.hmrc.fileupload.quarantine
 
-import org.joda.time.{DateTime, Duration}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsString
-import reactivemongo.bson.BSONDocument
-import reactivemongo.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.fileupload.FileRefId
 import uk.gov.hmrc.fileupload.fileupload.{ByteStream, JSONReadFile}
 import uk.gov.hmrc.mongo.MongoSpecSupport
@@ -37,7 +34,6 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val repository = new Repository(mongo)
-
 
   "repository" should {
     "provide an iteratee to store a stream" in {
@@ -69,15 +65,6 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
       val fileResult = repository.retrieveFile(nonexistentId).futureValue
 
       fileResult shouldBe None
-    }
-
-  }
-
-  def insertAnyFile(): String = {
-    val sink = repository.writeFile("fileName", None)
-    Enumerator[ByteStream]("testFile".getBytes).run[Future[JSONReadFile]](sink).futureValue.id match {
-      case JsString(id) => id
-      case _ => fail("expected JsString here")
     }
   }
 }
