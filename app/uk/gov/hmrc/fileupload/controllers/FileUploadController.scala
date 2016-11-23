@@ -17,7 +17,6 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
@@ -61,7 +60,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                   envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
                   contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
                   case Xor.Right(_) => Ok
-                  case Xor.Left(e) => Result(ResponseHeader(e.statusCode), Enumerator(e.reason.getBytes))
+                  case Xor.Left(e) => BadRequest(errorAsJson(e.reason.getBytes.toString))
                 }
               }
             } else {
