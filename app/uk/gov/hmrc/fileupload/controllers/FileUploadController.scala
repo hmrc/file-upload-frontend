@@ -68,7 +68,6 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
             }
         }
     }
-
 }
 
 object FileUploadController {
