@@ -19,5 +19,16 @@ package uk.gov.hmrc.fileupload.utils
 import play.api.libs.json.{JsObject, Json}
 
 object errorAsJson {
+
   def apply(msg: String) = JsObject(Seq("error" -> Json.obj("msg" -> msg)))
+
+  def apply(pageTitle: String, heading: String, msg: String) : JsObject= {
+    JsObject(
+        Seq(
+            "pageTitle" -> Json.parse(pageTitle),
+            "heading" -> Json.parse(heading),
+            "error" -> Json.obj("msg" -> msg)
+            )
+        )
+  }
 }
