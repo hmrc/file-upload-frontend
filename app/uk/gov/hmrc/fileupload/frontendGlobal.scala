@@ -75,6 +75,7 @@ object FrontendGlobal extends GlobalSettings with FrontendFilters with GraphiteC
   val now: () => Long = () => System.currentTimeMillis()
 
   override def onStart(app: Application) {
+    Logger.info(s"Starting frontend : $appName : in mode : ${app.mode}")
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
 
@@ -108,7 +109,6 @@ object FrontendGlobal extends GlobalSettings with FrontendFilters with GraphiteC
   def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): JsObject = {
     errorAsJson(pageTitle, heading, message)
   }
-
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
