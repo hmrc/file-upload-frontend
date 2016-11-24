@@ -33,7 +33,7 @@ import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
-import uk.gov.hmrc.fileupload.utils.errorAsJson
+import uk.gov.hmrc.fileupload.utils.{errorAsJson, showErrorAsJson}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
@@ -49,7 +49,7 @@ import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 import scala.concurrent.Future
 
 object FrontendGlobal extends GlobalSettings with FrontendFilters with GraphiteConfig
-  with RemovingOfTrailingSlashes with Routing.BlockingOfPaths with ErrorAuditingSettings {
+  with RemovingOfTrailingSlashes with Routing.BlockingOfPaths with ErrorAuditingSettings with showErrorAsJson {
 
   lazy val appName = Play.current.configuration.getString("appName").getOrElse("APP NAME NOT SET")
   lazy val enableSecurityHeaderFilter = Play.current.configuration.getBoolean("security.headers.filter.enabled").getOrElse(true)
@@ -106,7 +106,7 @@ object FrontendGlobal extends GlobalSettings with FrontendFilters with GraphiteC
     super.onLoadConfig(config, path, classloader, mode)
   }
 
-  def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): JsObject = {
+  override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): JsObject = {
     errorAsJson(pageTitle, heading, message)
   }
 
