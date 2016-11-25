@@ -21,9 +21,10 @@ import cats.data.Xor
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
-import play.api.mvc.Request
+import play.api.libs.json.JsObject
+import play.api.mvc.{EssentialAction, Filters, Request}
 import play.api.{Mode => _, _}
-import play.twirl.api.Html
+import play.filters.headers.SecurityHeadersFilter
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
@@ -32,18 +33,35 @@ import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
+import uk.gov.hmrc.fileupload.utils.{errorAsJson, ShowErrorAsJson}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
+import uk.gov.hmrc.play.audit.http.config.ErrorAuditingSettings
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
-import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
+import uk.gov.hmrc.play.frontend.bootstrap.Routing.RemovingOfTrailingSlashes
+import uk.gov.hmrc.play.frontend.bootstrap.{FrontendFilters, Routing}
+import uk.gov.hmrc.play.frontend.filters.{DeviceIdCookieFilter, SecurityHeadersFilterFactory}
+import uk.gov.hmrc.play.graphite.GraphiteConfig
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 
 import scala.concurrent.Future
 
-object FrontendGlobal
-  extends DefaultFrontendGlobal {
+object FrontendGlobal extends GlobalSettings with FrontendFilters with GraphiteConfig
+  with RemovingOfTrailingSlashes with Routing.BlockingOfPaths with ErrorAuditingSettings with ShowErrorAsJson {
+
+  lazy val appName = Play.current.configuration.getString("appName").getOrElse("APP NAME NOT SET")
+  lazy val enableSecurityHeaderFilter = Play.current.configuration.getBoolean("security.headers.filter.enabled").getOrElse(true)
+
+  override lazy val deviceIdFilter = DeviceIdCookieFilter(appName, auditConnector)
+
+  def filters = if (enableSecurityHeaderFilter) Seq(securityFilter) ++ frontendFilters  else frontendFilters
+
+  override def doFilter(a: EssentialAction): EssentialAction =
+    Filters(super.doFilter(a), filters: _* )
+
+  override def securityFilter: SecurityHeadersFilter = SecurityHeadersFilterFactory.newInstance
 
   override val auditConnector = FrontendAuditConnector
   override val loggingFilter = LoggingFilter
@@ -57,6 +75,7 @@ object FrontendGlobal
   val now: () => Long = () => System.currentTimeMillis()
 
   override def onStart(app: Application) {
+    Logger.info(s"Starting frontend : $appName : in mode : ${app.mode}")
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
 
@@ -87,8 +106,9 @@ object FrontendGlobal
     super.onLoadConfig(config, path, classloader, mode)
   }
 
-  override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): Html =
-    uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)
+  override def standardErrorTemplate(message: String)(implicit rh: Request[_]): JsObject = {
+    errorAsJson(message)
+  }
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
@@ -151,6 +171,7 @@ object FrontendGlobal
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
 
   lazy val fileUploadController = new FileUploadController(withValidEnvelope,  uploadParser = uploadParser, notify = notifyAndPublish, now = now)
+
   lazy val adminController = new AdminController(notify = notifyAndPublish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
