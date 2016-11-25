@@ -79,7 +79,7 @@ Body:
 }
 ```
 
-Note: All parameters are optional. A [callbackUrl](https://github.com/hmrc/file-upload/tree/file-263#callback) (documented in file-upload README) is optional but should be provided in order for the service to provide feedback of the envelope's progress.
+Note: All parameters are optional. A [callbackUrl](https://github.com/hmrc/file-upload#callback) (documented in file-upload README) is optional but should be provided in order for the service to provide feedback of the envelope's progress.
 
 Response (in Headers): Location → localhost:8898/file-upload/envelopes/0b215e97-11d4-4006-91db-c067e74fc653
 
@@ -373,34 +373,29 @@ Request (DELETE): localhost:8899/file-upload/test-only/transfer/delete-envelope/
 
 Response: 200
 
-### CLEAR STORAGE TEST ONLY
+### RECREATE COLLECTIONS TEST ONLY
 
-#### CLEAN UP QUARANTINE (DO NOT USE)
-Removes all files and chunks in Quarantine mongo storage. Note Collections and indexes are not removed.  
+#### RECREATE COLLECTIONS (DO NOT USE)
+Deletes all collections in quarantine and transient. Then recreates the following collections and its indexes.
+
+Quarantine:
+*   quarantine.chunks
+
+Transient:
+*   envelopes-read-model
+*   envelopes.chunks
+*   events
+
 ```
-POST    /file-upload/test-only/cleanup-quarantine
-```
-| Responses    | Status    | Description |
-| --------|---------|-------|
-| Ok  | 200   | Successfully cleaned up Quarantine.  |
-
-#### EXAMPLE
-Request (POST): localhost:8899/file-upload/test-only/cleanup-quarantine
-
-Response: 200
-
-#### CLEAR COLLECTIONS (DO NOT USE)
-Removes everything in all collections of Transient mongo storage.  Note Collections and indexes are not removed.
-```
-POST    /file-upload/test-only/clear-collections
+POST    /file-upload/test-only/recreate-collections
 ```
 
 | Responses    | Status    | Description |
 | --------|---------|-------|
-| Ok  | 200   | Successfully cleared all collections in both Quarantine and Transient.  |
+| Ok  | 200   | Successfully deleted and recreate collections in both Quarantine and Transient.  |
 
 #### EXAMPLE
-Reques (POST): localhost:8899/file-upload/test-only/clear-collections
+Reques (POST): localhost:8899/file-upload/test-only/recreate-collections
 
 Response: 200
 
@@ -436,22 +431,6 @@ POST    /file-upload/transfer/envelopes/{envelope-Id}/files/{file-Id}/{file-Ref-
 
 #### EXAMPLE
 Request (POST): localhost:8899/file-upload/transfer/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/file-id-1/file-ref-1 
-
-Response: 200
-
-#### REMOVE EXPIRED FILES (DO NOT USE)
-Removes files and chunks that are older than 7 days in Quarantine Store. 
-
-| Responses    | Status    | Description |
-| --------|---------|-------|
-| Ok  | 200   | Successfully removed files and chunks from quarantine.  |
-
-```
-POST    /files/expire
-```
-
-#### EXAMPLE
-Request (POST): localhost:8899/file-upload/files/expire
 
 Response: 200
 
