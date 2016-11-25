@@ -29,7 +29,8 @@ import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, Fil
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
-import uk.gov.hmrc.fileupload.quarantine.QuarantineService
+import uk.gov.hmrc.fileupload.quarantine.FileInfo.file_Info
+import uk.gov.hmrc.fileupload.quarantine.{FileInfo, QuarantineService}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
@@ -101,6 +102,7 @@ object FrontendGlobal
   lazy val retrieveFile = quarantineRepository.retrieveFile _
   lazy val getFileFromQuarantine= QuarantineService.getFileFromQuarantine(retrieveFile) _
   lazy val recreateCollections = () => quarantineRepository.recreate()
+  lazy val file_info = quarantineRepository.info _
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
@@ -150,8 +152,12 @@ object FrontendGlobal
 
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
 
-  lazy val fileUploadController = new FileUploadController(withValidEnvelope,  uploadParser = uploadParser, notify = notifyAndPublish, now = now)
-  lazy val adminController = new AdminController(notify = notifyAndPublish)
+  lazy val fileUploadController = new FileUploadController(
+    withValidEnvelope,
+    uploadParser = uploadParser,
+    notify = notifyAndPublish, now = now)
+
+  lazy val adminController = new AdminController(getFileInfo = file_info)(notify = notifyAndPublish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
   private val AdminControllerClass = classOf[AdminController]

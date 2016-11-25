@@ -20,24 +20,33 @@ import cats.data.Xor
 import org.joda.time.{DateTime, Duration}
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.{Format, JsString, JsValue, Json}
 import play.modules.reactivemongo.GridFSController._
 import play.modules.reactivemongo.JSONFileToSave
 import reactivemongo.api.gridfs.GridFS
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.api.{DB, DBMetaCommands}
-import reactivemongo.bson.{BSONDateTime, BSONDocument}
+import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONDocumentReader, BSONDocumentWriter}
 import reactivemongo.json._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 case class FileData(length: Long = 0, filename: String, contentType: Option[String], data: Enumerator[Array[Byte]] = null)
 
+case class FileInfo(_id: String, filename:String, chunkSize:Int, length: Long, uploadDate: Long, contentType: String)
+
+object FileInfo {
+
+  type file_Info = (FileRefId) => Future[Option[FileInfo]]
+
+  implicit val fileInfoFormat: Format[FileInfo] = Json.format[FileInfo]
+
+}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -77,6 +86,11 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
       file.map(f => FileData(length = f.length, filename = f.filename.getOrElse("data"), contentType = f.contentType, data = gfs.enumerate(f)))
     }
   }
+
+  def info(fileRefId: FileRefId)(implicit ec: ExecutionContext): Future[Option[FileInfo]] = {
+    gfs.files.find(BSONDocument("_id" -> fileRefId.value)).cursor[FileInfo]().collect[List]().map(_.headOption)
+  }
+
 
   def recreate(): Unit ={
     Await.result(gfs.chunks.drop(), 5 seconds)
