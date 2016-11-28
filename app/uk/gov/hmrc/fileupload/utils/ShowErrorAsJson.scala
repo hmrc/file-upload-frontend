@@ -17,42 +17,52 @@
 package uk.gov.hmrc.fileupload.utils
 
 import play.api._
-import play.api.http.HeaderNames._
-import play.api.i18n.Messages
-import play.api.libs.json.JsObject
+import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND}
+import play.api.libs.json.Json
 import play.api.mvc.Results._
-import play.api.mvc.{Result, _}
-import uk.gov.hmrc.play.frontend.exceptions.ApplicationException
+import play.api.mvc._
+import uk.gov.hmrc.play.http.{HttpException, Upstream4xxResponse, Upstream5xxResponse}
 
 import scala.concurrent.Future
 
+/**
+  * Copy from microservice-bootstrap_2.11-4.4.0-sources.jar.uk.gov.hmrc.play.microservice.bootstrap.JsonErrorHandling.scala
+  * The above class has been in production for sometime, so can be trusted.
+  */
+
+case class ErrorResponse(statusCode: Int, message: String, xStatusCode: Option[String] = None, requested: Option[String] = None)
+
 trait ShowErrorAsJson extends GlobalSettings {
 
-  private implicit def rhToRequest(rh: RequestHeader) : Request[_] = Request(rh, "")
+  implicit val erFormats = Json.format[ErrorResponse]
 
-  def standardErrorTemplate(message: String)(implicit request: Request[_]): JsObject
+  override def onError(request: RequestHeader, ex: Throwable) = {
+    Future.successful {
+      val (code, message) = ex match {
+        case e: HttpException => (e.responseCode, e.getMessage)
 
-  def badRequestTemplate(implicit request: Request[_]): JsObject = standardErrorTemplate(
-    Messages("global.error.badRequest400.message"))
+        case e: Upstream4xxResponse => (e.reportAs, e.getMessage)
+        case e: Upstream5xxResponse => (e.reportAs, e.getMessage)
 
-  def notFoundTemplate(implicit request: Request[_]): JsObject = standardErrorTemplate(
-    Messages("global.error.pageNotFound404.message"))
+        case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
+      }
 
-  def internalServerErrorTemplate(implicit request: Request[_]): JsObject = standardErrorTemplate(
-    Messages("global.error.InternalServerError500.message"))
+      new Status(code)(Json.toJson(ErrorResponse(code, message)))
+    }
+  }
 
-  final override def onBadRequest(rh: RequestHeader, error: String) =
-    Future.successful(BadRequest(badRequestTemplate(rh)))
+  override def onHandlerNotFound(request: RequestHeader) = {
+    Future.successful {
+      val er = ErrorResponse(NOT_FOUND, "URI not found", requested = Some(request.path))
+      NotFound(Json.toJson(er))
+    }
+  }
 
-  final override def onError(request: RequestHeader, ex: Throwable): Future[Result] =
-    Future.successful(resolveError(request, ex))
-
-  final override def onHandlerNotFound(rh: RequestHeader) =
-    Future.successful(NotFound(notFoundTemplate(rh)))
-
-  def resolveError(rh: RequestHeader, ex: Throwable) = ex.getCause match {
-    case ApplicationException(domain, result, _) => result
-    case _ => InternalServerError(internalServerErrorTemplate(rh)).withHeaders(CACHE_CONTROL -> "no-cache")
+  override def onBadRequest(request: RequestHeader, error: String) = {
+    Future.successful {
+      val er = ErrorResponse(BAD_REQUEST, error)
+      BadRequest(Json.toJson(er))
+    }
   }
 
 }

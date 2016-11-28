@@ -61,16 +61,6 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
         .build())
   }
 
-  def respondWithFail(envelopeId: EnvelopeId, status: Int = Status.INTERNAL_SERVER_ERROR, body: String = ENVELOPE_OPEN_RESPONSE) = {
-    backend.addStubMapping(
-      get(urlPathMatching(s"/file-upload/envelopes/${envelopeId.value}"))
-        .willReturn(
-          aResponse()
-            .withBody(body)
-            .withStatus(status))
-        .build())
-  }
-
   def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = Status.OK, body: String = "") = {
     backend.addStubMapping(
       put(urlPathMatching(fileContentUrl(envelopeId, fileId)))
