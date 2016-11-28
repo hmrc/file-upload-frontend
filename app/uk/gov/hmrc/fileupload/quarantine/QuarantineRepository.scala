@@ -38,20 +38,12 @@ import scala.util.{Failure, Success}
 
 case class FileData(length: Long = 0, filename: String, contentType: Option[String], data: Enumerator[Array[Byte]] = null)
 
-case class FileInfo(_id: String, filename:String, chunkSize:Int, length: Long, uploadDate: BSONDateTime, contentType: String)
+case class FileInfo(_id: String, filename:String, chunkSize:Int, uploadDate: DateTime, length: Long, contentType: String)
 
 object FileInfo {
-
-//  implicit val dateReads = Reads.jodaDateReads("yyyy-MM-dd'T'HH:mm:ss'Z'")
-//  implicit val dateWrites = Writes.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss'Z'")
+  implicit val dateReads = implicitly[Reads[BSONDateTime]].map(d => new DateTime(d.value))
+  implicit val dateWrites = Writes.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss'Z'")
   implicit val fileInfoFormat: Format[FileInfo] = Json.format[FileInfo]
-//  implicit val fileInfoOForat: OFormat[FileInfo] = new OFormat[FileInfo] {
-//    def reads(json:JsValue): JsResult[FileInfo] = fileInfoFormat.reads(json)
-//    def writes(fi: FileInfo): JsObject = fileInfoFormat.writes(fi).as[JsObject]
-//  }
-
-//
-
 }
 
 import scala.concurrent.{ExecutionContext, Future}
