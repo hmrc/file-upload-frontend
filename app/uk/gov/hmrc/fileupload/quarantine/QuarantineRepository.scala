@@ -20,14 +20,14 @@ import cats.data.Xor
 import org.joda.time.{DateTime, Duration}
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.api.libs.json.{Format, JsString, JsValue, Json}
+import play.api.libs.json._
 import play.modules.reactivemongo.GridFSController._
 import play.modules.reactivemongo.JSONFileToSave
 import reactivemongo.api.gridfs.GridFS
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.api.{DB, DBMetaCommands}
-import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONDocumentReader, BSONDocumentWriter}
+import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONDocumentReader, BSONDocumentWriter, BSONElement}
 import reactivemongo.json._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
@@ -38,13 +38,19 @@ import scala.util.{Failure, Success}
 
 case class FileData(length: Long = 0, filename: String, contentType: Option[String], data: Enumerator[Array[Byte]] = null)
 
-case class FileInfo(_id: String, filename:String, chunkSize:Int, length: Long, uploadDate: Long, contentType: String)
+case class FileInfo(_id: String, filename:String, chunkSize:Int, length: Long, uploadDate: BSONDateTime, contentType: String)
 
 object FileInfo {
 
-  type file_Info = (FileRefId) => Future[Option[FileInfo]]
-
+//  implicit val dateReads = Reads.jodaDateReads("yyyy-MM-dd'T'HH:mm:ss'Z'")
+//  implicit val dateWrites = Writes.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss'Z'")
   implicit val fileInfoFormat: Format[FileInfo] = Json.format[FileInfo]
+//  implicit val fileInfoOForat: OFormat[FileInfo] = new OFormat[FileInfo] {
+//    def reads(json:JsValue): JsResult[FileInfo] = fileInfoFormat.reads(json)
+//    def writes(fi: FileInfo): JsObject = fileInfoFormat.writes(fi).as[JsObject]
+//  }
+
+//
 
 }
 

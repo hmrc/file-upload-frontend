@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import play.api.libs.json.JsString
+import play.api.libs.json.{JsString, Json}
 import play.api.mvc.{Action, Controller}
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInfo
@@ -31,7 +31,7 @@ class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]])(noti
 
   def fileInfo(fileRefId: FileRefId) = Action.async { request =>
     getFileInfo(fileRefId).map {
-      case Some(f) => Ok(f.toString)
+      case Some(f) => Ok(Json.toJson(f))
       case None => NotFound(JsString("Not found file with: " + s"$fileRefId"))
     }
   }

@@ -29,7 +29,6 @@ import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, Fil
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
-import uk.gov.hmrc.fileupload.quarantine.FileInfo.file_Info
 import uk.gov.hmrc.fileupload.quarantine.{FileInfo, QuarantineService}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
