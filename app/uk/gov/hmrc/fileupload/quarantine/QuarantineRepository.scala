@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
-import org.joda.time.{DateTime, Duration}
+import org.joda.time.DateTime
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json._
@@ -27,12 +27,12 @@ import reactivemongo.api.gridfs.GridFS
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.api.{DB, DBMetaCommands}
-import reactivemongo.bson.{BSONDateTime, BSONDocument, BSONDocumentReader, BSONDocumentWriter, BSONElement}
+import reactivemongo.bson.{BSONDateTime, BSONDocument}
 import reactivemongo.json._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
@@ -55,7 +55,9 @@ object Repository {
   type WriteFileResult = Xor[WriteFileError, EnvelopeId]
 
   sealed trait WriteFileError
+
   case class WriteFileNotPersistedError(id: EnvelopeId) extends WriteFileError
+
 }
 
 class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionContext) {
@@ -69,7 +71,7 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
   def ensureIndex() =
     gfs.chunks.indexesManager.ensure(Index(List("files_id" -> Ascending, "n" -> Ascending), unique = true, background = true)).onComplete {
       case Success(result) => Logger.info(s"Index creation for chunks success $result")
-      case Failure(t) => Logger.warn(s"Index creation for chunks failed ${ t.getMessage }")
+      case Failure(t) => Logger.warn(s"Index creation for chunks failed ${t.getMessage}")
     }
 
   private def metadata(envelopeId: EnvelopeId, fileId: FileId) =
@@ -85,12 +87,18 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
     }
   }
 
-  def info(fileRefId: FileRefId)(implicit ec: ExecutionContext): Future[Option[FileInfo]] = {
+  def retrieveFileMetaData(fileRefId: FileRefId)(implicit ec: ExecutionContext): Future[Option[FileInfo]] = {
     gfs.files.find(BSONDocument("_id" -> fileRefId.value)).cursor[FileInfo]().collect[List]().map(_.headOption)
   }
 
+  def chunksCount(fileRefId: FileRefId)(implicit ec: ExecutionContext): Future[Int] = {
+    gfs.chunks.count(Some(JsObject(Seq("files_id" -> JsString(fileRefId.value)))))
+  }
 
-  def recreate(): Unit ={
+  //db.getCollection('quarantine.chunks').find({"files_id": "0947879b-4b1d-4c58-be75-7630f5426e30"}).count()
+
+
+  def recreate(): Unit = {
     Await.result(gfs.chunks.drop(), 5 seconds)
     Await.result(gfs.files.drop(), 5 seconds)
     ensureIndex()

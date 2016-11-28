@@ -1,4 +1,3 @@
 # microservice specific routes
 
-#GET         /file-upload/check/files/:fileRefId                                           @uk.gov.hmrc.fileupload.controllers.FileUploadController.checkAFile(fileRefId: uk.gov.hmrc.fileupload.FileRefId)
 POST        /file-upload/upload/envelopes/:envelopeId/files/:fileId                       @uk.gov.hmrc.fileupload.controllers.FileUploadController.uploadWithEnvelopeValidation(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId)
