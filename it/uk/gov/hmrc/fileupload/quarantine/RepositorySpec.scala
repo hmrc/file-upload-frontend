@@ -36,14 +36,13 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
 
   val repository = new Repository(mongo)
 
-
   "repository" should {
     val text = "I only exists to be stored in mongo :<"
     val filename = "myfile"
     val contentType = Some("application/octet-stream")
 
-    def writeDummyFileToDB: String = {
-      val contents = Enumerator[ByteStream](text.getBytes)
+    def writeDummyFileToDB(byteArr: Array[Byte] = text.getBytes) : String = {
+      val contents = Enumerator[ByteStream](byteArr)
       val sink = repository.writeFile(filename, contentType)
       val fsId = contents.run[Future[JSONReadFile]](sink).futureValue.id match {
         case JsString(id) => id
@@ -52,7 +51,7 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
       fsId
     }
     "provide an iteratee to store a stream" in {
-      val fsId: String = writeDummyFileToDB
+      val fsId: String = writeDummyFileToDB()
 
       val fileResult = repository.retrieveFile(FileRefId(fsId)).futureValue.get
 
@@ -73,7 +72,7 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
     }
 
     "returns file metadata for quarantined file" in {
-      val fsId: String = writeDummyFileToDB
+      val fsId: String = writeDummyFileToDB()
       val existentId = FileRefId(fsId)
 
       val fileMetaDataResult = repository.retrieveFileMetaData(existentId).futureValue
@@ -88,6 +87,23 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
 
       val fileMetaDataResult = repository.retrieveFileMetaData(nonexistentId).futureValue
       fileMetaDataResult shouldBe None
+    }
+
+    "returns file chunk count for a quarantined file" in {
+      val fsId: String = writeDummyFileToDB()
+      val existentId = FileRefId(fsId)
+
+      val noChunksUsed = repository.chunksCount(existentId).futureValue
+
+      noChunksUsed shouldBe 1
+
+      val byteArr = new Array[Byte](1255000) //1.255 MB
+      val byteArrFsId = writeDummyFileToDB(byteArr)
+      val byteArrExistentId = FileRefId(byteArrFsId)
+
+      val noChunksUsed_2 = repository.chunksCount(byteArrExistentId).futureValue
+
+      noChunksUsed_2 shouldBe 5
     }
 
   }
