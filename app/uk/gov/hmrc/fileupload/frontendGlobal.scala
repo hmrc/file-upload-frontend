@@ -23,7 +23,6 @@ import net.ceedubs.ficus.Ficus._
 import play.api.Mode._
 import play.api.mvc.Request
 import play.api.{Mode => _, _}
-import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
@@ -32,18 +31,17 @@ import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.{FileInfo, QuarantineService}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
+import uk.gov.hmrc.fileupload.utils.{DefaultFrontendGlobalSetting, ShowErrorAsJson}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
-import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 
 import scala.concurrent.Future
 
-object FrontendGlobal
-  extends DefaultFrontendGlobal {
+object FrontendGlobal extends DefaultFrontendGlobalSetting with ShowErrorAsJson {
 
   override val auditConnector = FrontendAuditConnector
   override val loggingFilter = LoggingFilter
@@ -57,6 +55,7 @@ object FrontendGlobal
   val now: () => Long = () => System.currentTimeMillis()
 
   override def onStart(app: Application) {
+    Logger.info(s"Starting frontend : $appName : in mode : ${app.mode}")
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
 
@@ -86,9 +85,6 @@ object FrontendGlobal
   override def onLoadConfig(config: Configuration, path: java.io.File, classloader: ClassLoader, mode: Mode): Configuration = {
     super.onLoadConfig(config, path, classloader, mode)
   }
-
-  override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): Html =
-    uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)
 
   override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
 
