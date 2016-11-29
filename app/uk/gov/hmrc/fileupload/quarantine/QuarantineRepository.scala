@@ -74,9 +74,6 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
       case Failure(t) => Logger.warn(s"Index creation for chunks failed ${t.getMessage}")
     }
 
-  private def metadata(envelopeId: EnvelopeId, fileId: FileId) =
-    Json.obj("envelopeId" -> envelopeId.value, "fileId" -> fileId.value)
-
   def writeFile(filename: String, contentType: Option[String])(implicit ec: ExecutionContext): Iteratee[Array[Byte], Future[JSONReadFile]] = {
     gfs.iteratee(JSONFileToSave(filename = Some(filename), contentType = contentType))
   }
@@ -94,9 +91,6 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
   def chunksCount(fileRefId: FileRefId)(implicit ec: ExecutionContext): Future[Int] = {
     gfs.chunks.count(Some(JsObject(Seq("files_id" -> JsString(fileRefId.value)))))
   }
-
-  //db.getCollection('quarantine.chunks').find({"files_id": "0947879b-4b1d-4c58-be75-7630f5426e30"}).count()
-
 
   def recreate(): Unit = {
     Await.result(gfs.chunks.drop(), 5 seconds)

@@ -22,6 +22,7 @@ import play.api.mvc.{Action, Controller}
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInfo
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
+import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
@@ -39,7 +40,7 @@ class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getC
           if (actualNoChunks == expectedNoChunks) {
             Ok(Json.toJson(f))
           } else {
-            Ok(JsString(s"Some file chunks are missing! Number of chunks expected $expectedNoChunks , actual $actualNoChunks"))
+            Ok(errorAsJson(s"Some file chunks are missing! Number of chunks expected $expectedNoChunks , actual $actualNoChunks"))
           }
         }.recover {
           case NonFatal(ex) =>
