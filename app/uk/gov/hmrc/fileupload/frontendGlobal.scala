@@ -97,8 +97,8 @@ object FrontendGlobal extends DefaultFrontendGlobalSetting with ShowErrorAsJson 
   lazy val retrieveFile = quarantineRepository.retrieveFile _
   lazy val getFileFromQuarantine= QuarantineService.getFileFromQuarantine(retrieveFile) _
   lazy val recreateCollections = () => quarantineRepository.recreate()
-  lazy val file_info = quarantineRepository.retrieveFileMetaData _
-  lazy val fileChunksInfo = quarantineRepository.chunksCount _
+  lazy val getFileInfo = quarantineRepository.retrieveFileMetaData _
+  lazy val getFileChunksInfo = quarantineRepository.chunksCount _
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
@@ -153,7 +153,7 @@ object FrontendGlobal extends DefaultFrontendGlobalSetting with ShowErrorAsJson 
     uploadParser = uploadParser,
     notify = notifyAndPublish, now = now)
 
-  lazy val adminController = new AdminController(getFileInfo = file_info, getChunks = fileChunksInfo)(notify = notifyAndPublish)
+  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(notify = notifyAndPublish)
 
   private val FileUploadControllerClass = classOf[FileUploadController]
   private val AdminControllerClass = classOf[AdminController]
