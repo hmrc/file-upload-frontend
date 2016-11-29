@@ -399,14 +399,14 @@ Reques (POST): localhost:8899/file-upload/test-only/recreate-collections
 
 Response: 200
 
-## INTERNAL USE ENDPOINTS ONLY <a name="internal"></a>
+## INTERNAL USE ONLY ENDPOINTS <a name="internal"></a>
 The following endpoints are for internal use. <i>**PLEASE DO NOT USE THESE ENDPOINTS WITHOUT PERMISSION**</i>.
 
 #### MANUALLY SCAN FILE (DO NOT USE)
 Scans a file if it was unsuccessfully scanned on the first attempt.
 
 ```
-POST    /file-upload/scan/envelopes/{envelope-Id}/files/{file-Id}/{file-Ref-Id} 
+POST    /admin/scan/envelopes/{envelope-Id}/files/{file-Id}/{file-Ref-Id} 
 ```
 
 | Responses    | Status    | Description |
@@ -422,7 +422,7 @@ Response: 200
 Sends a file that is "marked clean" from Quarantine to Transient.
 
 ```
-POST    /file-upload/transfer/envelopes/{envelope-Id}/files/{file-Id}/{file-Ref-Id} 
+POST    /admin/transfer/envelopes/{envelope-Id}/files/{file-Id}/{file-Ref-Id} 
 ```
 
 | Responses    | Status    | Description |
