@@ -17,10 +17,10 @@
 package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
-import org.joda.time.{DateTime, Duration}
+import org.joda.time.DateTime
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json._
 import play.modules.reactivemongo.GridFSController._
 import play.modules.reactivemongo.JSONFileToSave
 import reactivemongo.api.gridfs.GridFS
@@ -38,6 +38,13 @@ import scala.util.{Failure, Success}
 
 case class FileData(length: Long = 0, filename: String, contentType: Option[String], data: Enumerator[Array[Byte]] = null)
 
+case class FileInfo(_id: String, filename:String, chunkSize:Int, uploadDate: DateTime, length: Long, contentType: String)
+
+object FileInfo {
+  implicit val dateReads = implicitly[Reads[BSONDateTime]].map(d => new DateTime(d.value))
+  implicit val dateWrites = Writes.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss'Z'")
+  implicit val fileInfoFormat: Format[FileInfo] = Json.format[FileInfo]
+}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -48,7 +55,9 @@ object Repository {
   type WriteFileResult = Xor[WriteFileError, EnvelopeId]
 
   sealed trait WriteFileError
+
   case class WriteFileNotPersistedError(id: EnvelopeId) extends WriteFileError
+
 }
 
 class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionContext) {
@@ -62,11 +71,8 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
   def ensureIndex() =
     gfs.chunks.indexesManager.ensure(Index(List("files_id" -> Ascending, "n" -> Ascending), unique = true, background = true)).onComplete {
       case Success(result) => Logger.info(s"Index creation for chunks success $result")
-      case Failure(t) => Logger.warn(s"Index creation for chunks failed ${ t.getMessage }")
+      case Failure(t) => Logger.warn(s"Index creation for chunks failed ${t.getMessage}")
     }
-
-  private def metadata(envelopeId: EnvelopeId, fileId: FileId) =
-    Json.obj("envelopeId" -> envelopeId.value, "fileId" -> fileId.value)
 
   def writeFile(filename: String, contentType: Option[String])(implicit ec: ExecutionContext): Iteratee[Array[Byte], Future[JSONReadFile]] = {
     gfs.iteratee(JSONFileToSave(filename = Some(filename), contentType = contentType))
@@ -78,7 +84,15 @@ class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionCont
     }
   }
 
-  def recreate(): Unit ={
+  def retrieveFileMetaData(fileRefId: FileRefId)(implicit ec: ExecutionContext): Future[Option[FileInfo]] = {
+    gfs.files.find(BSONDocument("_id" -> fileRefId.value)).cursor[FileInfo]().collect[List]().map(_.headOption)
+  }
+
+  def chunksCount(fileRefId: FileRefId)(implicit ec: ExecutionContext): Future[Int] = {
+    gfs.chunks.count(Some(JsObject(Seq("files_id" -> JsString(fileRefId.value)))))
+  }
+
+  def recreate(): Unit = {
     Await.result(gfs.chunks.drop(), 5 seconds)
     Await.result(gfs.files.drop(), 5 seconds)
     ensureIndex()
