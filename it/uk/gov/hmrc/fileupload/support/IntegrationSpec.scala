@@ -8,10 +8,11 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.test.FakeApplication
 import uk.gov.hmrc.clamav.fake.FakeClam
 import uk.gov.hmrc.fileupload.transfer.FakeFileUploadBackend
+import uk.gov.hmrc.mongo.MongoSpecSupport
 
 import scala.concurrent.ExecutionContext
 
-trait IntegrationSpec extends FeatureSpec with OneServerPerSuite with FakeFileUploadBackend {
+trait IntegrationSpec extends FeatureSpec with MongoSpecSupport with OneServerPerSuite with FakeFileUploadBackend {
 
   implicit val ecIntegrationSpec = ExecutionContext.global
 
@@ -40,7 +41,9 @@ trait IntegrationSpec extends FeatureSpec with OneServerPerSuite with FakeFileUp
         "auditing.enabled" -> "false",
         "Test.clam.antivirus.host" -> "127.0.0.1",
         "Test.clam.antivirus.port" -> fakeClamSocket.getLocalPort,
-        "microservice.services.file-upload-backend.port" -> backend.port()
+        "microservice.services.file-upload-backend.port" -> backend.port(),
+        "mongodb.uri" -> s"mongodb://localhost:27017/$databaseName"
       )
     )
+
 }

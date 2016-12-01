@@ -37,7 +37,7 @@ class RepositorySpec extends UnitSpec with ScalaFutures with WithFakeApplication
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId
 
-      respondToEnvelopeCheck(envelopeId, HTTP_OK)
+      Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_OK)
 
       envelopeAvailable(envelopeId).futureValue shouldBe Xor.right(envelopeId)
     }
@@ -45,7 +45,7 @@ class RepositorySpec extends UnitSpec with ScalaFutures with WithFakeApplication
     "if the ID is not known of return an error" in {
       val envelopeId = anyEnvelopeId
 
-      respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
+      Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
       envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeNotFoundError(envelopeId))
     }
@@ -54,7 +54,7 @@ class RepositorySpec extends UnitSpec with ScalaFutures with WithFakeApplication
       val envelopeId = anyEnvelopeId
       val errorBody = "SOME_ERROR"
 
-      respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
+      Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
 
       envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
