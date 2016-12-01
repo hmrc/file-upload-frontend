@@ -13,14 +13,12 @@ import scala.concurrent.ExecutionContext
 
 trait IntegrationSpec extends FeatureSpec with MongoSpecSupport with OneServerPerSuite with FakeFileUploadBackend {
 
-  implicit val ecIntegrationSpec = ExecutionContext.global
-
   override lazy val port: Int = 9000
 
   val nextId = () => UUID.randomUUID().toString
 
   lazy val fakeClamSocket = new ServerSocket(0)
-  lazy val fakeClam = new FakeClam(fakeClamSocket)
+  lazy val fakeClam = new FakeClam(fakeClamSocket)(ExecutionContext.global)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
