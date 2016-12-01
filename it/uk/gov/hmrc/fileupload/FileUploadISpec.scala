@@ -39,15 +39,7 @@ class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActi
       result.status should be(423)
     }
 
-    def uploadDummyFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse = {
-      WS.url(s"http://localhost:$port/file-upload/upload/envelopes/$envelopeId/files/$fileId")
-        .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-          "X-Request-ID" -> "someId",
-          "X-Session-ID" -> "someId",
-          "X-Requested-With" -> "someId")
-        .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.txt\"\r\nContent-Type: text/plain\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
-        .futureValue(PatienceConfig(timeout = Span(10, Seconds)))
-    }
+
 
   }
 
