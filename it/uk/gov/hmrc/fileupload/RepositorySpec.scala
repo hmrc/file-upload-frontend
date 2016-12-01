@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.transfer
+package uk.gov.hmrc.fileupload
 
 import java.net.HttpURLConnection._
 
@@ -22,6 +22,8 @@ import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
+import uk.gov.hmrc.fileupload.support.{FakeFileUploadBackend, IntegrationSpec}
+import uk.gov.hmrc.fileupload.transfer.Repository
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 

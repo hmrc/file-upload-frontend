@@ -7,7 +7,6 @@ import org.scalatest.FeatureSpec
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.test.FakeApplication
 import uk.gov.hmrc.clamav.fake.FakeClam
-import uk.gov.hmrc.fileupload.transfer.FakeFileUploadBackend
 import uk.gov.hmrc.mongo.MongoSpecSupport
 
 import scala.concurrent.ExecutionContext
