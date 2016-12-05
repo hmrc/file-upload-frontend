@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload
+package uk.gov.hmrc.fileupload.transfer
 
 import java.net.HttpURLConnection._
 
@@ -22,8 +22,6 @@ import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.support.{FakeFileUploadBackend, IntegrationSpec}
-import uk.gov.hmrc.fileupload.transfer.Repository
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
 
@@ -39,7 +37,7 @@ class RepositorySpec extends UnitSpec with ScalaFutures with WithFakeApplication
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId
 
-      Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_OK)
+      respondToEnvelopeCheck(envelopeId, HTTP_OK)
 
       envelopeAvailable(envelopeId).futureValue shouldBe Xor.right(envelopeId)
     }
@@ -47,7 +45,7 @@ class RepositorySpec extends UnitSpec with ScalaFutures with WithFakeApplication
     "if the ID is not known of return an error" in {
       val envelopeId = anyEnvelopeId
 
-      Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
+      respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
       envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeNotFoundError(envelopeId))
     }
@@ -56,7 +54,7 @@ class RepositorySpec extends UnitSpec with ScalaFutures with WithFakeApplication
       val envelopeId = anyEnvelopeId
       val errorBody = "SOME_ERROR"
 
-      Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
+      respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
 
       envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
