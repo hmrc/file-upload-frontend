@@ -36,9 +36,7 @@ private object AppDependencies {
   import play.core.PlayVersion
 
   private val playHealthVersion = "1.1.0"
-  private val playJsonLoggerVersion = "2.1.1"
   private val frontendBootstrapVersion = "6.7.0"
-  private val govukTemplateVersion = "4.0.0"
   private val playUiVersion = "4.17.2"
   private val playPartialsVersion = "4.6.0"
   private val playAuthorisedFrontendVersion = "5.7.0"
@@ -48,7 +46,6 @@ private object AppDependencies {
   private val simpleReactivemongoVersion = "4.8.0"
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
-  private val playAuditingVersion = "1.9.0"
   private val playUrlBindersVersion = "1.1.0"
 
 
@@ -60,9 +57,6 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-partials" % playPartialsVersion,
     "uk.gov.hmrc" %% "play-authorised-frontend" % playAuthorisedFrontendVersion,
     "uk.gov.hmrc" %% "play-config" % playConfigVersion,
-    "uk.gov.hmrc" %% "play-json-logger" % playJsonLoggerVersion,
-    "uk.gov.hmrc" %% "play-auditing" % playAuditingVersion,
-    "uk.gov.hmrc" %% "govuk-template" % govukTemplateVersion,
     "uk.gov.hmrc" %% "play-health" % playHealthVersion,
     "uk.gov.hmrc" %% "play-ui" % playUiVersion,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
@@ -86,7 +80,6 @@ private object AppDependencies {
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
-        "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope
       )
     }.test
@@ -105,7 +98,6 @@ private object AppDependencies {
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
-        "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope
       )
     }.test
