@@ -1,15 +1,11 @@
 package uk.gov.hmrc.fileupload.support
 
-import java.net.ServerSocket
 import java.util.UUID
 
 import org.scalatest.{BeforeAndAfterEach, FeatureSpec}
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.test.FakeApplication
-import uk.gov.hmrc.clamav.fake.FakeClam
 import uk.gov.hmrc.mongo.MongoSpecSupport
-
-import scala.concurrent.ExecutionContext
 
 trait IntegrationSpec extends FeatureSpec with MongoSpecSupport with OneServerPerSuite with FakeFileUploadBackend with BeforeAndAfterEach {
 
