@@ -135,7 +135,7 @@ object FrontendGlobal extends DefaultFrontendGlobalSetting with ShowErrorAsJson 
     import play.api.Play.current
 
     val runStubClam = ServiceConfig.clamAvConfig.flatMap(_.getBoolean("runStub")).getOrElse(false)
-    if (runStubClam & Play.isDev) {
+    if (runStubClam & (Play.isDev ||Play.isTest)) {
       (_: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
     } else {
       ScanningService.scanBinaryData(scanner, getFileFromQuarantine)
