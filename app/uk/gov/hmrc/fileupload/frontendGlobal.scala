@@ -16,23 +16,23 @@
 
 package uk.gov.hmrc.fileupload
 
+import akka.actor.{ActorRef, ActorSystem}
+import akka.stream.{ActorMaterializer, Materializer}
 import cats.data.Xor
-import akka.actor.ActorRef
-import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
-import org.joda.time.Duration
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Request
-import play.api.{Mode => _, _}
-import play.api.mvc.{BodyParser, Request}
-import play.api.{Application, Configuration, Logger, Play}
+import play.api.{Application, Configuration, Logger, Play, Mode => _}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
-import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.controllers.{EnvelopeChecker, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
-import uk.gov.hmrc.fileupload.quarantine.{FileInfo, QuarantineService}
+import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
@@ -40,36 +40,30 @@ import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusSca
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
-import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
-import play.api.i18n.Messages.Implicits._
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
-import play.api.libs.streams.Streams
-import play.mvc.BodyParser.MultipartFormData
-import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
+import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
+import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 
 import scala.concurrent.Future
 
 
-object Implicits {
-  implicit val system = Akka.system
-  implicit val materializer = ActorMaterializer()
+object StreamImplicits {
+  implicit val system = ActorSystem()
+  implicit val materializer: Materializer = ActorMaterializer()
 }
-import Implicits._
 
-object FileUploadController extends FileUploadController(uploadParser = FrontendGlobal.uploadParser,
-  notify = FrontendGlobal.notifyAndPublish, now = FrontendGlobal.now, clearFiles = FrontendGlobal.clearFiles)
+import uk.gov.hmrc.fileupload.StreamImplicits._
 
-object TestOnlyController extends TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, FrontendGlobal.removeAllFiles)
+object FileUploadController extends FileUploadController(FrontendGlobal.withValidEnvelope, uploadParser = FrontendGlobal.uploadParser,
+  notify = FrontendGlobal.notifyAndPublish, now = FrontendGlobal.now)
+
+object TestOnlyController extends TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, FrontendGlobal.recreateCollections)
 
 
 object FrontendGlobal extends DefaultFrontendGlobal {
-
-  override val auditConnector = FrontendAuditConnector
-  override val loggingFilter = LoggingFilter
-  override val frontendAuditFilter = AuditFilter
+  val auditConnector = FrontendAuditConnector
+  val loggingFilter = LoggingFilter
+  val frontendAuditFilter = AuditFilter
 
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
@@ -109,7 +103,7 @@ object FrontendGlobal extends DefaultFrontendGlobal {
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
   lazy val retrieveFile = quarantineRepository.retrieveFile _
-  lazy val getFileFromQuarantine= QuarantineService.getFileFromQuarantine(retrieveFile) _
+  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(retrieveFile) _
   lazy val recreateCollections = () => quarantineRepository.recreate()
   lazy val getFileInfo = quarantineRepository.retrieveFileMetaData _
   lazy val getFileChunksInfo = quarantineRepository.chunksCount _
@@ -132,7 +126,7 @@ object FrontendGlobal extends DefaultFrontendGlobal {
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute,ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
 
@@ -149,7 +143,7 @@ object FrontendGlobal extends DefaultFrontendGlobal {
     import play.api.Play.current
 
     val runStubClam = ServiceConfig.clamAvConfig.flatMap(_.getBoolean("runStub")).getOrElse(false)
-    if (runStubClam & (Play.isDev ||Play.isTest)) {
+    if (runStubClam & (Play.isDev || Play.isTest)) {
       (_: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
     } else {
       ScanningService.scanBinaryData(scanner, getFileFromQuarantine)
@@ -168,11 +162,11 @@ object ControllerConfiguration extends ControllerConfig {
   lazy val controllerConfigs = Play.current.configuration.underlying.as[Config]("controllers")
 }
 
-object LoggingFilter extends FrontendLoggingFilter with MicroserviceFilterSupport{
+object LoggingFilter extends FrontendLoggingFilter with MicroserviceFilterSupport {
   override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
 }
 
-object AuditFilter extends FrontendAuditFilter with RunMode with AppName with MicroserviceFilterSupport{
+object AuditFilter extends FrontendAuditFilter with RunMode with AppName with MicroserviceFilterSupport {
 
   override lazy val maskedFormFields = Seq("password")
 

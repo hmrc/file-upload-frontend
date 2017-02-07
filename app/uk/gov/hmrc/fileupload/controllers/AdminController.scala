@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import play.api.Logger
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInfo
