@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,12 @@ object TransferService {
   case class EnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
   case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
 
+  type EnvelopeStatusResult = Xor[EnvelopeStatusError, String]
+
+  sealed trait EnvelopeStatusError
+  case class EnvelopeStatusNotFoundError(id: EnvelopeId) extends EnvelopeStatusError
+  case class EnvelopeStatusServiceError(id: EnvelopeId, message: String) extends EnvelopeStatusError
+
   type TransferResult = Xor[TransferError, EnvelopeId]
 
   sealed trait TransferError
@@ -42,6 +48,11 @@ object TransferService {
   def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
     isEnvelopeAvailable(envelopeId)
+  }
+
+  def envelopeStatus(status: (EnvelopeId) => Future[EnvelopeStatusResult])(envelopeId: EnvelopeId)
+                    (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
+    status(envelopeId)
   }
 
   def stream(baseUrl: String,

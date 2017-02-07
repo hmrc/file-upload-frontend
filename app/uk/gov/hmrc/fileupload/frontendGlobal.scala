@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,11 @@ import play.api.mvc.{BodyParser, Request}
 import play.api.{Application, Configuration, Logger, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.crypto.ApplicationCrypto
-import uk.gov.hmrc.fileupload.controllers.{FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
-import uk.gov.hmrc.fileupload.quarantine.QuarantineService
+import uk.gov.hmrc.fileupload.quarantine.{FileInfo, QuarantineService}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
@@ -40,7 +40,6 @@ import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusSca
 import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
-import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
 import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
 import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
 import play.api.i18n.Messages.Implicits._
@@ -79,6 +78,7 @@ object FrontendGlobal extends DefaultFrontendGlobal {
   val now: () => Long = () => System.currentTimeMillis()
 
   override def onStart(app: Application) {
+    Logger.info(s"Starting frontend : $appName : in mode : ${app.mode}")
     super.onStart(app)
     ApplicationCrypto.verifyConfiguration()
 
@@ -108,9 +108,11 @@ object FrontendGlobal extends DefaultFrontendGlobal {
 
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
-  lazy val removeAllFiles = () => quarantineRepository.clear(Duration.ZERO)
   lazy val retrieveFile = quarantineRepository.retrieveFile _
   lazy val getFileFromQuarantine= QuarantineService.getFileFromQuarantine(retrieveFile) _
+  lazy val recreateCollections = () => quarantineRepository.recreate()
+  lazy val getFileInfo = quarantineRepository.retrieveFileMetaData _
+  lazy val getFileChunksInfo = quarantineRepository.chunksCount _
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
@@ -130,7 +132,12 @@ object FrontendGlobal extends DefaultFrontendGlobal {
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
+  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute,ServiceConfig.fileUploadBackendBaseUrl) _
+
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
+
+  lazy val envelopeStatus = transfer.TransferService.envelopeStatus(status) _
+
   lazy val streamTransferCall = transfer.TransferService.stream(
     ServiceConfig.fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
 
@@ -142,7 +149,7 @@ object FrontendGlobal extends DefaultFrontendGlobal {
     import play.api.Play.current
 
     val runStubClam = ServiceConfig.clamAvConfig.flatMap(_.getBoolean("runStub")).getOrElse(false)
-    if (runStubClam & Play.isDev) {
+    if (runStubClam & (Play.isDev ||Play.isTest)) {
       (_: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
     } else {
       ScanningService.scanBinaryData(scanner, getFileFromQuarantine)
@@ -153,7 +160,7 @@ object FrontendGlobal extends DefaultFrontendGlobal {
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
 
-  lazy val clearFiles = quarantineRepository.clear() _
+  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
 
 }
 

@@ -3,41 +3,60 @@ package uk.gov.hmrc.fileupload
 import org.scalatest.Matchers
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
-import play.api.libs.ws.WS
 import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions, IntegrationSpec}
+import uk.gov.hmrc.fileupload.support.{ChunksMongoRepository, EnvelopeActions, FileActions, IntegrationSpec}
 
 class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with Eventually with Matchers {
 
   feature("File upload front-end") {
 
+    val fileId = anyFileId
+    val envelopeId = anyEnvelopeId
+
     scenario("transfer a file to the back-end") {
-      pending
+      Wiremock.responseToUpload(envelopeId, fileId)
+      Wiremock.respondToEnvelopeCheck(envelopeId)
 
-      val fileId = anyFileId
-      val envelopeId = anyEnvelopeId
-
-      responseToUpload(envelopeId, fileId)
-      respondToEnvelopeCheck(envelopeId)
-
-      val result = WS.url(s"http://localhost:$port/file-upload/upload/envelopes/${envelopeId.value}/files/${fileId.value}")
-          .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-            "X-Request-ID" -> "someId",
-            "X-Session-ID" -> "someId",
-            "X-Requested-With" -> "someId")
-          .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.txt\"\r\nContent-Type: text/plain\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
-          .futureValue(PatienceConfig(timeout = Span(30, Seconds)))
+      val result = uploadDummyFile(envelopeId, fileId)
 
       result.status should be(200)
 
-      quarantinedEventTriggered()
+      Wiremock.quarantinedEventTriggered()
       eventually {
-        fileScannedEventTriggered()
+        Wiremock.fileScannedEventTriggered()
       }(PatienceConfig(timeout = Span(30, Seconds)))
       eventually {
-        uploadedFile(envelopeId, fileId).map(_.getBodyAsString) shouldBe Some("someTextContents")
+        Wiremock.uploadedFile(envelopeId, fileId).map(_.getBodyAsString) shouldBe Some("someTextContents")
       }(PatienceConfig(timeout = Span(30, Seconds)))
     }
+
+    scenario("""Prevent uploading if envelope is not in "OPEN" state"""") {
+      Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_CLOSED_RESPONSE)
+
+      val repository = new ChunksMongoRepository(mongo)
+      repository.removeAll().futureValue
+      def numberOfChunks = repository.findAll().futureValue.size
+      numberOfChunks shouldBe 0
+
+      val result = uploadDummyFile(envelopeId, fileId)
+      result.status should be(423)
+      numberOfChunks shouldBe 0
+    }
+
+    scenario("""Ensure we continue to allow uploading if envelope is in "OPEN" state"""") {
+      Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
+
+      val repository = new ChunksMongoRepository(mongo)
+      repository.removeAll().futureValue
+      def numberOfChunks = repository.findAll().futureValue.size
+      numberOfChunks shouldBe 0
+
+      val result = uploadDummyFile(envelopeId, fileId)
+      result.status should be(200)
+      numberOfChunks should be > 0
+    }
+
   }
+
 }
 

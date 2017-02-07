@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,16 +65,31 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
   def newController(uploadParser: => () => BodyParser[MultipartFormData[Future[JSONReadFile]]] = parse,
                     notify: AnyRef => Future[NotifyResult] = _ => Future.successful(Xor.right(NotifySuccess)),
                     now: () => Long = () => 10,
-                    clearFiles: () => Future[List[WriteResult]] = () => Future.successful(List.empty)) =
-    new FileUploadController(uploadParser, notify, now, clearFiles)
+                  successfulNotificationFromBackend = (_: AnyRef) => Future.successful(Xor.right(NotifySuccess))
+  =
+    new FileUploadController(uploadParser, notify, now)
+
+                   //refactor below
+  val controller = {
+    val noEnvelopeValidation = null
+    val noParsingIsActuallyDoneHere = () => UploadParser.parse(null) _
+    val successfulNotificationFromBackend = (_: AnyRef) => Future.successful(Xor.right(NotifySuccess))
+    val fakeCurrentTime = () => 10L
+
+    new FileUploadController(
+      noEnvelopeValidation,
+      noParsingIsActuallyDoneHere,
+      successfulNotificationFromBackend,
+      fakeCurrentTime
+    )
+  }
 
   "POST /upload" should {
     "return OK response if successfully upload files" in {
       val file = anyFile()
       val request = validUploadRequest(List(file))
-      val controller = newController()
 
-      val result = controller.upload(EnvelopeId(), FileId())(request).futureValue
+      val result = controller.upload(EnvelopeId(), FileId())(request)
 
       status(result) shouldBe Status.OK
     }
@@ -82,6 +97,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     "return 400 Bad Request if file was not found in the request" in {
       val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty), sizeExceeded = false)
       val controller = newController()
+      val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty), sizeExceeded = false)
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
 
@@ -90,7 +106,6 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     }
     "return 400 Bad Request if >1 files were found in the request" in {
       val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
-      val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files)
 
@@ -99,7 +114,6 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     }
     "return 413 Entity To Large if file size exceeds 10 mb" in {
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
-      val controller = newController()
 
       val result = controller.upload(EnvelopeId(), FileId())(tooLargeRequest)
 

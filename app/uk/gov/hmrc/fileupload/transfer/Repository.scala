@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import cats.data.Xor
 import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.ws.{WS, WSRequest, WSResponse}
+import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.EnvelopeId
@@ -37,6 +38,19 @@ object Repository {
         case Status.OK => Xor.right(envelopeId)
         case Status.NOT_FOUND => Xor.left(EnvelopeNotFoundError(envelopeId))
         case _ => Xor.left(EnvelopeAvailableServiceError(envelopeId, response.body))
+      }
+    }
+  }
+
+  def envelopeStatus(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
+                       (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
+
+    auditedHttpCall(WS.url(s"$baseUrl/file-upload/envelopes/${ envelopeId.value }").withMethod("GET")).map {
+      case Xor.Left(error) => Xor.left(EnvelopeStatusServiceError(envelopeId, error.message))
+      case Xor.Right(response) => response.status match {
+        case Status.OK => Xor.right((Json.parse(response.body) \ "status").as[String])
+        case Status.NOT_FOUND => Xor.left(EnvelopeStatusNotFoundError(envelopeId))
+        case _ => Xor.left(EnvelopeStatusServiceError(envelopeId, response.body))
       }
     }
   }

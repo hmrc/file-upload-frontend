@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,11 @@ import play.api.Play.current
 import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WS, WSResponse}
-import play.api.mvc.Controller
-import play.api.mvc.Action
-import reactivemongo.api.commands.WriteResult
+import play.api.mvc.{Action, Controller}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
-class TestOnlyController(baseUrl: String, removeAllFiles: () => Future[List[WriteResult]])(implicit executionContext: ExecutionContext) extends Controller {
+class TestOnlyController(baseUrl: String, recreateCollections: () => Unit)(implicit executionContext: ExecutionContext) extends Controller {
 
   def createEnvelope() = Action.async { request =>
     def extractEnvelopeId(response: WSResponse): String =
@@ -87,18 +85,6 @@ class TestOnlyController(baseUrl: String, removeAllFiles: () => Future[List[Writ
     }
   }
 
-  def cleanupQuarantine() = Action.async { request =>
-    removeAllFiles().map { results =>
-      if (results.forall(_.ok)) Ok else InternalServerError
-    }
-  }
-
-  def clearCollections() = Action.async {
-    WS.url(s"$baseUrl/file-upload/test-only/clear-collections").post(Json.obj()).map { response =>
-      new Status(response.status)(response.body)
-    }
-  }
-
   def getEvents(streamId: String) = Action.async { request =>
     WS.url(s"$baseUrl/file-upload/events/$streamId").get().map { response =>
       new Status(response.status)(response.body).withHeaders {
@@ -115,4 +101,12 @@ class TestOnlyController(baseUrl: String, removeAllFiles: () => Future[List[Writ
       Ok(Json.parse(response.body))
     }
   }
+
+  def recreateAllCollections() = Action.async {
+    recreateCollections()
+    WS.url(s"$baseUrl/file-upload/test-only/recreate-collections").post(Json.obj()).map {
+      response => new Status(response.status)(response.body)
+    }
+  }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 HM Revenue & Customs
+ * Copyright 2017 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,19 +35,26 @@ import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import play.api.http.HttpEntity
 import play.api.libs.streams.Streams
-
 import play.api.i18n.Messages.Implicits._
 import play.api.Play.current
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 
-class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
+class FileUploadController(withValidEnvelope: WithValidEnvelope,
+                           uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
-                           now: () => Long,
-                           clearFiles: () => Future[List[WriteResult]])
+                           now: () => Long)
                           (implicit executionContext: ExecutionContext, implicit val mat: Materializer) extends Controller {
 
   val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
+
+  def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
+    withValidEnvelope(envelopeId) {
+      upload(envelopeId, fileId)
+    }
+
   def upload(envelopeId: EnvelopeId, fileId: FileId) =
     Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
     request.body match {
@@ -80,26 +87,6 @@ class FileUploadController(uploadParser: () => BodyParser[MultipartFormData[Futu
     }
   }
 
-  def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
-    Future.successful(Ok)
-  }
-
-  def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    notify(TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
-    Future.successful(Ok)
-  }
-
-  def clear() = Action.async { request =>
-    clearFiles().map {
-      results =>
-        val errors = results.filter(_.hasErrors)
-        errors match {
-          case Nil => Ok
-          case _ => InternalServerError(errors.flatMap(_.errmsg).mkString(", "))
-        }
-    }
-  }
 }
 
 object FileUploadController {

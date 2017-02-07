@@ -68,8 +68,7 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-ui" % playUiVersion,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
     "org.typelevel" %% "cats" % catsVersion,
-    "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
-    "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.0"
+    "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion
   )
 
   trait TestDependencies {
