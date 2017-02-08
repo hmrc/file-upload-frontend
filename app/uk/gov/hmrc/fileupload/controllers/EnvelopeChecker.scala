@@ -16,17 +16,17 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import akka.util.ByteString
 import cats.data.Xor
 import play.api.Logger
 import play.api.http.Status._
 import play.api.libs.iteratee.Done
 import play.api.libs.json.Json
-import play.api.libs.streams.{Accumulator, Streams}
+import play.api.libs.streams.Accumulator
 import play.api.mvc.Results._
 import play.api.mvc.{EssentialAction, RequestHeader, Result}
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeStatusNotFoundError, _}
+import uk.gov.hmrc.fileupload.utils.StreamsConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,12 +34,13 @@ object EnvelopeChecker {
 
   type WithValidEnvelope = EnvelopeId => EssentialAction => EssentialAction
 
+  import uk.gov.hmrc.fileupload.StreamImplicits.materializer
+
   def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeStatusResult])
                        (envelopeId: EnvelopeId)
                        (action: EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
-      import uk.gov.hmrc.fileupload.StreamImplicits.materializer
       Accumulator.flatten {
         check(envelopeId).map {
           case Xor.Right("OPEN") =>
@@ -56,8 +57,9 @@ object EnvelopeChecker {
 
   private def logAndReturn(statusCode: Int, problem: String)(implicit rh: RequestHeader) = {
     Logger.warn(s"Request: $rh failed because: $problem")
-    val iteratee = Done[Array[Byte], Result](new Status(statusCode).apply (Json.obj("message" -> problem)))
-    val sink = Streams.iterateeToAccumulator(iteratee).toSink
-    Accumulator(sink.contramap[ByteString](_.toArray[Byte]))
+    val iteratee = Done[Array[Byte], Result](new Status(statusCode).apply(Json.obj("message" -> problem)))
+    StreamsConverter.iterateeToAccumulator(iteratee)
   }
+
+
 }

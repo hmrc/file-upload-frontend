@@ -16,20 +16,22 @@
 
 package uk.gov.hmrc.fileupload
 
-import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.{ActorMaterializer, Materializer}
+import javax.inject.Provider
+
+import akka.actor.ActorRef
 import cats.data.Xor
+import com.kenshoo.play.metrics.MetricsController
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
-import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
+import play.Logger
+import play.api.ApplicationLoader.Context
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.Request
-import play.api.{Application, Configuration, Logger, Play, Mode => _}
-import play.twirl.api.Html
-import uk.gov.hmrc.crypto.ApplicationCrypto
-import uk.gov.hmrc.fileupload.controllers.{EnvelopeChecker, FileUploadController, UploadParser}
-import uk.gov.hmrc.fileupload.infrastructure.{DefaultMongoConnection, HttpStreamingBody, PlayHttp}
+import play.api.{BuiltInComponentsFromContext, LoggerConfigurator, Mode}
+import play.modules.reactivemongo.ReactiveMongoComponentImpl
+import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
@@ -37,68 +39,73 @@ import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
-import uk.gov.hmrc.play.audit.filters.FrontendAuditFilter
+import uk.gov.hmrc.play.audit.filters.{AuditFilter, FrontendAuditFilter}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
-import uk.gov.hmrc.play.frontend.bootstrap.DefaultFrontendGlobal
-import uk.gov.hmrc.play.http.logging.filters.FrontendLoggingFilter
+import uk.gov.hmrc.play.graphite.GraphiteMetricsImpl
+import uk.gov.hmrc.play.http.logging.filters.{FrontendLoggingFilter, LoggingFilter}
 
 import scala.concurrent.Future
 
 
-object StreamImplicits {
-  implicit val system = ActorSystem()
-  implicit val materializer: Materializer = ActorMaterializer()
+class ApplicationLoader extends play.api.ApplicationLoader {
+  def load(context: Context) = {
+    LoggerConfigurator(context.environment.classLoader).foreach {
+      _.configure(context.environment)
+    }
+    new ApplicationModule(context).application
+  }
 }
 
-import uk.gov.hmrc.fileupload.StreamImplicits._
+class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(context)
+  with AhcWSComponents with AppName {
 
-object FileUploadController extends FileUploadController(FrontendGlobal.withValidEnvelope, uploadParser = FrontendGlobal.uploadParser,
-  notify = FrontendGlobal.notifyAndPublish, now = FrontendGlobal.now)
+  override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
 
-object TestOnlyController extends TestOnlyController(ServiceConfig.fileUploadBackendBaseUrl, FrontendGlobal.recreateCollections)
+  lazy val healthRoutes = new manualdihealth.Routes(httpErrorHandler, new uk.gov.hmrc.play.health.AdminController(configuration))
+  lazy val appRoutes = new app.Routes(httpErrorHandler, fileUploadController)
+
+  lazy val adminRoutes = new admin.Routes(httpErrorHandler, adminController)
+
+  lazy val metrics = new GraphiteMetricsImpl(applicationLifecycle, configuration)
+  lazy val metricsController = new MetricsController(metrics)
+
+  override def router = new prod.Routes(httpErrorHandler, new Provider[MetricsController] {
+    override def get(): MetricsController = metricsController
+  }, healthRoutes, appRoutes, adminRoutes)
 
 
-object FrontendGlobal extends DefaultFrontendGlobal {
-  val auditConnector = FrontendAuditConnector
-  val loggingFilter = LoggingFilter
-  val frontendAuditFilter = AuditFilter
+  lazy val fileUploadController = new FileUploadController(withValidEnvelope = withValidEnvelope, uploadParser = uploadParser,
+    notify = notifyAndPublish, now = now)
 
+  lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
+
+  lazy val healthController = new uk.gov.hmrc.play.health.AdminController(configuration)
+
+  lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, recreateCollections, wsClient)
+
+  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(notify = notifyAndPublish)
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
   var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
   val now: () => Long = () => System.currentTimeMillis()
 
-  override def onStart(app: Application) {
-    Logger.info(s"Starting frontend : $appName : in mode : ${app.mode}")
-    super.onStart(app)
-    ApplicationCrypto.verifyConfiguration()
+  //TODO uncomment below
+  //ApplicationCrypto.verifyConfiguration()
 
-    // event stream
-    import play.api.Play.current
-    import play.api.libs.concurrent.Akka
-    val eventStream = Akka.system.eventStream
-    subscribe = eventStream.subscribe
-    publish = eventStream.publish
+  subscribe = actorSystem.eventStream.subscribe
+  publish = actorSystem.eventStream.publish
 
-    notifyAndPublish = NotifierService.notify(sendNotification, publish) _
+  notifyAndPublish = NotifierService.notify(sendNotification, publish) _
 
-    // scanner
-    Akka.system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
-    Akka.system.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
-
-  }
-
-  override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: Request[_]): Html =
-    uk.gov.hmrc.fileupload.views.html.error_template(pageTitle, heading, message)(rh, applicationMessages)
-
-  override def microserviceMetricsConfig(implicit app: Application): Option[Configuration] = app.configuration.getConfig(s"microservice.metrics")
+  // scanner
+  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
+  actorSystem.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
 
   // db
-
-  lazy val db = DefaultMongoConnection.db
+  lazy val db = new ReactiveMongoComponentImpl(application, applicationLifecycle).mongoConnector.db
 
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
@@ -109,9 +116,9 @@ object FrontendGlobal extends DefaultFrontendGlobal {
   lazy val getFileChunksInfo = quarantineRepository.chunksCount _
 
   // auditing
-  lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t))) _
+  lazy val auditedHttpExecute = PlayHttp.execute(AuditFilter.auditConnector, appName, Some(t => Logger.warn(t.getMessage, t))) _
   lazy val auditF: (Boolean, Int, String) => (Request[_]) => Future[AuditResult] =
-    PlayHttp.audit(auditConnector, ServiceConfig.appName, Some(t => Logger.warn(t.getMessage, t)))
+    PlayHttp.audit(AuditFilter.auditConnector, appName, Some(t => Logger.warn(t.getMessage, t)))
   val auditedHttpBodyStreamer = (baseUrl: String, envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, request: Request[_]) =>
     new HttpStreamingBody(
       url = s"$baseUrl/file-upload/envelopes/${envelopeId.value}/files/${fileId.value}/${fileRefId.value}",
@@ -124,26 +131,25 @@ object FrontendGlobal extends DefaultFrontendGlobal {
     )
 
   // transfer
-  lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
-  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
 
   lazy val envelopeStatus = transfer.TransferService.envelopeStatus(status) _
 
   lazy val streamTransferCall = transfer.TransferService.stream(
-    ServiceConfig.fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
+    fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
 
   // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
 
-  lazy val scanner: () => AvScanIteratee = VirusScanner.scanIteratee
+  lazy val scanner: () => AvScanIteratee = new VirusScanner(configuration, environment).scanIteratee
   lazy val scanBinaryData: (FileRefId) => Future[ScanResult] = {
-    import play.api.Play.current
 
-    val runStubClam = ServiceConfig.clamAvConfig.flatMap(_.getBoolean("runStub")).getOrElse(false)
-    if (runStubClam & (Play.isDev || Play.isTest)) {
+    val runStubClam = configuration.getConfig(s"${environment.mode}.clam.antivirus").flatMap(_.getBoolean("runStub")).getOrElse(false)
+    if (runStubClam & (environment.mode == Mode.Dev || environment.mode == Mode.Test)) {
       (_: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
     } else {
       ScanningService.scanBinaryData(scanner, getFileFromQuarantine)
@@ -152,27 +158,36 @@ object FrontendGlobal extends DefaultFrontendGlobal {
 
   // notifier
   //TODO: inject proper toConsumerUrl function
-  lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, ServiceConfig.fileUploadBackendBaseUrl) _
+  lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
 
-}
+  /*object ControllerConfiguration extends ControllerConfig {
+    lazy val controllerConfigs = configuration.underlying.as[Config]("controllers")
+  }
 
-object ControllerConfiguration extends ControllerConfig {
-  lazy val controllerConfigs = Play.current.configuration.underlying.as[Config]("controllers")
-}
+  object LoggingFilter extends LoggingFilter {
+    override def mat = materializer
+    override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
+  }
 
-object LoggingFilter extends FrontendLoggingFilter with MicroserviceFilterSupport {
-  override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
-}
+  object AuditFilter extends AuditFilter with AppName {
 
-object AuditFilter extends FrontendAuditFilter with RunMode with AppName with MicroserviceFilterSupport {
+    override def mat = materializer
+    override lazy val auditConnector = FrontendAuditConnector
 
-  override lazy val maskedFormFields = Seq("password")
+    override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
 
-  override lazy val applicationPort = None
+    override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
+  }*/
 
-  override lazy val auditConnector = FrontendAuditConnector
+  private lazy val services = s"${environment.mode}.microservice.services"
 
-  override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
+  private def baseUrl(serviceName: String) = {
+    val protocol = configuration.getString(s"$services.$serviceName.protocol").getOrElse("http")
+    val host = configuration.getString(s"$services.$serviceName.host").getOrElse(throw new RuntimeException(s"Could not find config $services.$serviceName.host"))
+    val port = configuration.getInt(s"$services.$serviceName.port").getOrElse(throw new RuntimeException(s"Could not find config $services.$serviceName.port"))
+    s"$protocol://$host:$port"
+  }
+
 }

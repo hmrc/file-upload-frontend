@@ -18,17 +18,17 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import cats.data.Xor
 import play.api.libs.iteratee.Iteratee
+import play.api.{Configuration, Environment}
 import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
-import uk.gov.hmrc.fileupload.ServiceConfig
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-object VirusScanner {
-  private def clamAvConfig = ClamAvConfig(ServiceConfig.clamAvConfig)
+class VirusScanner(config : Configuration, environment: Environment) {
+  private def clamAvConfig = ClamAvConfig(config.getConfig(s"$environment.clam.antivirus"))
 
   def scanIteratee()(implicit ec: ExecutionContext): AvScanIteratee = {
     val clamAntiVirus = ClamAntiVirus(clamAvConfig)

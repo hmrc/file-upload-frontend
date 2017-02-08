@@ -36,9 +36,9 @@ private object AppDependencies {
   import play.core.PlayVersion
 
   private val playHealthVersion = "2.0.0"
-  private val playJsonLoggerVersion = "3.0.0"
+  private val logbackJsonLoggerVersion = "3.0.0"
 
-  private val frontendBootstrapVersion = "7.5.0"
+  private val frontendBootstrapVersion = "7.3.0"
   private val govukTemplateVersion = "5.0.0"
   private val playUiVersion = "5.0.0"
   private val playPartialsVersion = "5.2.0"
@@ -49,7 +49,7 @@ private object AppDependencies {
   private val simpleReactivemongoVersion = "5.0.0"
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
-  private val playAuditingVersion = "1.9.0"
+  private val playAuditingVersion = "2.4.0"
   private val playUrlBindersVersion = "2.0.0"
 
 
@@ -61,9 +61,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-partials" % playPartialsVersion,
     "uk.gov.hmrc" %% "play-authorised-frontend" % playAuthorisedFrontendVersion,
     "uk.gov.hmrc" %% "play-config" % playConfigVersion,
-    "uk.gov.hmrc" %% "logback-json-logger" % playJsonLoggerVersion,
+    "uk.gov.hmrc" %% "logback-json-logger" % logbackJsonLoggerVersion,
     "uk.gov.hmrc" %% "play-auditing" % playAuditingVersion,
-    "uk.gov.hmrc" %% "govuk-template" % govukTemplateVersion,
     "uk.gov.hmrc" %% "play-health" % playHealthVersion,
     "uk.gov.hmrc" %% "play-ui" % playUiVersion,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
@@ -83,12 +82,12 @@ private object AppDependencies {
         "org.scalatest" %% "scalatest" % "2.2.6" % scope,
         "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
+        "org.scalatestplus" %% "play" % "1.2.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
-        "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope,
-        "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope
+        "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope
       )
     }.test
   }
@@ -102,6 +101,7 @@ private object AppDependencies {
         "org.scalatest" %% "scalatest" % "2.2.6" % scope,
         "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
+        "org.scalatestplus" %% "play" % "1.2.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,

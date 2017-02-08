@@ -24,6 +24,7 @@ import play.api.mvc.{BodyParser, MultipartFormData}
 import play.core.parsers.Multipart
 import play.core.parsers.Multipart.{FileInfo, FilePartHandler}
 import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
+import uk.gov.hmrc.fileupload.utils.StreamsConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,14 +35,8 @@ object UploadParser {
 
     play.api.mvc.BodyParsers.parse.multipartFormData(handleFilePart {
       case Multipart.FileInfo(partName, filename, contentType) =>
-        toAccumulator(writeFile(filename, contentType))
+        StreamsConverter.iterateeToAccumulator(writeFile(filename, contentType))
     })
-  }
-
-  def toAccumulator(iteratee: Iteratee[Array[Byte], Future[JSONReadFile]])
-                   (implicit ec: ExecutionContext): Accumulator[ByteString, Future[JSONReadFile]] = {
-    val sink = Streams.iterateeToAccumulator(iteratee).toSink
-    Accumulator(sink.contramap[ByteString](_.toArray[Byte]))
   }
 
   def handleFilePart[A](handler: FileInfo => Accumulator[ByteString, A]): FilePartHandler[A] = {

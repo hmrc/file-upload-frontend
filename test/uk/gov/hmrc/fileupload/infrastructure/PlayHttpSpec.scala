@@ -110,8 +110,8 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
 
       val response = await(testExecute(WS.url(downstreamUrl)(fakeApplication).withMethod("GET")))
 
-      response shouldBe Xor.Left(PlayHttpError("Remotely closed"))
-      loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely closed"
+      response shouldBe Xor.Left(PlayHttpError("Remotely Closed"))
+      loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely Closed"
     }
   }
 

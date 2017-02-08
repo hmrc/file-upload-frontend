@@ -55,7 +55,9 @@ object Repository {
   type WriteFileResult = Xor[WriteFileError, EnvelopeId]
 
   sealed trait WriteFileError
+
   case class WriteFileNotPersistedError(id: EnvelopeId) extends WriteFileError
+
 }
 
 class Repository(mongo: () => DB with DBMetaCommands)(implicit ec: ExecutionContext) {

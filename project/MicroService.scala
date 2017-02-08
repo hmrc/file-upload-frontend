@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import play.routes.compiler.StaticRoutesGenerator
+import play.routes.compiler.{InjectedRoutesGenerator, StaticRoutesGenerator}
 import play.sbt.PlayImport.PlayKeys
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt.Keys._
@@ -66,8 +66,8 @@ trait MicroService {
       fork in Test := false,
       retrieveManaged := true,
       evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
-      routesGenerator := StaticRoutesGenerator,
-//      scalacOptions += "-Xfatal-warnings",
+      routesGenerator := InjectedRoutesGenerator,
+     // scalacOptions += "-Xfatal-warnings",
       // -Xlint:-missing-interpolator is unfortunately necessary due to a bug in Scala which causes a warning to
       // be raised from some Play generated code with paramaterised URL paths.
       // https://gitter.im/playframework/playframework/archives/2015/07/06
@@ -82,7 +82,6 @@ trait MicroService {
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
       testOptions in IntegrationTest := Seq(Tests.Filter(itFilter)),
-      routesGenerator in IntegrationTest := StaticRoutesGenerator,
       parallelExecution in IntegrationTest := false)
     .settings(
       resolvers += Resolver.bintrayRepo("hmrc", "releases"),
