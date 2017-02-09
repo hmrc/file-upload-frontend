@@ -37,7 +37,3 @@ object FrontendAuthConnector extends AuthConnector with ServicesConfig {
   lazy val http = WSHttp
 }
 
-object StreamImplicits {
-  implicit val system = ActorSystem()
-  implicit val materializer: Materializer = ActorMaterializer()
-}

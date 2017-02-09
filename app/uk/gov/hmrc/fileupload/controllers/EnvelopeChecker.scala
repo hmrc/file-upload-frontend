@@ -34,7 +34,7 @@ object EnvelopeChecker {
 
   type WithValidEnvelope = EnvelopeId => EssentialAction => EssentialAction
 
-  import uk.gov.hmrc.fileupload.StreamImplicits.materializer
+  import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeStatusResult])
                        (envelopeId: EnvelopeId)

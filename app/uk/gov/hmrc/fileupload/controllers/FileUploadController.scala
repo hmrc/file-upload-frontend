@@ -34,7 +34,7 @@ import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
-import uk.gov.hmrc.fileupload.StreamImplicits.materializer
+import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
 class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],

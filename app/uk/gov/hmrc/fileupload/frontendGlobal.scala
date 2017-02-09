@@ -39,12 +39,11 @@ import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
-import uk.gov.hmrc.play.audit.filters.{AuditFilter, FrontendAuditFilter}
+import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
-import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
-import uk.gov.hmrc.play.filters.MicroserviceFilterSupport
+import uk.gov.hmrc.play.config.{AppName, ControllerConfig}
 import uk.gov.hmrc.play.graphite.GraphiteMetricsImpl
-import uk.gov.hmrc.play.http.logging.filters.{FrontendLoggingFilter, LoggingFilter}
+import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 
 import scala.concurrent.Future
 
@@ -71,10 +70,11 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val metrics = new GraphiteMetricsImpl(applicationLifecycle, configuration)
   lazy val metricsController = new MetricsController(metrics)
 
-  override def router = new prod.Routes(httpErrorHandler, new Provider[MetricsController] {
+  lazy val prodRoutes = new prod.Routes(httpErrorHandler, new Provider[MetricsController] {
     override def get(): MetricsController = metricsController
   }, healthRoutes, appRoutes, adminRoutes)
 
+  override def router = if (configuration.getString("application.router").get == "testOnlyDoNotUseInAppConf.Routes") testRoutes else prodRoutes
 
   lazy val fileUploadController = new FileUploadController(withValidEnvelope = withValidEnvelope, uploadParser = uploadParser,
     notify = notifyAndPublish, now = now)
@@ -84,6 +84,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val healthController = new uk.gov.hmrc.play.health.AdminController(configuration)
 
   lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, recreateCollections, wsClient)
+
+  lazy val testRoutes = new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, testOnlyController, prodRoutes)
 
   lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(notify = notifyAndPublish)
 
@@ -162,7 +164,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
 
-  /*object ControllerConfiguration extends ControllerConfig {
+  object ControllerConfiguration extends ControllerConfig {
     lazy val controllerConfigs = configuration.underlying.as[Config]("controllers")
   }
 
@@ -179,7 +181,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
 
     override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
-  }*/
+  }
 
   private lazy val services = s"${environment.mode}.microservice.services"
 
