@@ -38,13 +38,12 @@ private object AppDependencies {
   private val playHealthVersion = "2.0.0"
   private val logbackJsonLoggerVersion = "3.0.0"
 
-  private val frontendBootstrapVersion = "7.3.0"
+  private val frontendBootstrapVersion = "7.10.0"
   private val govukTemplateVersion = "5.0.0"
-  private val playUiVersion = "5.0.0"
   private val playPartialsVersion = "5.2.0"
   private val playAuthorisedFrontendVersion = "6.1.0"
   private val playConfigVersion = "3.0.0"
-  private val hmrcTestVersion = "2.0.0"
+  private val hmrcTestVersion = "2.2.0"
   private val playReactivemongoVersion = "5.0.0"
   private val simpleReactivemongoVersion = "5.0.0"
   private val clamAvClientVersion = "2.4.0"
@@ -64,7 +63,6 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "logback-json-logger" % logbackJsonLoggerVersion,
     "uk.gov.hmrc" %% "play-auditing" % playAuditingVersion,
     "uk.gov.hmrc" %% "play-health" % playHealthVersion,
-    "uk.gov.hmrc" %% "play-ui" % playUiVersion,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
     "org.typelevel" %% "cats" % catsVersion,
     "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion
@@ -82,7 +80,7 @@ private object AppDependencies {
         "org.scalatest" %% "scalatest" % "2.2.6" % scope,
         "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
-        "org.scalatestplus" %% "play" % "1.2.0" % scope,
+        "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
@@ -101,7 +99,6 @@ private object AppDependencies {
         "org.scalatest" %% "scalatest" % "2.2.6" % scope,
         "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
-        "org.scalatestplus" %% "play" % "1.2.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,

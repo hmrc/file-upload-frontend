@@ -17,10 +17,13 @@
 package uk.gov.hmrc.fileupload.utils
 
 import play.api._
+import play.api.http.DefaultHttpErrorHandler
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
 import play.api.mvc.Results._
 import play.api.mvc._
+import play.api.routing.Router
+import play.core.SourceMapper
 import uk.gov.hmrc.play.http.{HttpException, Upstream4xxResponse, Upstream5xxResponse}
 
 import scala.concurrent.Future
@@ -32,11 +35,13 @@ import scala.concurrent.Future
 
 case class ErrorResponse(statusCode: Int, message: String, xStatusCode: Option[String] = None, requested: Option[String] = None)
 
-trait ShowErrorAsJson extends GlobalSettings {
+class ShowErrorAsJson(environment: Environment, configuration: Configuration,
+                      sourceMapper: Option[SourceMapper] = None,
+                      router: => Option[Router] = None) extends DefaultHttpErrorHandler(environment, configuration, sourceMapper, router) {
 
   implicit val erFormats = Json.format[ErrorResponse]
 
-  override def onError(request: RequestHeader, ex: Throwable) = {
+  override def onServerError(request: RequestHeader, ex: Throwable) = {
     Future.successful {
       val (code, message) = ex match {
         case e: HttpException => (e.responseCode, e.getMessage)
@@ -51,9 +56,9 @@ trait ShowErrorAsJson extends GlobalSettings {
     }
   }
 
-  override def onHandlerNotFound(request: RequestHeader) = {
+  override def onNotFound(request: RequestHeader, message: String)= {
     Future.successful {
-      val er = ErrorResponse(NOT_FOUND, "URI not found", requested = Some(request.path))
+      val er = ErrorResponse(NOT_FOUND, message, requested = Some(request.path))
       NotFound(Json.toJson(er))
     }
   }

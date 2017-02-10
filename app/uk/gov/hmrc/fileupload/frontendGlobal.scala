@@ -26,6 +26,7 @@ import net.ceedubs.ficus.Ficus._
 import play.Logger
 import play.api.ApplicationLoader.Context
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.ws.WSRequest
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.Request
 import play.api.{BuiltInComponentsFromContext, LoggerConfigurator, Mode}
@@ -37,12 +38,15 @@ import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
+import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.AuditFilter
-import uk.gov.hmrc.play.audit.http.connector.AuditResult
-import uk.gov.hmrc.play.config.{AppName, ControllerConfig}
+import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
+import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
+import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
 import uk.gov.hmrc.play.graphite.GraphiteMetricsImpl
+import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 
 import scala.concurrent.Future
@@ -61,6 +65,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   with AhcWSComponents with AppName {
 
   override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
+  override lazy val httpErrorHandler = new ShowErrorAsJson(environment, configuration)
 
   lazy val healthRoutes = new manualdihealth.Routes(httpErrorHandler, new uk.gov.hmrc.play.health.AdminController(configuration))
   lazy val appRoutes = new app.Routes(httpErrorHandler, fileUploadController)
@@ -173,13 +178,19 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
   }
 
-  object AuditFilter extends AuditFilter with AppName {
+  object MicroserviceAuditConnector extends AuditConnector with RunMode {
+    override lazy val auditingConfig = LoadAuditingConfig(s"auditing")
 
+    override def buildRequest(url: String)(implicit hc: HeaderCarrier): WSRequest = {
+      wsApi.url(url).withHeaders(hc.headers: _*)
+    }
+  }
+
+  object AuditFilter extends AuditFilter with AppName {
     override def mat = materializer
-    override lazy val auditConnector = FrontendAuditConnector
+    override lazy val auditConnector = MicroserviceAuditConnector
 
     override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
-
     override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
   }
 
