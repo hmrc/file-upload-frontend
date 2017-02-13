@@ -24,6 +24,7 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.virusscan.FileScanned
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
                     transferFile: (EnvelopeId, FileId, FileRefId) => Future[TransferResult])
@@ -46,12 +47,17 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
   
   private def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId): Unit =
     transferFile(envelopeId, fileId, fileRefId).map {
-      case Xor.Right(envelopeId) =>
+      case Xor.Right(_) =>
         Logger.info(s"File successful transferred $envelopeId and $fileId and $fileRefId")
-      case Xor.Left(TransferServiceError(id, m)) =>
+      case Xor.Left(TransferServiceError(_, m)) =>
         Logger.info(s"File not transferred for $envelopeId and $fileId and $fileRefId with $m")
       case Xor.Left(_) =>
         Logger.info(s"File not transferred for $envelopeId and $fileId and $fileRefId")
+    } recover {
+      case NonFatal(ex) =>
+        Logger.error(
+          s"Exception while transferring (envelopeId: $envelopeId, fileId: $fileId, fileRefId: $fileRefId)",
+          ex)
     }
 }
 
