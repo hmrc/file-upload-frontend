@@ -24,6 +24,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Second, Span}
 import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
+import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -31,7 +32,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures {
+class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures with TestApplicationComponents {
 
   def enumerator() = {
     val inputString = "a random string long enough to by divided into chunks"
@@ -42,12 +43,14 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures {
   val noVirusFound = () => Future.successful(Success(true))
   val virusDetected = () => Future.successful(Failure(new VirusDetectedException("test virus")))
 
+  val virusScanner = new VirusScanner(components.configuration, components.environment)
+
   "VirusScanner" should {
 
     s"return $ScanResultFileClean result if input did not contain a virus" in {
       val chunkEnumerator = enumerator()
 
-      val result = await(chunkEnumerator.run(VirusScanner.scanIteratee(sendingChunksSuccessful, noVirusFound)).flatMap(identity))
+      val result = await(chunkEnumerator.run(new VirusScanner(components.configuration, components.environment).scanIteratee(sendingChunksSuccessful, noVirusFound)).flatMap(identity))
 
       result shouldBe Xor.Right(ScanResultFileClean)
     }
@@ -55,7 +58,7 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures {
     s"return $ScanResultVirusDetected result if input contained a virus" in {
       val chunkEnumerator = enumerator()
 
-      val result = await(chunkEnumerator.run(VirusScanner.scanIteratee(sendingChunksSuccessful, virusDetected)).flatMap(identity))
+      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, virusDetected)).flatMap(identity))
 
       result shouldBe Xor.Left(ScanResultVirusDetected)
     }
@@ -64,7 +67,7 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures {
       val chunkEnumerator = enumerator()
       val unexpectedResultFromCheckingForAVirus = () => Future.successful(Success(false))
 
-      val result = await(chunkEnumerator.run(VirusScanner.scanIteratee(sendingChunksSuccessful, unexpectedResultFromCheckingForAVirus)).flatMap(identity))
+      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, unexpectedResultFromCheckingForAVirus)).flatMap(identity))
 
       result shouldBe Xor.Left(ScanResultUnexpectedResult)
     }
@@ -74,7 +77,7 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures {
       val exception = new RuntimeException("av-client error")
       val avClientReturnedErrorWhenCheckingForAVirus = () => Future.successful(Failure(exception))
 
-      val result = await(chunkEnumerator.run(VirusScanner.scanIteratee(sendingChunksSuccessful, avClientReturnedErrorWhenCheckingForAVirus)).flatMap(identity))
+      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, avClientReturnedErrorWhenCheckingForAVirus)).flatMap(identity))
 
       result shouldBe Xor.Left(ScanResultError(exception))
     }
@@ -84,7 +87,7 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures {
       val exception = new SocketException("failed to connect to clam av")
       val problemCheckingForAVirus = () => Future.failed(exception)
 
-      val result = await(chunkEnumerator.run(VirusScanner.scanIteratee(sendingChunksSuccessful, problemCheckingForAVirus)).flatMap(identity))
+      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, problemCheckingForAVirus)).flatMap(identity))
 
       result shouldBe Xor.Left(ScanResultError(exception))
     }
@@ -94,7 +97,7 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures {
       val exception = new RuntimeException("unknown error")
       val sendingChunksFailed = (_ : Array[Byte]) => Future.failed(exception)
 
-      val result = await(chunkEnumerator.run(VirusScanner.scanIteratee(sendingChunksFailed, noVirusFound)).flatMap(identity))
+      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksFailed, noVirusFound)).flatMap(identity))
 
       result shouldBe Xor.Left(ScanResultFailureSendingChunks(exception))
     }

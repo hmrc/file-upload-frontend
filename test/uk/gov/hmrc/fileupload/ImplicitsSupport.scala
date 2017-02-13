@@ -16,13 +16,14 @@
 
 package uk.gov.hmrc.fileupload
 
-import org.scalatest.{BeforeAndAfterAll, Suite}
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 
-trait StopSystemAfterAll extends BeforeAndAfterAll {
-  this: Suite =>
-  override protected def afterAll() {
-    import uk.gov.hmrc.fileupload.utils.StreamImplicits._
-    super.afterAll()
-    system.terminate()
+object ImplicitsSupport {
+
+  object StreamImplicits {
+    implicit val system = ActorSystem()
+    implicit val materializer: Materializer = ActorMaterializer()
   }
+
 }

@@ -16,20 +16,20 @@
 
 package uk.gov.hmrc.fileupload
 
-import org.scalatest.{BeforeAndAfterAll, Suite, TestData}
-import org.scalatestplus.play.OneAppPerTest
+import org.scalatest.{BeforeAndAfterAll, Suite}
+import org.scalatestplus.play.OneAppPerSuite
 import play.api.ApplicationLoader.Context
 import play.api._
 import play.api.mvc.EssentialFilter
 
-trait ApplicationComponents extends OneAppPerTest with BeforeAndAfterAll {
+trait TestApplicationComponents extends OneAppPerSuite with BeforeAndAfterAll {
   this: Suite =>
 
   // accessed to get the components in tests
   lazy val components: ApplicationModule = new TestApplicationModule(context)
 
   // creates a new application and sets the components
-  lazy val newApplication: Application = components.application
+  implicit override lazy val app: Application = components.application
 
   lazy val context: ApplicationLoader.Context = {
     val classLoader = ApplicationLoader.getClass.getClassLoader
@@ -37,9 +37,6 @@ trait ApplicationComponents extends OneAppPerTest with BeforeAndAfterAll {
     ApplicationLoader.createContext(env)
   }
 
-  override def newAppForTest(testData: TestData): Application = {
-    newApplication
-  }
 }
 
 class TestApplicationModule(context: Context) extends ApplicationModule(context = context) {

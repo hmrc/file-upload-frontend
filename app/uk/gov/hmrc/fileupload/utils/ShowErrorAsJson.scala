@@ -58,7 +58,7 @@ class ShowErrorAsJson(environment: Environment, configuration: Configuration,
 
   override def onNotFound(request: RequestHeader, message: String)= {
     Future.successful {
-      val er = ErrorResponse(NOT_FOUND, message, requested = Some(request.path))
+      val er = ErrorResponse(NOT_FOUND, "URI not found " + message, requested = Some(request.path))
       NotFound(Json.toJson(er))
     }
   }

@@ -1,40 +1,41 @@
 package uk.gov.hmrc.fileupload.support
 
+import org.scalatest.Suite
 import org.scalatest.time.{Seconds, Span}
-import play.api.Play.current
-import play.api.libs.ws.{WS, WSResponse}
+import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 trait FileActions extends ActionsSupport {
+  this: Suite =>
 
   def upload(data: Array[Byte], envelopeId: EnvelopeId, fileId: FileId): WSResponse =
-    WS
+    client
       .url(s"$url/envelopes/$envelopeId/files/$fileId/content")
       .withHeaders("Content-Type" -> "application/octet-stream")
       .put(data)
       .futureValue
 
   def download(envelopeId: EnvelopeId, fileId: FileId): WSResponse =
-    WS
+    client
       .url(s"$url/envelopes/$envelopeId/files/$fileId/content")
       .get()
       .futureValue
 
   def updateFileMetadata(data: String, envelopeId: EnvelopeId, fileId: FileId): WSResponse =
-    WS
-      .url(s"$url/envelopes/$envelopeId/files/$fileId/metadata" )
+    client
+      .url(s"$url/envelopes/$envelopeId/files/$fileId/metadata")
       .withHeaders("Content-Type" -> "application/json")
       .put(data.getBytes)
       .futureValue
 
   def getFileMetadataFor(envelopeId: EnvelopeId, fileId: FileId): WSResponse =
-    WS
+    client
       .url(s"$url/envelopes/$envelopeId/files/$fileId/metadata")
       .get()
       .futureValue
 
   def uploadDummyFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse = {
-    WS.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
+    client.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
       .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
         "X-Request-ID" -> "someId",
         "X-Session-ID" -> "someId",

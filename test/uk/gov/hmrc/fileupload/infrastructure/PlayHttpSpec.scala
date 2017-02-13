@@ -27,17 +27,20 @@ import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 import play.api.http.Status
 import play.api.libs.json.{JsSuccess, Json}
-import play.api.libs.ws.WS
+import play.api.libs.ws.WSRequest
+import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.FakeAuditer
-import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
+import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer, LoadAuditingConfig}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
+import uk.gov.hmrc.play.config.RunMode
+import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEach with WithFakeApplication with Eventually with FakeAuditer {
+class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplicationComponents with Eventually with FakeAuditer {
   this: Suite =>
 
   private lazy val fakeDownstreamSystemConfig = wireMockConfig().dynamicPort()
@@ -47,9 +50,17 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
 
   private val testAppName = "test-app"
   private lazy val consumer = Consumer(BaseUri("localhost", fakeAuditer.port(), "http"))
-  private lazy val auditConnector = AuditConnector(AuditingConfig(Some(consumer), enabled = true, traceRequests = true))
+
+  object TestAuditConnector extends AuditConnector with RunMode {
+    override lazy val auditingConfig = AuditingConfig(Some(consumer), enabled = true, traceRequests = true)
+
+    override def buildRequest(url: String)(implicit hc: HeaderCarrier): WSRequest = {
+      components.wsClient.url(url).withHeaders(hc.headers: _*)
+    }
+  }
+
   private var loggedErrors = ListBuffer.empty[Throwable]
-  private val testExecute = PlayHttp.execute(auditConnector, testAppName, Some(t => {
+  private val testExecute = PlayHttp.execute(TestAuditConnector, testAppName, Some(t => {
     loggedErrors += t
   })) _
 
@@ -86,10 +97,12 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
             .withStatus(statusCode).withBody("someResponseBody"))
           .build())
 
-      val response = await(testExecute(WS.url(downstreamUrl)(fakeApplication).withMethod("GET"))).valueOr(t => fail(t.message))
+      val response = await(testExecute(components.wsClient.url(downstreamUrl).withMethod("GET"))).valueOr(t => fail(t.message))
 
       response.status shouldBe statusCode
-      eventually { getAudits.size() shouldBe 1}
+      eventually {
+        getAudits.size() shouldBe 1
+      }
 
       val auditedItem = getAudits.get(0)
       val json = Json.parse(auditedItem.getBodyAsString)
@@ -108,10 +121,10 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterAll with BeforeAndAfterEa
             .withFault(Fault.MALFORMED_RESPONSE_CHUNK))
           .build())
 
-      val response = await(testExecute(WS.url(downstreamUrl)(fakeApplication).withMethod("GET")))
+      val response = await(testExecute(components.wsClient.url(downstreamUrl).withMethod("GET")))
 
-      response shouldBe Xor.Left(PlayHttpError("Remotely Closed"))
-      loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely Closed"
+      response shouldBe Xor.Left(PlayHttpError("Remotely closed"))
+      loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely closed"
     }
   }
 
