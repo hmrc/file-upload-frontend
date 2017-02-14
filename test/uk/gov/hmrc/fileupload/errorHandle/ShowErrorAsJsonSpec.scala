@@ -17,47 +17,36 @@
 package uk.gov.hmrc.fileupload.errorHandle
 
 import org.scalatest.concurrent.ScalaFutures
-import play.api.GlobalSettings
-import play.api.http.MimeTypes
-import play.api.mvc.RequestHeader
-import play.api.test.Helpers.{contentType, _}
+import play.api.test.FakeRequest
+import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
-import uk.gov.hmrc.play.http.{BadRequestException, NotFoundException, UnauthorizedException}
+import uk.gov.hmrc.play.http.BadRequestException
 import uk.gov.hmrc.play.test.UnitSpec
 
-class ShowErrorAsJsonSpec extends UnitSpec with ScalaFutures {
+import scala.concurrent.ExecutionContext
 
-  //TODO find out how to replace the tests below in Play 2.5
-  /*val jsh = new GlobalSettings with ShowErrorAsJson
+class ShowErrorAsJsonSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
-  val requestHeader = mock[RequestHeader]
+  implicit val ec = ExecutionContext.global
+  val errorHandler = new ShowErrorAsJson(components.environment, components.configuration)
 
-  "error handling in onError function" should {
-
-    "convert a NotFoundException to NotFound response" in {
-      val result = jsh.onError(requestHeader, new NotFoundException("test")).futureValue
-      result.header.status shouldBe 404
-      contentType(result).get shouldBe MimeTypes.JSON
-    }
+  "Error Handler For the Controllers" should {
 
     "convert a BadRequestException to NotFound response" in {
-      val result = jsh.onError(requestHeader, new BadRequestException("bad request")).futureValue
-      result.header.status shouldBe 400
-      contentType(result).get shouldBe MimeTypes.JSON
+      val result = errorHandler.onServerError(FakeRequest(), new BadRequestException("40x Bad Request"))
+      result.map(res => res.header.status should be(404))
     }
 
-    "convert an UnauthorizedException to Unauthorized response" in {
-      val result = jsh.onError(requestHeader, new UnauthorizedException("unauthorized")).futureValue
-      result.header.status shouldBe 401
-      contentType(result).get shouldBe MimeTypes.JSON
+    "500 Internal Server Error is handled" in {
+
+      val result = errorHandler.onServerError(FakeRequest(), new RuntimeException("Unexpected Error"))
+      result.map(res => {
+        res.header.status should be(500)
+        res.body.contentType should be(Some("application/json"))
+      })
     }
 
-    "convert an Exception to InternalServerError" in {
-      val result = jsh.onError(requestHeader, new Exception("any application exception")).futureValue
-      result.header.status shouldBe 500
-      contentType(result).get shouldBe MimeTypes.JSON
-    }
 
-  }*/
+  }
 
 }
