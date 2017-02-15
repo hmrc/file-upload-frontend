@@ -21,14 +21,14 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsString
-import uk.gov.hmrc.fileupload.FileRefId
 import uk.gov.hmrc.fileupload.fileupload.{ByteStream, JSONReadFile}
+import uk.gov.hmrc.fileupload.{FileRefId, TestApplicationComponents}
 import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
+import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
-class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplication with ScalaFutures with BeforeAndAfterEach {
+class RepositorySpec extends UnitSpec with MongoSpecSupport with TestApplicationComponents with ScalaFutures with BeforeAndAfterEach {
 
   implicit override val patienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(5, Millis))
 
@@ -41,7 +41,7 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
     val filename = "myfile"
     val contentType = Some("application/octet-stream")
 
-    def writeDummyFileToDB(byteArr: Array[Byte] = text.getBytes) : String = {
+    def writeDummyFileToDB(byteArr: Array[Byte] = text.getBytes): String = {
       val contents = Enumerator[ByteStream](byteArr)
       val sink = repository.writeFile(filename, contentType)
       val fsId = contents.run[Future[JSONReadFile]](sink).futureValue.id match {
@@ -50,6 +50,7 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
       }
       fsId
     }
+
     "provide an iteratee to store a stream" in {
       val fsId: String = writeDummyFileToDB()
 
@@ -78,8 +79,8 @@ class RepositorySpec extends UnitSpec with MongoSpecSupport with WithFakeApplica
       val fileMetaDataResult = repository.retrieveFileMetaData(existentId).futureValue
 
       fileMetaDataResult should not be None
-        fileMetaDataResult.get.length shouldBe text.getBytes.length
-        fileMetaDataResult.get.filename shouldBe filename
+      fileMetaDataResult.get.length shouldBe text.getBytes.length
+      fileMetaDataResult.get.filename shouldBe filename
     }
 
     "returns 404 for files not found" in {

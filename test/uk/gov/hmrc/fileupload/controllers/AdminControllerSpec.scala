@@ -18,19 +18,18 @@ package uk.gov.hmrc.fileupload.controllers
 
 import org.joda.time.DateTime
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.MimeTypes
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.fileupload.FileRefId
 import uk.gov.hmrc.fileupload.quarantine.FileInfo
+import uk.gov.hmrc.fileupload.{FileRefId, TestApplicationComponents}
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class AdminControllerSpec extends UnitSpec with ScalaFutures with OneServerPerSuite {
+class AdminControllerSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  implicit val ec = ExecutionContext.global
 
   val controller = {
     val getFileInfo = (refId: FileRefId) => Future.successful(Some(FileInfo("refId", "testFile", 2500, DateTime.parse("2016-11-29T12:27:19Z"), 10000, "application/content")))
@@ -80,7 +79,7 @@ class AdminControllerSpec extends UnitSpec with ScalaFutures with OneServerPerSu
 
       status(result) shouldBe 200
       contentType(result).get shouldBe MimeTypes.JSON
-      contentAsString(result) should include (s"Number of chunks expected $expectedNoChunks , actual $actualNoChunks")
+      contentAsString(result) should include(s"Number of chunks expected $expectedNoChunks , actual $actualNoChunks")
     }
   }
 }

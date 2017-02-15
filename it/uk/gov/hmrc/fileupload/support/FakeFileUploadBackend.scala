@@ -14,8 +14,9 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   this: Suite =>
 
   lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
+  lazy val backendPort = backend.port()
 
-  final lazy val fileUploadBackendBaseUrl = s"http://localhost:${backend.port()}"
+  final lazy val fileUploadBackendBaseUrl = s"http://localhost:$backendPort"
 
   override def beforeAll() = {
     super.beforeAll()
@@ -27,6 +28,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   }
 
   override def afterAll() = {
+    println("Stopping the mock backend server")
     super.afterAll()
     backend.stop()
   }

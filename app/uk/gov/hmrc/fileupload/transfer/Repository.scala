@@ -17,22 +17,21 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
-import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.json.Json
-import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
+import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.TransferService._
-import uk.gov.hmrc.fileupload.EnvelopeId
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object Repository {
 
-  def envelopeAvailable(auditedHttpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
+  def envelopeAvailable(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wSClient: WSClient)(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
 
-    auditedHttpCall(WS.url(s"$baseUrl/file-upload/envelopes/${ envelopeId.value }").withMethod("GET")).map {
+    auditedHttpCall(wSClient.url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}").withMethod("GET")).map {
       case Xor.Left(error) => Xor.left(EnvelopeAvailableServiceError(envelopeId, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right(envelopeId)
@@ -42,10 +41,10 @@ object Repository {
     }
   }
 
-  def envelopeStatus(auditedHttpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)(envelopeId: EnvelopeId)
-                       (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
+  def envelopeStatus(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wSClient: WSClient)(envelopeId: EnvelopeId)
+                    (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
 
-    auditedHttpCall(WS.url(s"$baseUrl/file-upload/envelopes/${ envelopeId.value }").withMethod("GET")).map {
+    auditedHttpCall(wSClient.url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}").withMethod("GET")).map {
       case Xor.Left(error) => Xor.left(EnvelopeStatusServiceError(envelopeId, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right((Json.parse(response.body) \ "status").as[String])

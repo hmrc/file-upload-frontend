@@ -31,7 +31,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 
-class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServerPerSuite {
+class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -60,7 +60,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with OneServer
     }
 
     "return 400 Bad Request if file was not found in the request" in {
-      val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty, Seq.empty), sizeExceeded = false)
+      val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty), sizeExceeded = false)
 
       val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
 

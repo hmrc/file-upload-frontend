@@ -17,10 +17,9 @@
 package uk.gov.hmrc.fileupload.notifier
 
 import cats.data.Xor
-import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.json.{JsValue, Json}
-import play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
@@ -34,17 +33,19 @@ object NotifierRepository {
 
   sealed trait NotificationError {
     def statusCode: Int
+
     def reason: String
   }
+
   case class NotificationFailedError(envelopeId: EnvelopeId,
                                      fileId: FileId,
                                      override val statusCode: Int,
                                      override val reason: String) extends NotificationError
 
-  def send(httpCall: (WSRequestHolder => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String)
+  def send(httpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wsClient: WSClient)
           (notification: Notification)
           (implicit executionContext: ExecutionContext): Future[Result] =
-    httpCall(WS.url(s"$baseUrl/file-upload/events/${notification.eventType}").withBody(Json.stringify(notification.event)).withMethod("POST")).map {
+    httpCall(wsClient.url(s"$baseUrl/file-upload/events/${notification.eventType}").withBody(Json.stringify(notification.event)).withMethod("POST")).map {
       case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, 500, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right(notification.envelopeId)

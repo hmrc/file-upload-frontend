@@ -27,12 +27,15 @@ import play.mvc.BodyParser.AnyContent
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeStatusNotFoundError, EnvelopeStatusServiceError}
+import uk.gov.hmrc.fileupload.utils.StreamsConverter
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class EnvelopeCheckerSpec extends UnitSpec {
+
+  import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
 
   val testRequest = FakeRequest()
   val testEnvelopeId = EnvelopeId()
@@ -82,7 +85,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
       status(result) shouldBe 500
       contentType(result).get shouldBe MimeTypes.JSON
-      contentAsString(result) should include (errorMsg)
+      contentAsString(result) should include(errorMsg)
     }
   }
 
@@ -91,9 +94,10 @@ class EnvelopeCheckerSpec extends UnitSpec {
   }
 
   def bodyParserThatShouldNotExecute: BodyParser[AnyContent] = BodyParser { r =>
-    Iteratee.consume[Array[Byte]]().map { _ =>
-      fail("body parser executed which we wanted to prevent")
-    }
+    StreamsConverter.iterateeToAccumulator(Iteratee.consume[Array[Byte]]())
+      .map { _ =>
+        fail("body parser executed which we wanted to prevent")
+      }
   }
 
 }

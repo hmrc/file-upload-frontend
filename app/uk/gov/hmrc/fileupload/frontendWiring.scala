@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.fileupload
 
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, Materializer}
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector => Auditing}
 import uk.gov.hmrc.play.config.{AppName, RunMode, ServicesConfig}
@@ -34,3 +36,4 @@ object FrontendAuthConnector extends AuthConnector with ServicesConfig {
   val serviceUrl = baseUrl("auth")
   lazy val http = WSHttp
 }
+

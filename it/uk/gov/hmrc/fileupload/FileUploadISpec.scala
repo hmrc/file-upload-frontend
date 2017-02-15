@@ -1,12 +1,12 @@
 package uk.gov.hmrc.fileupload
 
-import org.scalatest.Matchers
+import org.scalatest.{FeatureSpecLike, Matchers}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.support.{ChunksMongoRepository, EnvelopeActions, FileActions, IntegrationSpec}
+import uk.gov.hmrc.fileupload.support._
 
-class FileUploadISpec extends IntegrationSpec with FileActions with EnvelopeActions with Eventually with Matchers {
+class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActions with Eventually with Matchers{
 
   feature("File upload front-end") {
 
