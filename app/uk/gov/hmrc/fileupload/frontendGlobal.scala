@@ -99,9 +99,6 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
   val now: () => Long = () => System.currentTimeMillis()
 
-  //TODO uncomment below
-  //ApplicationCrypto.verifyConfiguration()
-
   subscribe = actorSystem.eventStream.subscribe
   publish = actorSystem.eventStream.publish
 
