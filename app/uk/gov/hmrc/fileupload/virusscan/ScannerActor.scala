@@ -34,8 +34,8 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
                    notify: (AnyRef) => Future[NotifyResult])
                   (implicit executionContext: ExecutionContext) extends Actor {
 
-  var outstandingScans = Queue.empty[Event]
-  var scanningEvent: Option[Event] = None
+  private var outstandingScans = Queue.empty[Event]
+  private var scanningEvent: Option[Event] = None
 
   override def preStart = {
     subscribe(self, classOf[FileInQuarantineStored])
@@ -61,23 +61,28 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
     case e: VirusScanRequested =>
       outstandingScans = outstandingScans enqueue e
 
-    case Xor.Right(ScanResultFileClean) =>
-      notify(hasVirus = false)
-      scanNext()
-
-    case Xor.Left(ScanResultVirusDetected) =>
-      notify(hasVirus = true)
-      scanNext()
-
-    case Xor.Left(_) =>
-      scanNext()
-
+    case executed: ScanExecuted =>
+      executed.result match {
+        case Xor.Right(ScanResultFileClean) =>
+          notify(hasVirus = false)
+          scanNext()
+        case Xor.Left(ScanResultVirusDetected) =>
+          notify(hasVirus = true)
+          scanNext()
+        case Xor.Left(a: ScanError) =>
+          Logger.error(s"Scan of file ${executed.requestedFor} failed with ScanError: $a")
+          scanNext()
+      }
     case e: Failure =>
+      Logger.error("Unknown Failure status.", e.cause)
       scanNext()
 
-    case _ =>
+    case default =>
+      Logger.error(s"Unknown message : $default")
       scanNext()
   }
+
+  case class ScanExecuted(requestedFor: FileRefId, result: ScanResult)
 
   def scanNext(): Unit = {
     outstandingScans.dequeueOption match {
@@ -87,7 +92,8 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
         scanningEvent = Some(e)
 
         Logger.info(s"Scan $e")
-        scanBinaryData(e.fileRefId) pipeTo self
+        scanBinaryData(e.fileRefId)
+          .map(ScanExecuted(e.fileRefId, _)) pipeTo self
 
       case None =>
         context become receive
@@ -96,14 +102,16 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
   }
 
   def notify(hasVirus: Boolean): Unit =
-    scanningEvent.foreach { case e =>
+    scanningEvent.foreach { e =>
       notify(FileScanned(e.envelopeId, e.fileId, e.fileRefId, hasVirus = hasVirus))
     }
 }
 
 object ScannerActor {
 
-  def props(subscribe: (ActorRef, Class[_]) => Boolean, scanBinaryData: (FileRefId) => Future[ScanResult], notify: (AnyRef) => Future[NotifyResult])
+  def props(subscribe: (ActorRef, Class[_]) => Boolean,
+            scanBinaryData: (FileRefId) => Future[ScanResult],
+            notify: (AnyRef) => Future[NotifyResult])
            (implicit executionContext: ExecutionContext) =
     Props(new ScannerActor(subscribe = subscribe, scanBinaryData = scanBinaryData, notify = notify))
 }
