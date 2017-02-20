@@ -28,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class VirusScanner(config : Configuration, environment: Environment) {
-  private def clamAvConfig = ClamAvConfig(config.getConfig(s"$environment.clam.antivirus"))
+  private def clamAvConfig = ClamAvConfig(config.getConfig(s"${environment.mode}.clam.antivirus"))
 
   def scanIteratee()(implicit ec: ExecutionContext): AvScanIteratee = {
     val clamAntiVirus = ClamAntiVirus(clamAvConfig)
