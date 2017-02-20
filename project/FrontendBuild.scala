@@ -36,7 +36,7 @@ private object AppDependencies {
   import play.core.PlayVersion
 
   private val playHealthVersion = "2.0.0"
-  private val logbackJsonLoggerVersion = "3.0.0"
+  private val logbackJsonLoggerVersion = "3.1.0"
 
   private val frontendBootstrapVersion = "7.10.0"
   private val govukTemplateVersion = "5.0.0"
