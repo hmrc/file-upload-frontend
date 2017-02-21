@@ -79,7 +79,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     override def get(): MetricsController = metricsController
   }, healthRoutes, appRoutes, adminRoutes)
 
-  override def router = if (configuration.getString("application.router").get == "testOnlyDoNotUseInAppConf.Routes") testRoutes else prodRoutes
+  lazy val router = if (configuration.getString("application.router").get == "testOnlyDoNotUseInAppConf.Routes") testRoutes else prodRoutes
 
   lazy val fileUploadController = new FileUploadController(withValidEnvelope = withValidEnvelope, uploadParser = uploadParser,
     notify = notifyAndPublish, now = now)
