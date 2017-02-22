@@ -42,7 +42,7 @@ private object AppDependencies {
   private val govukTemplateVersion = "5.0.0"
   private val playPartialsVersion = "5.2.0"
   private val playAuthorisedFrontendVersion = "6.1.0"
-  private val playConfigVersion = "3.0.0"
+  private val playConfigVersion = "3.1.0"
   private val hmrcTestVersion = "2.2.0"
   private val playReactivemongoVersion = "5.0.0"
   private val simpleReactivemongoVersion = "5.0.0"

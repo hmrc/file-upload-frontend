@@ -44,7 +44,7 @@ import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusSca
 import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
-import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
+import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.graphite.GraphiteMetricsImpl
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
@@ -62,10 +62,13 @@ class ApplicationLoader extends play.api.ApplicationLoader {
 }
 
 class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(context)
-  with AhcWSComponents with AppName {
+  with AhcWSComponents with AppName with ServicesConfig {
 
   override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
   override lazy val httpErrorHandler = new ShowErrorAsJson(environment, configuration)
+
+  override lazy val mode = context.environment.mode
+  override lazy val runModeConfiguration = configuration
 
   lazy val healthRoutes = new manualdihealth.Routes(httpErrorHandler, new uk.gov.hmrc.play.health.AdminController(configuration))
   lazy val appRoutes = new app.Routes(httpErrorHandler, fileUploadController)
@@ -189,15 +192,6 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
     override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
     override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
-  }
-
-  private lazy val services = s"${environment.mode}.microservice.services"
-
-  private def baseUrl(serviceName: String) = {
-    val protocol = configuration.getString(s"$services.$serviceName.protocol").getOrElse("http")
-    val host = configuration.getString(s"$services.$serviceName.host").getOrElse(throw new RuntimeException(s"Could not find config $services.$serviceName.host"))
-    val port = configuration.getInt(s"$services.$serviceName.port").getOrElse(throw new RuntimeException(s"Could not find config $services.$serviceName.port"))
-    s"$protocol://$host:$port"
   }
 
 }
