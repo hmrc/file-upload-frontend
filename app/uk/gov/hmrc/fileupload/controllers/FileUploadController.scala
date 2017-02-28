@@ -63,7 +63,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                 case _ => throw new Exception("invalid reference")
               }
               notify(FileInQuarantineStored(
-                envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
+                envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename, fileRef.length,
                 contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
                 case Xor.Right(_) => Ok
                 case Xor.Left(e) =>
