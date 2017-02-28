@@ -32,7 +32,8 @@ object TransferService {
 
   sealed trait EnvelopeAvailableError
   case class EnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
-  case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
+  case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String)
+    extends EnvelopeAvailableError
 
   type EnvelopeStatusResult = Xor[EnvelopeStatusError, String]
 
@@ -45,7 +46,8 @@ object TransferService {
   sealed trait TransferError
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
-  def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
+  def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])
+                       (envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
     isEnvelopeAvailable(envelopeId)
   }
@@ -57,7 +59,8 @@ object TransferService {
 
   def stream(baseUrl: String,
              publish: (AnyRef) => Unit,
-             toHttpBodyStreamer: (String, EnvelopeId, FileId, FileRefId, Request[_]) => Iteratee[Array[Byte], HttpStreamingBody.Result],
+             toHttpBodyStreamer: (String, EnvelopeId, FileId, FileRefId,
+               Request[_]) => Iteratee[Array[Byte], HttpStreamingBody.Result],
              getFile: (FileRefId) => Future[QuarantineDownloadResult])
             (envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId)
             (implicit executionContext: ExecutionContext): Future[TransferResult] = {
@@ -75,7 +78,8 @@ object TransferService {
               Xor.Left(TransferServiceError(envelopeId, r.response))
           })
 
-      case Xor.Left(QuarantineDownloadFileNotFound) => Future.failed(throw new Exception("unexpected exception"))
+      case Xor.Left(QuarantineDownloadFileNotFound) =>
+        Future.failed(throw new Exception(QuarantineDownloadFileNotFound.toString))
     }
 
   }
