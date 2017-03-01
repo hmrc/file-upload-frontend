@@ -41,8 +41,11 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
-
-  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 10
+  /*
+  * this val "MAX_FILE_SIZE_IN_BYTES" is not used for constraints the max. size per file when an envelope creates,
+  * but purely stop users to upload a very large file.
+  * */
+  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
     withValidEnvelope(envelopeId) {
