@@ -42,7 +42,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
-  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
+  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 10
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
     withValidEnvelope(envelopeId) {
