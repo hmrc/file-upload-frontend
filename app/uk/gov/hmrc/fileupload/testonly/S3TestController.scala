@@ -21,7 +21,7 @@ import java.io.{File, FileOutputStream, InputStream, OutputStreamWriter}
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{GetObjectRequest, PutObjectRequest}
+import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, PutObjectRequest}
 import com.typesafe.config.ConfigFactory
 import play.api.mvc.{Action, Controller}
 
@@ -30,8 +30,12 @@ import scala.collection.JavaConverters._
 trait S3TestController { self: Controller =>
   val awsClient = new AwsDummyClient()
 
-  def listBuckets() = Action {
-    Ok(awsClient.getBuckets())
+  def listFilesInQuarantine() = Action {
+    Ok(awsClient.listBucket(awsClient.quarantineBucket))
+  }
+
+  def listFilesInTransient() = Action {
+    Ok(awsClient.listBucket(awsClient.transientBucket))
   }
 
   def uploadTestFileQuarantine() = Action {
@@ -65,11 +69,27 @@ class AwsDummyClient() {
 
   def getBuckets() = s3.listBuckets.asScala.map(_.getName).mkString("\n")
 
+  def listBucket(bucketName: String): String = {
+    var listing = s3.listObjects(bucketName)
+    val summaries = listing.getObjectSummaries
+    while (listing.isTruncated) {
+      listing = s3.listNextBatchOfObjects(listing)
+      summaries.addAll(listing.getObjectSummaries)
+    }
+    "files in the basket are: \n" + summaries.asScala.map(_.getKey).mkString("\n")
+  }
+
   def uploadFile(bucketName: String) = {
-    s3.putObject(new PutObjectRequest(bucketName, key, S3FileUtils.createSampleFile))
+    val putRequest = new PutObjectRequest(bucketName, key, S3FileUtils.createSampleFile)
+    val objectMetadata = new ObjectMetadata()
+    objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
+    putRequest.setMetadata(objectMetadata)
+
+    s3.putObject(putRequest)
     val o = s3.getObject(new GetObjectRequest(bucketName, key))
     S3FileUtils.displayTextInputStream(o.getObjectContent)
   }
+
 
 }
 

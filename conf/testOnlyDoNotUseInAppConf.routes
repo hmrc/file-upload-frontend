@@ -25,9 +25,10 @@ GET         /file-upload/test-only/transfer/download-envelope/:envelopeId       
 DELETE      /file-upload/test-only/transfer/delete-envelope/:envelopeId                         uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDeleteEnvelope(envelopeId: String)
 
 # test s3 routes to test connectivity to s3
-GET         /file-upload/test-only/s3/buckets                                                   uk.gov.hmrc.fileupload.testonly.TestOnlyController.listBuckets()
+GET         /file-upload/test-only/s3/files-in-quarantine                                       uk.gov.hmrc.fileupload.testonly.TestOnlyController.listFilesInQuarantine()
+GET         /file-upload/test-only/s3/files-in-transient                                        uk.gov.hmrc.fileupload.testonly.TestOnlyController.listFilesInTransient()
 GET         /file-upload/test-only/s3/upload-test-file-quarantine                               uk.gov.hmrc.fileupload.testonly.TestOnlyController.uploadTestFileQuarantine()
 GET         /file-upload/test-only/s3/upload-test-file-transient                                uk.gov.hmrc.fileupload.testonly.TestOnlyController.uploadTestFileTransient()
 
 # Add all the application routes to the prod.routes file
-->          /                                                 prod.Routes
+->          /                                                                                   prod.Routes
