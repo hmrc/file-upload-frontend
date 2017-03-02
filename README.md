@@ -10,6 +10,8 @@ Frontend for uploading files to the Tax Platform. Please <i>**DO NOT USE**</i> T
 
 ## Run the application locally
 
+Before you attempt to run file-upload-frontend locally ensure you have ClamAV running and the correct version of Mongo as per the Software Requirements above.
+
 To run the application execute
 
 ```
