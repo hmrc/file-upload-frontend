@@ -21,7 +21,7 @@ import java.io.{File, FileOutputStream, InputStream, OutputStreamWriter}
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, PutObjectRequest}
+import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, PutObjectRequest, SSEAlgorithm}
 import com.typesafe.config.ConfigFactory
 import play.api.mvc.{Action, Controller}
 
@@ -82,7 +82,7 @@ class AwsDummyClient() {
   def uploadFile(bucketName: String) = {
     val putRequest = new PutObjectRequest(bucketName, key, S3FileUtils.createSampleFile)
     val objectMetadata = new ObjectMetadata()
-    objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION)
+    objectMetadata.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
     putRequest.setMetadata(objectMetadata)
 
     s3.putObject(putRequest)
