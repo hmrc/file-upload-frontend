@@ -31,29 +31,31 @@ import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.utils.errorAsJson
+
+import scala.concurrent.duration._
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
 class FileUploadController(withValidEnvelope: WithValidEnvelope,
+                           setMaxFileSize: (EnvelopeId) => Future[Int],
                            uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
-  /*
-  * this val "MAX_FILE_SIZE_IN_BYTES" is not used for constraints the max. size per file when an envelope creates,
-  * but purely stop users to upload a very large file.
-  * */
-  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
     withValidEnvelope(envelopeId) {
       upload(envelopeId, fileId)
     }
 
+  def maxFileSize(envelopeId: EnvelopeId) = {
+    Await.result(setMaxFileSize(envelopeId), 1 seconds)
+  }
+
   def upload(envelopeId: EnvelopeId, fileId: FileId) =
-    Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
+    Action.async(parse.maxLength(maxFileSize(envelopeId), uploadParser())) { implicit request =>
       request.body match {
         case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
         case Right(formData) =>
@@ -82,7 +84,6 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
           }
       }
     }
-
 }
 
 object FileUploadController {

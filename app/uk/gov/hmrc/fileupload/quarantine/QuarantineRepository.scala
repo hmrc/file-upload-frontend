@@ -40,6 +40,14 @@ case class FileData(length: Long = 0, filename: String, contentType: Option[Stri
 
 case class FileInfo(_id: String, filename:String, chunkSize:Int, uploadDate: DateTime, length: Long, contentType: String)
 
+case class Constraints(maxNumFiles: Option[Int],
+                       maxSize: Option[String],
+                       maxSizePerItem: Option[String])
+
+object Constraints {
+  implicit val contraintsFormat: Format[Constraints] = Json.format[Constraints]
+}
+
 object FileInfo {
   implicit val dateReads = implicitly[Reads[BSONDateTime]].map(d => new DateTime(d.value))
   implicit val dateWrites = Writes.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss'Z'")

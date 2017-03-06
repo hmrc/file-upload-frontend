@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
+import play.api.libs.json.{JsObject, JsValue}
 import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
@@ -45,6 +46,16 @@ object TransferService {
   sealed trait TransferError
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
+  type EnvelopeSizeConstraintsResult = Xor[EnvelopeSizeConstraintsError, JsObject]
+  sealed trait EnvelopeSizeConstraintsError
+  case class EnvelopeSizeConstraintsNotFound(id: EnvelopeId) extends EnvelopeSizeConstraintsError
+  case class EnvelopeSizeConstraintsServiceError(id: EnvelopeId, message: String) extends EnvelopeSizeConstraintsError
+
+  type EnvelopeDetailResult = Xor[EnvelopeError, JsValue]
+  sealed trait EnvelopeError
+  case class EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeError
+  case class EnvelopeDetailServiceError(id: EnvelopeId, message: String) extends EnvelopeError
+
   def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
     isEnvelopeAvailable(envelopeId)
@@ -53,6 +64,12 @@ object TransferService {
   def envelopeStatus(status: (EnvelopeId) => Future[EnvelopeStatusResult])(envelopeId: EnvelopeId)
                     (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
     status(envelopeId)
+  }
+
+  def envelopeResult(result: (EnvelopeId) => Future[EnvelopeDetailResult])
+                    (envelopeId: EnvelopeId)
+                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] = {
+    result(envelopeId)
   }
 
   def stream(baseUrl: String,

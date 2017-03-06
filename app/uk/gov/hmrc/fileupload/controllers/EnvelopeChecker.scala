@@ -16,15 +16,17 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import akka.util.ByteString
 import cats.data.Xor
 import play.api.Logger
 import play.api.http.Status._
 import play.api.libs.iteratee.Done
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.Accumulator
 import play.api.mvc.Results._
-import play.api.mvc.{EssentialAction, RequestHeader, Result}
+import play.api.mvc.{Action, EssentialAction, RequestHeader, Result}
 import uk.gov.hmrc.fileupload.EnvelopeId
+import uk.gov.hmrc.fileupload.quarantine.Constraints
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeStatusNotFoundError, _}
 import uk.gov.hmrc.fileupload.utils.StreamsConverter
 
@@ -54,6 +56,26 @@ object EnvelopeChecker {
         }
       }
     }
+
+  def setMaxFileSize(check: (EnvelopeId) => Future[EnvelopeDetailResult])
+                    (envelopeId: EnvelopeId)
+                    (implicit ec: ExecutionContext) = {
+    check(envelopeId).map {
+      case Xor.Right(envelope) =>
+        val maxSize = (envelope \ "constraints").as[Constraints].maxSizePerItem match {
+          case Some(s) =>
+            val fileSize = s.replaceAll("[^\\d.]", "").toInt
+            val fileSizeType = s.replaceAll("[^KB,MB,kb,mb]{2}","")
+            fileSizeType match {
+              case "KB" | "kb" => fileSize * 1024
+              case "MB" | "mb" => fileSize * 1024 * 1024
+            }
+          case None => 10 * 1024 * 1024
+        }
+        maxSize
+      case _ => 10 * 1024 * 1024
+    }
+  }
 
   private def logAndReturn(statusCode: Int, problem: String)(implicit rh: RequestHeader) = {
     Logger.warn(s"Request: $rh failed because: $problem")
