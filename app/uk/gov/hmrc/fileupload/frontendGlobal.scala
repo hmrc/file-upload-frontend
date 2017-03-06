@@ -175,9 +175,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
-  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeResult) _
-
-  lazy val setMaxFileSize = EnvelopeChecker.setMaxFileSize _
+  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
 
   object ControllerConfiguration extends ControllerConfig {
     lazy val controllerConfigs = configuration.underlying.as[Config]("controllers")

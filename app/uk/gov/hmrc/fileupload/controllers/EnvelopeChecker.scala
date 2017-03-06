@@ -34,16 +34,17 @@ import scala.concurrent.{ExecutionContext, Future}
 object EnvelopeChecker {
 
   type FileSize = Int
-  type WithValidEnvelope = EnvelopeId => FileSize => EssentialAction => EssentialAction
+  type WithValidEnvelope = EnvelopeId => (FileSize => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeStatusResult])
                        (envelopeId: EnvelopeId)
-                       (action: Int => EssentialAction)
+                       (action: FileSize => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
+        // TODO fileSizeChecker and check should be just one call to get details of envelope
         check(envelopeId).zip(fileSizeChecker(envelopeId)).map {
           case (Xor.Right("OPEN"), sizeLimit) =>
             action(sizeLimit)(rh)
