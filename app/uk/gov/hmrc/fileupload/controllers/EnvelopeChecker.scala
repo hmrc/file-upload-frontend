@@ -34,22 +34,27 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object EnvelopeChecker {
 
-  type WithValidEnvelope = EnvelopeId => EssentialAction => EssentialAction
+  type WithValidEnvelope = EnvelopeId => (Int => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
-  def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeStatusResult])
+  val defaultMaxUploadSize = 11 * 1024 * 1024
+
+  def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
-                       (action: EssentialAction)
+                       (action: Int => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
         check(envelopeId).map {
-          case Xor.Right("OPEN") =>
-            action(rh)
-          case Xor.Right(otherStatus) =>
-            logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $otherStatus")
-          case Xor.Left(EnvelopeStatusNotFoundError(_)) =>
+          case Xor.Right(envelope) =>
+            val status = (envelope \ "status").as[String]
+            if (status == "OPEN") {
+              action(setMaxFileSize(envelope))(rh)
+            } else {
+              logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
+            }
+          case Xor.Left(EnvelopeDetailNotFoundError(_)) =>
             logAndReturn(NOT_FOUND, s"Unable to upload to nonexistent envelope: $envelopeId")
           case Xor.Left(error) =>
             logAndReturn(INTERNAL_SERVER_ERROR, error.toString)
@@ -57,24 +62,15 @@ object EnvelopeChecker {
       }
     }
 
-  def setMaxFileSize(check: (EnvelopeId) => Future[EnvelopeDetailResult])
-                    (envelopeId: EnvelopeId)
-                    (implicit ec: ExecutionContext) = {
-    check(envelopeId).map {
-      case Xor.Right(envelope) =>
-        val maxSize = (envelope \ "constraints").as[Constraints].maxSizePerItem match {
-          case Some(s) =>
-            val fileSize = s.replaceAll("[^\\d.]", "").toInt + 1
-            val fileSizeType = s.replaceAll("[^KB,MB,kb,mb]{2}","")
-            fileSizeType match {
-              case "KB" | "kb" => fileSize * 1024
-              case "MB" | "mb" => fileSize * 1024 * 1024
-            }
-          case None => 11 * 1024 * 1024
-        }
-        maxSize
-      case _ => 11 * 1024 * 1024
-    }
+  def setMaxFileSize(envelope: JsValue) = (envelope \ "constraints").as[Constraints].maxSizePerItem match {
+    case Some(s) =>
+      val fileSize = s.replaceAll("[^\\d.]", "").toInt + 1
+      val fileSizeType = s.replaceAll("[^KB,MB,kb,mb]{2}", "")
+      fileSizeType match {
+        case "KB" | "kb" => fileSize * 1024
+        case "MB" | "mb" => fileSize * 1024 * 1024
+      }
+    case None => defaultMaxUploadSize
   }
 
   private def logAndReturn(statusCode: Int, problem: String)(implicit rh: RequestHeader) = {
@@ -82,6 +78,4 @@ object EnvelopeChecker {
     val iteratee = Done[Array[Byte], Result](new Status(statusCode).apply(Json.obj("message" -> problem)))
     StreamsConverter.iterateeToAccumulator(iteratee)
   }
-
-
 }

@@ -39,23 +39,20 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
 class FileUploadController(withValidEnvelope: WithValidEnvelope,
-                           setMaxFileSize: (EnvelopeId) => Future[Int],
                            uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
-    withValidEnvelope(envelopeId) {
-      upload(envelopeId, fileId)
+    withValidEnvelope(envelopeId) { maxSize =>
+      upload(maxSize)(envelopeId, fileId)
     }
 
-  def maxFileSize(envelopeId: EnvelopeId) = {
-    Await.result(setMaxFileSize(envelopeId), 1 seconds)
-  }
-
-  def upload(envelopeId: EnvelopeId, fileId: FileId) =
-    Action.async(parse.maxLength(maxFileSize(envelopeId), uploadParser())) { implicit request =>
+  def upload(maxSize: Int)(envelopeId: EnvelopeId, fileId: FileId) =
+    Action.async {
+      parse.maxLength(maxSize, uploadParser())
+    } { implicit request =>
       request.body match {
         case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
         case Right(formData) =>
