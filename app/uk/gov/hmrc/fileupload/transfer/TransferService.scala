@@ -87,7 +87,8 @@ object TransferService {
               Xor.Left(TransferServiceError(envelopeId, r.response))
           })
 
-      case Xor.Left(QuarantineDownloadFileNotFound) => Future.failed(throw new Exception("unexpected exception"))
+      case Xor.Left(QuarantineDownloadFileNotFound) =>
+        Future.failed(throw new Exception(s"File not found in quarantine (fileRefId: $fileRefId, envelopeId: $envelopeId"))
     }
 
   }

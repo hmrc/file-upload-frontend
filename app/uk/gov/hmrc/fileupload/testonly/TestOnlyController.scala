@@ -23,7 +23,8 @@ import play.api.mvc.{Action, Controller}
 
 import scala.concurrent.ExecutionContext
 
-class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSClient: WSClient)(implicit executionContext: ExecutionContext) extends Controller {
+class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSClient: WSClient)
+                        (implicit executionContext: ExecutionContext) extends Controller with S3TestController {
 
   def createEnvelope() = Action.async { request =>
     def extractEnvelopeId(response: WSResponse): String =
