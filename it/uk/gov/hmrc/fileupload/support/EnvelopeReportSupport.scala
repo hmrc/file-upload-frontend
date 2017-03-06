@@ -15,7 +15,7 @@ object EnvelopeReportSupport extends Support {
      |      "application/vnd.oasis.opendocument.spreadsheet"
      |    ],
      |    "maxItems": 100,
-     |    "maxSize": "12GB",
+     |    "maxSize": "25MB",
      |    "maxSizePerItem": "10MB"
      |  },
      |  "callbackUrl": "http://absolute.callback.url",
@@ -38,7 +38,7 @@ object EnvelopeReportSupport extends Support {
     |      "application/vnd.oasis.opendocument.spreadsheet"
     |    ],
     |    "maxItems": 100,
-    |    "maxSize": "12GB",
+    |    "maxSize": "25MB",
     |    "maxSizePerItem": "10MB"
     |  },
     |  "callbackUrl": "http://absolute.callback.url",

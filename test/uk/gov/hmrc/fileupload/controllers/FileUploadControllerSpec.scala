@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
@@ -26,6 +25,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.{ConstraintsFormEnvelope, loadConstraintsFromEnvelope}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -35,14 +35,20 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  val defaultConstraints = ConstraintsFormEnvelope(100, "25MB", "10MB")
+  val testEnvelopeId = EnvelopeId()
+
   val controller = {
     val noEnvelopeValidation = null
+    val defaultConstraintsFormEnvelope = (envelopeId: EnvelopeId) => Future(defaultConstraints)
+
     val noParsingIsActuallyDoneHere = () => UploadParser.parse(null) _
     val successfulNotificationFromBackend = (_: AnyRef) => Future.successful(Xor.right(NotifySuccess))
     val fakeCurrentTime = () => 10L
 
     new FileUploadController(
       noEnvelopeValidation,
+      defaultConstraintsFormEnvelope,
       noParsingIsActuallyDoneHere,
       successfulNotificationFromBackend,
       fakeCurrentTime
@@ -54,7 +60,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
       val file = anyFile()
       val request = validUploadRequest(List(file))
 
-      val result = controller.upload(EnvelopeId(), FileId())(request)
+      val result = controller.upload(EnvelopeId(), FileId(), 1024)(request)
 
       status(result) shouldBe Status.OK
     }
@@ -62,7 +68,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     "return 400 Bad Request if file was not found in the request" in {
       val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty), sizeExceeded = false)
 
-      val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
+      val result = controller.upload(EnvelopeId(), FileId(), 1024)(requestWithoutAFile)
 
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
@@ -70,7 +76,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     "return 400 Bad Request if >1 files were found in the request" in {
       val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
 
-      val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files)
+      val result = controller.upload(EnvelopeId(), FileId(), 1024)(requestWith2Files)
 
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
@@ -78,7 +84,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     "return 413 Entity To Large if file size exceeds 10 mb" in {
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
 
-      val result = controller.upload(EnvelopeId(), FileId())(tooLargeRequest)
+      val result = controller.upload(EnvelopeId(), FileId(), 1024)(tooLargeRequest)
 
       status(result) shouldBe Status.REQUEST_ENTITY_TOO_LARGE
     }

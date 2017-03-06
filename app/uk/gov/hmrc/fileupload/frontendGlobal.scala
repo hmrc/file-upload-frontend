@@ -84,7 +84,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val router = if (configuration.getString("application.router").get == "testOnlyDoNotUseInAppConf.Routes") testRoutes else prodRoutes
 
-  lazy val fileUploadController = new FileUploadController(withValidEnvelope = withValidEnvelope, uploadParser = uploadParser,
+  lazy val fileUploadController = new FileUploadController(withValidEnvelope = withValidEnvelope, withConstraintsFromEnvelope = withConstraintsFromEnvelope,
+    uploadParser = uploadParser,
     notify = notifyAndPublish, now = now)
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
@@ -142,9 +143,13 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
+  lazy val result = transfer.Repository.envelopeConstraints(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
+
   lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
 
   lazy val envelopeStatus = transfer.TransferService.envelopeStatus(status) _
+
+  lazy val envelopeConstraints = transfer.TransferService.envelopeConstraintsResult(result) _
 
   lazy val streamTransferCall = transfer.TransferService.stream(
     fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
@@ -168,6 +173,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
+  lazy val withConstraintsFromEnvelope = EnvelopeChecker.loadConstraintsFromEnvelope(envelopeConstraints) _
 
   object ControllerConfiguration extends ControllerConfig {
     lazy val controllerConfigs = configuration.underlying.as[Config]("controllers")
