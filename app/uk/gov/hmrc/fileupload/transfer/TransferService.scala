@@ -23,6 +23,7 @@ import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
 import uk.gov.hmrc.fileupload._
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.ConstraintsFormEnvelope
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,6 +46,12 @@ object TransferService {
   sealed trait TransferError
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
+
+  type EnvelopeConstraintsResult = Xor[EnvelopeConstraintsError, ConstraintsFormEnvelope]
+
+  case class EnvelopeConstraintsError(id: EnvelopeId, message: String)
+
+
   def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
     isEnvelopeAvailable(envelopeId)
@@ -53,6 +60,11 @@ object TransferService {
   def envelopeStatus(status: (EnvelopeId) => Future[EnvelopeStatusResult])(envelopeId: EnvelopeId)
                     (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
     status(envelopeId)
+  }
+
+  def envelopeConstraintsResult(result: (EnvelopeId) => Future[EnvelopeConstraintsResult])(envelopeId: EnvelopeId)
+                               (implicit executionContext: ExecutionContext): Future[EnvelopeConstraintsResult] = {
+    result(envelopeId)
   }
 
   def stream(baseUrl: String,

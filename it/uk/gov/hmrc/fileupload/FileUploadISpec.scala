@@ -12,6 +12,7 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
 
     val fileId = anyFileId
     val envelopeId = anyEnvelopeId
+    val oneMBInBytes = 1024
 
     scenario("transfer a file to the back-end") {
       Wiremock.responseToUpload(envelopeId, fileId)

@@ -25,31 +25,38 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.libs.streams.Streams
 import play.api.mvc._
-import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.{WithConstraintsFromEnvelope, WithValidEnvelope, sizeToByte}
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
+import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
-import scala.concurrent.{ExecutionContext, Future}
-import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.language.postfixOps
 
 class FileUploadController(withValidEnvelope: WithValidEnvelope,
+                           withConstraintsFromEnvelope: WithConstraintsFromEnvelope,
                            uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
-  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
+
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
     withValidEnvelope(envelopeId) {
-      upload(envelopeId, fileId)
+      val oneMBInBytes = 1024
+      val constraintsFromEnvelope = Await.result(withConstraintsFromEnvelope(envelopeId), 1 seconds)
+      val MAX_FILE_SIZE_IN_BYTES = sizeToByte(constraintsFromEnvelope.maxSizePerItem) + oneMBInBytes
+
+      upload(envelopeId, fileId, MAX_FILE_SIZE_IN_BYTES)
     }
 
-  def upload(envelopeId: EnvelopeId, fileId: FileId) =
+  def upload(envelopeId: EnvelopeId, fileId: FileId, MAX_FILE_SIZE_IN_BYTES: Long) =
     Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
       request.body match {
         case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
@@ -63,7 +70,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                 case _ => throw new Exception("invalid reference")
               }
               notify(FileInQuarantineStored(
-                envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename,
+                envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename, fileRef.length,
                 contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
                 case Xor.Right(_) => Ok
                 case Xor.Left(e) =>

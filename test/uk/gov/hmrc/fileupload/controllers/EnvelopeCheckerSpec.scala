@@ -29,9 +29,10 @@ import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeStatusNotFoundError, EnvelopeStatusServiceError}
 import uk.gov.hmrc.fileupload.utils.StreamsConverter
 import uk.gov.hmrc.play.test.UnitSpec
+import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 class EnvelopeCheckerSpec extends UnitSpec {
 
@@ -39,6 +40,8 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   val testRequest = FakeRequest()
   val testEnvelopeId = EnvelopeId()
+
+  val defaultConstraintsFormEnvelope = ConstraintsFormEnvelope(100, "25MB", "10MB")
 
   "When an envelope is OPEN it" should {
     "be possible to execute an Action" in {
@@ -86,6 +89,15 @@ class EnvelopeCheckerSpec extends UnitSpec {
       status(result) shouldBe 500
       contentType(result).get shouldBe MimeTypes.JSON
       contentAsString(result) should include(errorMsg)
+    }
+  }
+
+  "When an envelopeId is a valid Id, it" should {
+    "get the envelope constraints" in {
+      val wrappedAction = loadConstraintsFromEnvelope(_ => Future(Xor.right(defaultConstraintsFormEnvelope)))(testEnvelopeId)
+      val result = Await.result(wrappedAction, 1 seconds)
+      wrappedAction.isCompleted shouldBe true
+      result shouldBe defaultConstraintsFormEnvelope
     }
   }
 

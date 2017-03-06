@@ -77,7 +77,7 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
     }
 
     def fillEvents(n: Int) = List.fill(n) {
-      FileInQuarantineStored(EnvelopeId(), FileId(), FileRefId(), 0, "name", "pdf", Json.obj())
+      FileInQuarantineStored(EnvelopeId(), FileId(), FileRefId(), 0, "name", 10, "pdf", Json.obj())
     }
 
     def expectedCollector(events: List[FileInQuarantineStored]): List[Any] =
