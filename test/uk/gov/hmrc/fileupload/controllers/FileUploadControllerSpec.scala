@@ -37,12 +37,14 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
 
   val controller = {
     val noEnvelopeValidation = null
+    val defaultEnvelopeMaxSize = (envelopeId: EnvelopeId) => Future.successful(11)
     val noParsingIsActuallyDoneHere = () => UploadParser.parse(null) _
     val successfulNotificationFromBackend = (_: AnyRef) => Future.successful(Xor.right(NotifySuccess))
     val fakeCurrentTime = () => 10L
 
     new FileUploadController(
       noEnvelopeValidation,
+      defaultEnvelopeMaxSize,
       noParsingIsActuallyDoneHere,
       successfulNotificationFromBackend,
       fakeCurrentTime

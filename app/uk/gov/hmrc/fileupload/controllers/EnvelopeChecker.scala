@@ -64,16 +64,16 @@ object EnvelopeChecker {
       case Xor.Right(envelope) =>
         val maxSize = (envelope \ "constraints").as[Constraints].maxSizePerItem match {
           case Some(s) =>
-            val fileSize = s.replaceAll("[^\\d.]", "").toInt
+            val fileSize = s.replaceAll("[^\\d.]", "").toInt + 1
             val fileSizeType = s.replaceAll("[^KB,MB,kb,mb]{2}","")
             fileSizeType match {
               case "KB" | "kb" => fileSize * 1024
               case "MB" | "mb" => fileSize * 1024 * 1024
             }
-          case None => 10 * 1024 * 1024
+          case None => 11 * 1024 * 1024
         }
         maxSize
-      case _ => 10 * 1024 * 1024
+      case _ => 11 * 1024 * 1024
     }
   }
 
