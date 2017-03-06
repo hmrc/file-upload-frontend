@@ -35,22 +35,22 @@ private object AppDependencies {
   import play.sbt.PlayImport._
   import play.core.PlayVersion
 
-  private val playHealthVersion = "2.0.0"
+  private val playHealthVersion = "2.1.0"
   private val playJsonLoggerVersion = "3.1.0"
 
-  private val frontendBootstrapVersion = "7.10.0"
+  private val frontendBootstrapVersion = "7.14.0"
   private val govukTemplateVersion = "5.0.0"
-  private val playPartialsVersion = "5.2.0"
-  private val playAuthorisedFrontendVersion = "6.1.0"
-  private val playConfigVersion = "3.1.0"
-  private val hmrcTestVersion = "2.2.0"
-  private val playReactivemongoVersion = "5.0.0"
-  private val simpleReactivemongoVersion = "5.0.0"
+  private val playPartialsVersion = "5.3.0"
+  private val playAuthorisedFrontendVersion = "6.3.0"
+  private val playConfigVersion = "4.2.0"
+  private val hmrcTestVersion = "2.3.0"
+  private val playReactivemongoVersion = "5.2.0"
+  private val simpleReactivemongoVersion = "5.2.0"
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
-  private val playAuditingVersion = "2.4.0"
-  private val playUrlBindersVersion = "2.0.0"
-
+  private val playAuditingVersion = "2.6.0"
+  private val playUrlBindersVersion = "2.1.0"
+  private val awsJavaSdkVersion = "1.11.97"
 
   val compile = Seq(
     ws,
@@ -65,7 +65,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-health" % playHealthVersion,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
     "org.typelevel" %% "cats" % catsVersion,
-    "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion
+    "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
+    "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion
   )
 
   trait TestDependencies {

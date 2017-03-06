@@ -6,9 +6,11 @@ Frontend for uploading files to the Tax Platform. Please <i>**DO NOT USE**</i> T
 
 ## Software Requirements
 *   ClamAv Version 0.99 or later - the [clam-av client ReadMe](https://github.com/hmrc/clamav-client) provides documentation on how to install or alternatively you can download and run the [docker-clamav image](https://hub.docker.com/r/mkodockx/docker-clamav). ClamAv is also configured to block Macros.
-*   MongoDB Version 3.2 or later
+*   MongoDB Version 3.2 (3.4 will not work currently)
 
 ## Run the application locally
+
+Before you attempt to run file-upload-frontend locally ensure you have ClamAV running and the correct version of Mongo as per the Software Requirements above.
 
 To run the application execute
 
