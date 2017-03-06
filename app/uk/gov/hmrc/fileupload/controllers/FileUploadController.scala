@@ -30,16 +30,13 @@ import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService._
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
+import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 import uk.gov.hmrc.fileupload.utils.errorAsJson
-
-import scala.concurrent.duration._
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
-import scala.concurrent.{Await, ExecutionContext, Future}
-import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
+import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(withValidEnvelope: WithValidEnvelope,
-                           setMaxFileSize: (EnvelopeId) => Future[Int],
                            uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
                            notify: AnyRef => Future[NotifyResult],
                            now: () => Long)
@@ -47,15 +44,11 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
     withValidEnvelope(envelopeId) {
-      upload(envelopeId, fileId)
+      limit => upload(limit)(envelopeId, fileId)
     }
 
-  def maxFileSize(envelopeId: EnvelopeId) = {
-    Await.result(setMaxFileSize(envelopeId), 1 seconds)
-  }
-
-  def upload(envelopeId: EnvelopeId, fileId: FileId) =
-    Action.async(parse.maxLength(maxFileSize(envelopeId), uploadParser())) { implicit request =>
+  def upload(limit: Int)(envelopeId: EnvelopeId, fileId: FileId) = {
+    Action.async(parse.maxLength(limit, uploadParser())) { implicit request =>
       request.body match {
         case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
         case Right(formData) =>
@@ -84,6 +77,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
           }
       }
     }
+  }
 }
 
 object FileUploadController {
