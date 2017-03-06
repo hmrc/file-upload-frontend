@@ -46,11 +46,6 @@ object TransferService {
   sealed trait TransferError
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
-  type EnvelopeSizeConstraintsResult = Xor[EnvelopeSizeConstraintsError, JsObject]
-  sealed trait EnvelopeSizeConstraintsError
-  case class EnvelopeSizeConstraintsNotFound(id: EnvelopeId) extends EnvelopeSizeConstraintsError
-  case class EnvelopeSizeConstraintsServiceError(id: EnvelopeId, message: String) extends EnvelopeSizeConstraintsError
-
   type EnvelopeDetailResult = Xor[EnvelopeError, JsValue]
   sealed trait EnvelopeError
   case class EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeError
