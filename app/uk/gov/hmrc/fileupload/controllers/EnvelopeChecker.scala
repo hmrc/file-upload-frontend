@@ -38,14 +38,15 @@ object EnvelopeChecker {
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
-  def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeStatusResult])
+  def withValidEnvelope(statusCheck: (EnvelopeId) => Future[EnvelopeStatusResult])
+                       ( fileSizeLimitCheck: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
                        (action: FileSize => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
-        // TODO fileSizeChecker and check should be just one call to get details of envelope
-        check(envelopeId).zip(fileSizeChecker(envelopeId)).map {
+        // TODO there should be just one call to get all the details of envelope & unit test refactor
+        statusCheck(envelopeId).zip(checkSizeLimit(fileSizeLimitCheck)(envelopeId)).map {
           case (Xor.Right("OPEN"), sizeLimit) =>
             action(sizeLimit)(rh)
           case (Xor.Right(otherStatus), _) =>
@@ -57,8 +58,6 @@ object EnvelopeChecker {
         }
       }
     }
-
-  def fileSizeChecker(envelopeId: EnvelopeId): Future[Int] = Future.successful(5)
 
   def checkSizeLimit(check: (EnvelopeId) => Future[EnvelopeDetailResult])
                     (envelopeId: EnvelopeId)
