@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData

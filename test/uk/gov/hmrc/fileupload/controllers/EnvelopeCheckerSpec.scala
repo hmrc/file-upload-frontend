@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.controllers
 import cats.data.Xor
 import play.api.http.MimeTypes
 import play.api.libs.iteratee.Iteratee
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.Json
 import play.api.mvc.Results._
 import play.api.mvc.{Action, BodyParser}
 import play.api.test.FakeRequest
