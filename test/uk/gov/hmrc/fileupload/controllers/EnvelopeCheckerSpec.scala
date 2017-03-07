@@ -97,6 +97,27 @@ class EnvelopeCheckerSpec extends UnitSpec {
     }
   }
 
+  "When returned envelope data has file constraint, \"10KB\"" should {
+    "set the as upload size limit to 11KB" in {
+      val envelope10KB = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : "10KB" } }""")
+
+      val expectedSetSize = 11 * 1024
+
+      checkSizeLimit(envelope10KB) shouldBe expectedSetSize
+    }
+  }
+
+  "When returned envelope data has file constraint not defined" should {
+    "set the as upload size limit to default, \"11MB\"" in {
+      val envelope10KB = Json.parse("""{"status" : "OPEN", "constraints": { } }""")
+
+      val expectedSetSize = 11 * 1024 * 1024
+
+      checkSizeLimit(envelope10KB) shouldBe expectedSetSize
+    }
+  }
+
+
   def actionThatShouldNotExecute = Action(bodyParserThatShouldNotExecute) { req =>
     fail("action executed which we wanted to prevent")
   }
@@ -107,4 +128,6 @@ class EnvelopeCheckerSpec extends UnitSpec {
         fail("body parser executed which we wanted to prevent")
       }
   }
+
+
 }
