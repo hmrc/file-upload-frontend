@@ -158,9 +158,9 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   "When returned envelope data has file constraint: 2GB " should {
     "set the as upload size limit to default: 10MB" in {
-      val envelope2GB = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : "2GB" } }""")
+      val fileLimit2GB = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : "2GB" } }""")
 
-      setMaxFileSize(envelope2GB) shouldBe defaultFileSize
+      setMaxFileSize(fileLimit2GB) shouldBe defaultFileSize
     }
   }
 
