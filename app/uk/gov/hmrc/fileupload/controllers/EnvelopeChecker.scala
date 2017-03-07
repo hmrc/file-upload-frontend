@@ -38,38 +38,61 @@ object EnvelopeChecker {
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
-  def withValidEnvelope(check: (EnvelopeId) => Future[EnvelopeDetailResult])
+  val defaultFileSize = 10 * 1024 * 1024
+
+  def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
                        (action: FileSize => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
-        check(envelopeId).map {
-          case (Xor.Right(envelope)) =>
+        checkEnvelopeDetails(envelopeId).map {
+          case Xor.Right(envelope) =>
             val status = (envelope \ "status").as[String]
             if (status == "OPEN") {
-              action(checkSizeLimit(envelope))(rh)
-            } else {
+              action(setMaxFileSize(envelope))(rh)
+            } else if (status == "CLOSED") {
               logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
+            } else if(status == "SEALED") {
+              logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
+            } else {
+              //If uploading to deleted Envelope
+              logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
-          case (Xor.Left(EnvelopeDetailNotFoundError(_))) =>
+          case Xor.Left(EnvelopeDetailNotFoundError(_)) =>
             logAndReturn(NOT_FOUND, s"Unable to upload to nonexistent envelope: $envelopeId")
-          case (Xor.Left(error)) =>
+          case Xor.Left(error) =>
             logAndReturn(INTERNAL_SERVER_ERROR, error.toString)
         }
       }
     }
 
-  def checkSizeLimit(envelope: JsValue) = (
-    envelope \ "constraints").as[Constraints].maxSizePerItem match {
-    case Some(s) =>
-      val fileSize = s.replaceAll("[^\\d.]", "").toInt + 1
-      val fileSizeType = s.toUpperCase.replaceAll("[^KB,MB]{2}", "")
-      fileSizeType match {
-        case "KB" => fileSize * 1024
-        case "MB" => fileSize * 1024 * 1024
+  def setMaxFileSize(envelope: JsValue): FileSize = {
+    val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
+       definedConstraints match {
+           //TODO Possibly in the future this may change to take into account the envelope size e.g. if envelope size is 5MB and the upload limit is 10MB
+         case Some(constraints) => constraints.maxSizePerItem match {
+           case Some(maxSizePerItem) =>
+             val fileSize = maxSizePerItem.replaceAll("[^\\d.]", "").toInt
+             val fileSizeType = maxSizePerItem.toUpperCase.replaceAll("[^KMB]", "")
+             fileSizeType match {
+               case "KB" => fileSize * 1024
+               case "MB" =>
+                 if(fileSize <= 10){
+                   fileSize * 1024 * 1024
+                 } else {
+                   //If maxSizePerItem is accidentally more than 10MB e.g. 100MB
+                   defaultFileSize
+                 }
+                 //If maxSizePerItem is GB or TB
+               case _ => defaultFileSize
+             }
+             //If constraint's maxSizePerItem exist or not
+           case None => defaultFileSize
+         }
+         //If constraints not specified
+         case None => defaultFileSize
       }
-    case None => 11 * 1024 * 1024
   }
 
   private def logAndReturn(statusCode: Int, problem: String)(implicit rh: RequestHeader) = {

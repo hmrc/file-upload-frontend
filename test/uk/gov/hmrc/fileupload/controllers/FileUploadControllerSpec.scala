@@ -34,7 +34,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val defaultFileSize = 11 * 1024 * 1024
+  val defaultFileSize = 10 * 1024 * 1024
 
   val controller = {
     val noEnvelopeValidation = null

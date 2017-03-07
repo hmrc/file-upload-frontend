@@ -44,11 +44,11 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
     withValidEnvelope(envelopeId) {
-      limit => upload(limit)(envelopeId, fileId)
+      setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
     }
 
-  def upload(limit: Int)(envelopeId: EnvelopeId, fileId: FileId) = {
-    Action.async(parse.maxLength(limit, uploadParser())) { implicit request =>
+  def upload(setMaxFileSize: Int)(envelopeId: EnvelopeId, fileId: FileId) = {
+    Action.async(parse.maxLength(setMaxFileSize, uploadParser())) { implicit request =>
       request.body match {
         case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
         case Right(formData) =>
