@@ -41,19 +41,6 @@ object Repository {
     }
   }
 
-  def envelopeStatus(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wSClient: WSClient)(envelopeId: EnvelopeId)
-                    (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
-
-    auditedHttpCall(wSClient.url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}").withMethod("GET")).map {
-      case Xor.Left(error) => Xor.left(EnvelopeStatusServiceError(envelopeId, error.message))
-      case Xor.Right(response) => response.status match {
-        case Status.OK => Xor.right((Json.parse(response.body) \ "status").as[String])
-        case Status.NOT_FOUND => Xor.left(EnvelopeStatusNotFoundError(envelopeId))
-        case _ => Xor.left(EnvelopeStatusServiceError(envelopeId, response.body))
-      }
-    }
-  }
-
   def envelopeDetail(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]),
                      baseUrl: String, wSClient: WSClient)
                     (envelopeId: EnvelopeId)

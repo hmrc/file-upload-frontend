@@ -144,11 +144,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
-  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
-
   lazy val envelopeJsonResult = transfer.Repository.envelopeDetail(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
-
-  lazy val envelopeStatus = transfer.TransferService.envelopeStatus(status) _
 
   lazy val envelopeResult = transfer.TransferService.envelopeResult(envelopeJsonResult) _
 
@@ -173,7 +169,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   //TODO: inject proper toConsumerUrl function
   lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
-  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus)(envelopeJsonResult) _
+  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeResult) _
 
   object ControllerConfiguration extends ControllerConfig {
     lazy val controllerConfigs = configuration.underlying.as[Config]("controllers")

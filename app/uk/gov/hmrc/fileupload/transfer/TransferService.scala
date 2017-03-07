@@ -35,12 +35,6 @@ object TransferService {
   case class EnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
   case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
 
-  type EnvelopeStatusResult = Xor[EnvelopeStatusError, String]
-
-  sealed trait EnvelopeStatusError
-  case class EnvelopeStatusNotFoundError(id: EnvelopeId) extends EnvelopeStatusError
-  case class EnvelopeStatusServiceError(id: EnvelopeId, message: String) extends EnvelopeStatusError
-
   type TransferResult = Xor[TransferError, EnvelopeId]
 
   sealed trait TransferError
@@ -54,11 +48,6 @@ object TransferService {
   def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
                        (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
     isEnvelopeAvailable(envelopeId)
-  }
-
-  def envelopeStatus(status: (EnvelopeId) => Future[EnvelopeStatusResult])(envelopeId: EnvelopeId)
-                    (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
-    status(envelopeId)
   }
 
   def envelopeResult(result: (EnvelopeId) => Future[EnvelopeDetailResult])

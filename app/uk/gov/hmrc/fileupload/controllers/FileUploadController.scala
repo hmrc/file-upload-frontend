@@ -93,7 +93,6 @@ object FileUploadController {
     } else {
       Json.obj()
     }
-
     metadata
   }
 }
