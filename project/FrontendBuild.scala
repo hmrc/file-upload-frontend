@@ -66,7 +66,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
     "org.typelevel" %% "cats" % catsVersion,
     "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
-    "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion
+    "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion,
+    "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.6"
   )
 
   trait TestDependencies {

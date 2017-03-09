@@ -28,6 +28,7 @@ DELETE      /file-upload/test-only/transfer/delete-envelope/:envelopeId         
 GET         /file-upload/test-only/s3/files-in-quarantine                                       uk.gov.hmrc.fileupload.testonly.TestOnlyController.listFilesInQuarantine()
 GET         /file-upload/test-only/s3/files-in-transient                                        uk.gov.hmrc.fileupload.testonly.TestOnlyController.listFilesInTransient()
 GET         /file-upload/test-only/s3/upload-test-file-quarantine                               uk.gov.hmrc.fileupload.testonly.TestOnlyController.uploadTestFileQuarantine()
+POST        /file-upload/test-only/s3/upload-test-file-quarantine/:fileName                     uk.gov.hmrc.fileupload.testonly.TestOnlyController.streamFile(fileName: String)
 GET         /file-upload/test-only/s3/upload-test-file-transient                                uk.gov.hmrc.fileupload.testonly.TestOnlyController.uploadTestFileTransient()
 
 # Add all the application routes to the prod.routes file

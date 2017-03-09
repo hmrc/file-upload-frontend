@@ -18,14 +18,25 @@ package uk.gov.hmrc.fileupload.testonly
 
 import java.io.{File, FileOutputStream, InputStream, OutputStreamWriter}
 
+import akka.actor.ActorSystem
+import akka.stream.alpakka.s3.impl.MetaHeaders
+import akka.stream.alpakka.s3.scaladsl.{MultipartUploadResult, S3Client}
+import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer, Materializer}
+import akka.util.ByteString
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, PutObjectRequest, SSEAlgorithm}
 import com.typesafe.config.ConfigFactory
+import play.api.libs.streams.Accumulator
+import play.api.mvc.MultipartFormData.FilePart
 import play.api.mvc.{Action, Controller}
+import play.core.parsers.Multipart.{FileInfo, FilePartHandler}
 
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext.Implicits.global
+
 
 trait S3TestController { self: Controller =>
   val awsClient = new AwsDummyClient()
@@ -38,8 +49,15 @@ trait S3TestController { self: Controller =>
     Ok(awsClient.listBucket(awsClient.transientBucket))
   }
 
-  def uploadTestFileQuarantine() = Action {
-    Ok(awsClient.uploadFile(awsClient.quarantineBucket))
+  implicit val actorSystem = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+
+  def streamFile(fileName: String) = Action(parse.multipartFormData(awsClient.s3BodyParser(awsClient.quarantineBucket, fileName))) { req =>
+    Ok(req.body.files(0).ref.etag)
+  }
+
+  def uploadTestFileQuarantine() = Action.async { req =>
+    awsClient.streamFile(awsClient.quarantineBucket).map(r => Ok(r.location.toString()))
   }
 
   def uploadTestFileTransient() = Action {
@@ -79,6 +97,20 @@ class AwsDummyClient() {
     "files in the basket are: \n" + summaries.asScala.map(_.getKey).mkString("\n")
   }
 
+  def streamFile(bucketName: String)(implicit system: ActorSystem, mat: Materializer) = {
+    val source: Source[ByteString, Any] = Source(ByteString("foo object") :: Nil)
+    //val source: Source[ByteString, Any] = FileIO.fromPath(Paths.get("/tmp/IMG_0470.JPG"))
+
+    source.runWith(S3Client().multipartUpload(bucketName, key))
+  }
+
+  def s3BodyParser(bucketName: String, key: String)(implicit system: ActorSystem, mat: Materializer): FilePartHandler[MultipartUploadResult] = {
+    case FileInfo(partName, filename, contentType) =>
+      Accumulator(S3Client().multipartUpload(bucketName, key)).map { r =>
+        FilePart(partName, filename, contentType, r)
+      }
+  }
+
   def uploadFile(bucketName: String) = {
     val putRequest = new PutObjectRequest(bucketName, key, S3FileUtils.createSampleFile)
     val objectMetadata = new ObjectMetadata()
@@ -89,7 +121,6 @@ class AwsDummyClient() {
     val o = s3.getObject(new GetObjectRequest(bucketName, key))
     S3FileUtils.displayTextInputStream(o.getObjectContent)
   }
-
 
 }
 
