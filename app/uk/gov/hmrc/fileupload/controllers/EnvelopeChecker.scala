@@ -49,15 +49,11 @@ object EnvelopeChecker {
         checkEnvelopeDetails(envelopeId).map {
           case Xor.Right(envelope) =>
             val status = (envelope \ "status").as[String]
-            if (status == "OPEN") {
-              action(setMaxFileSize(envelope))(rh)
-            } else if (status == "CLOSED") {
-              logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
-            } else if(status == "SEALED") {
-              logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
-            } else {
-              //If uploading to deleted Envelope
-              logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
+            status match {
+              case "OPEN" => action(getMaxFileSize(envelope))(rh)
+              case "CLOSED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
+              case "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
+              case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
           case Xor.Left(EnvelopeDetailNotFoundError(_)) =>
             logAndReturn(NOT_FOUND, s"Unable to upload to nonexistent envelope: $envelopeId")
@@ -67,36 +63,20 @@ object EnvelopeChecker {
       }
     }
 
-  def setMaxFileSize(envelope: JsValue): FileSize = {
+  def getMaxFileSize(envelope: JsValue): FileSize = {
     val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
        definedConstraints match {
-           //TODO Possibly in the future this may change to take into account the envelope size e.g. if envelope size is 5MB and the upload limit is 10MB
          case Some(constraints) => constraints.maxSizePerItem match {
            case Some(maxSizePerItem) =>
              val fileSize = maxSizePerItem.replaceAll("[^\\d.]", "").toInt
              val fileSizeType = maxSizePerItem.toUpperCase.replaceAll("[^KMB]", "")
              fileSizeType match {
-               case "KB" =>
-                 if(fileSize <= 1024) {
-                   fileSize * 1024
-                 } else {
-                   //If maxSizePerItem is accidentally more than 10MB e.g. 10000KB
-                   defaultFileSize
-                 }
-               case "MB" =>
-                 if(fileSize <= 10){
-                   fileSize * 1024 * 1024
-                 } else {
-                   //If maxSizePerItem is accidentally more than 10MB e.g. 100MB
-                   defaultFileSize
-                 }
-                 //If maxSizePerItem is GB or TB
+               case "KB" if fileSize < 1024 => fileSize * 1024
+               case "MB" if fileSize <= 10 => fileSize * 1024 * 1024
                case _ => defaultFileSize
              }
-             //If constraint's maxSizePerItem exist or not
            case None => defaultFileSize
          }
-         //If constraints not specified
          case None => defaultFileSize
       }
   }
