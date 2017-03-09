@@ -46,6 +46,7 @@ POST    /file-upload/upload/envelopes/{envelope-Id}/files/{file-Id}
 | Bad Request  | 400   | Request must have exactly one file attached. |
 | Not Found | 404   |  Envelope not found. |
 | Entity Too Large  | 413   |  File size exceeds limit to upload.  |
+| Unsupported Media Type  | 415   |  File type other than the supported type.  |
 | Locked  | 423   |  Routing request has been made for this Envelope.  |
 
 #### Example
@@ -53,6 +54,9 @@ Request (POST): localhost:8899/file-upload/upload/envelopes/0b215e97-11d4-4006-9
 
 Body (Multipart Form): A single binary file.  
          
+Note: constraints.contentTypes and constraints.maxSizePerItem are applied when the file is uploaded. If validation fails, the user will receive an error.
+
+
 Response: 200
 
 ## TEST-ONLY ENDPOINTS <a name="testonly"></a>
