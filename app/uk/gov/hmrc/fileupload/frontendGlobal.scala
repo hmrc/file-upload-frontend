@@ -18,7 +18,8 @@ package uk.gov.hmrc.fileupload
 
 import javax.inject.Provider
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
+import akka.stream.ActorMaterializer
 import cats.data.Xor
 import com.kenshoo.play.metrics.MetricsController
 import com.typesafe.config.Config
@@ -36,7 +37,7 @@ import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
-import uk.gov.hmrc.fileupload.testonly.TestOnlyController
+import uk.gov.hmrc.fileupload.testonly.{AwsDummyClient, TestOnlyController}
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
@@ -87,6 +88,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val fileUploadController = new FileUploadController(withValidEnvelope = withValidEnvelope, uploadParser = uploadParser,
     notify = notifyAndPublish, now = now)
 
+  lazy val awsClient = new AwsDummyClient()
+
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 
   lazy val healthController = new uk.gov.hmrc.play.health.AdminController(configuration)
@@ -117,7 +120,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
   lazy val retrieveFile = quarantineRepository.retrieveFile _
-  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(retrieveFile) _
+  lazy val s3retrieveFile = awsClient.download _ //(FileRefId("tempKorhan.txt"))
+  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(s3retrieveFile) _
   lazy val recreateCollections = () => quarantineRepository.recreate()
   lazy val getFileInfo = quarantineRepository.retrieveFileMetaData _
   lazy val getFileChunksInfo = quarantineRepository.chunksCount _

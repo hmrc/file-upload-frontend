@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.fileupload.testonly
 
-import java.io.{File, FileOutputStream, InputStream, OutputStreamWriter}
+import java.io._
+import java.nio.file.{Files, Paths}
 
 import akka.actor.ActorSystem
 import akka.stream.alpakka.s3.impl.MetaHeaders
@@ -29,10 +30,13 @@ import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, PutObjectRequest, SSEAlgorithm}
 import com.typesafe.config.ConfigFactory
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.streams.Accumulator
 import play.api.mvc.MultipartFormData.FilePart
 import play.api.mvc.{Action, Controller}
 import play.core.parsers.Multipart.{FileInfo, FilePartHandler}
+import uk.gov.hmrc.fileupload.FileRefId
+import uk.gov.hmrc.fileupload.quarantine.FileData
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -75,6 +79,9 @@ class AwsConfig {
 }
 
 class AwsDummyClient() {
+  implicit val actorSystem = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+
   val awsConfig = new AwsConfig()
   val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
   val s3 = new AmazonS3Client(credentials)
@@ -98,14 +105,14 @@ class AwsDummyClient() {
     "files in the basket are: \n" + summaries.asScala.map(_.getKey).mkString("\n")
   }
 
-  def streamFile(bucketName: String)(implicit system: ActorSystem, mat: Materializer) = {
+  def streamFile(bucketName: String)= {
     val source: Source[ByteString, Any] = Source(ByteString("foo object") :: Nil)
     //val source: Source[ByteString, Any] = FileIO.fromPath(Paths.get("/tmp/IMG_0470.JPG"))
 
     source.runWith(S3Client().multipartUpload(bucketName, key))
   }
 
-  def s3BodyParser(bucketName: String, key: String)(implicit system: ActorSystem, mat: Materializer): FilePartHandler[MultipartUploadResult] = {
+  def s3BodyParser(bucketName: String, key: String): FilePartHandler[MultipartUploadResult] = {
     case FileInfo(partName, filename, contentType) =>
       Accumulator(S3Client().multipartUpload(bucketName, key)).map { r =>
         FilePart(partName, filename, contentType, r)
@@ -123,9 +130,12 @@ class AwsDummyClient() {
     S3FileUtils.displayTextInputStream(o.getObjectContent)
   }
 
-  def download(bucketName: String, key: String)(implicit system: ActorSystem, mat: Materializer) : Future[ByteString] = {
-    val src = S3Client().download(bucketName, key)
-    src.runWith(Sink.last)
+  def download(fileRefId: FileRefId): Future[Option[FileData]] = {
+    val src = S3Client().download(quarantineBucket, "tempKorhan.txt")
+    src.runWith(Sink.last).map { source =>
+      val fileIS = new ByteArrayInputStream(source.toArray)
+      Some(FileData(length = 100000, filename = key, contentType = Some("pdf"), data = Enumerator.fromStream(fileIS)))
+    }
   }
 
 }
