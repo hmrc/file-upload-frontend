@@ -21,7 +21,7 @@ import java.io.{File, FileOutputStream, InputStream, OutputStreamWriter}
 import akka.actor.ActorSystem
 import akka.stream.alpakka.s3.impl.MetaHeaders
 import akka.stream.alpakka.s3.scaladsl.{MultipartUploadResult, S3Client}
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.ByteString
 import com.amazonaws.auth.BasicAWSCredentials
@@ -36,6 +36,7 @@ import play.core.parsers.Multipart.{FileInfo, FilePartHandler}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 
 trait S3TestController { self: Controller =>
@@ -120,6 +121,11 @@ class AwsDummyClient() {
     s3.putObject(putRequest)
     val o = s3.getObject(new GetObjectRequest(bucketName, key))
     S3FileUtils.displayTextInputStream(o.getObjectContent)
+  }
+
+  def download(bucketName: String, key: String)(implicit system: ActorSystem, mat: Materializer) : Future[ByteString] = {
+    val src = S3Client().download(bucketName, key)
+    src.runWith(Sink.last)
   }
 
 }
