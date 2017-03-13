@@ -36,6 +36,7 @@ import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
+import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
@@ -84,8 +85,14 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val router = if (configuration.getString("application.router").get == "testOnlyDoNotUseInAppConf.Routes") testRoutes else prodRoutes
 
-  lazy val fileUploadController = new FileUploadController(withValidEnvelope = withValidEnvelope, uploadParser = uploadParser,
-    notify = notifyAndPublish, now = now)
+  lazy val inMemoryBodyParser = InMemoryMultipartFileHandler.parser
+
+  lazy val s3Service = new S3JavaSdkService()
+
+  lazy val uploadToQuarantine = s3Service.uploadToQuarantine
+
+  lazy val fileUploadController =
+    new FileUploadController(withValidEnvelope, inMemoryBodyParser, notifyAndPublish, uploadToQuarantine, now)
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 

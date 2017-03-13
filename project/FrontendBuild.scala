@@ -67,7 +67,7 @@ private object AppDependencies {
     "org.typelevel" %% "cats" % catsVersion,
     "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
     "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion,
-    "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.6"
+    "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.6-SNAPSHOT"
   )
 
   trait TestDependencies {

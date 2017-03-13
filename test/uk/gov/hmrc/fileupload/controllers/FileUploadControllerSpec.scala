@@ -17,8 +17,8 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
+import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
@@ -27,6 +27,8 @@ import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
+import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler
+import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
@@ -37,14 +39,17 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
 
   val controller = {
     val noEnvelopeValidation = null
-    val noParsingIsActuallyDoneHere = () => UploadParser.parse(null) _
+    val noParsingIsActuallyDoneHere = InMemoryMultipartFileHandler.parser
     val successfulNotificationFromBackend = (_: AnyRef) => Future.successful(Xor.right(NotifySuccess))
     val fakeCurrentTime = () => 10L
+    val uploadToQuarantine: UploadToQuarantine = (_,_,_) => new UploadResult()
+
 
     new FileUploadController(
       noEnvelopeValidation,
       noParsingIsActuallyDoneHere,
       successfulNotificationFromBackend,
+      uploadToQuarantine,
       fakeCurrentTime
     )
   }

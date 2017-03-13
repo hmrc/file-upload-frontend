@@ -47,6 +47,9 @@
 
     <logger name="org.asynchttpclient" level="INFO" />
     <logger name="io.netty" level="INFO" />
+    <logger name="javax.management" level="INFO" />
+    <logger name="sun.rmi" level="INFO" />
+    <logger name="org.apache.http.wire" level="INFO" />
 
     <logger name="application" level="DEBUG"/>
 
