@@ -27,7 +27,7 @@ import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.ExecutorFactory
 import com.amazonaws.event.{ProgressEvent, ProgressEventType, ProgressListener}
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, S3ObjectSummary, SSEAlgorithm}
+import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
@@ -35,6 +35,7 @@ import uk.gov.hmrc.fileupload.s3.S3Service._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Future, Promise}
+import scala.util.Try
 
 trait S3Service {
   def awsConfig: AwsConfig
@@ -54,6 +55,8 @@ trait S3Service {
 
   def listFilesInTransient: Source[Seq[S3ObjectSummary], NotUsed] =
     listFilesInBucket(awsConfig.transientBucketName)
+
+  def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult]
 }
 
 object S3Service {
@@ -88,8 +91,13 @@ class S3JavaSdkService extends S3Service {
       .build()
 
   def objectMetadata(fileSize: Int) = {
-    val om = new ObjectMetadata()
+    val om = objectMetadataWithServerSideEncryption
     om.setContentLength(fileSize)
+    om
+  }
+
+  def objectMetadataWithServerSideEncryption: ObjectMetadata = {
+    val om = new ObjectMetadata()
     om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
     om
   }
@@ -122,6 +130,12 @@ class S3JavaSdkService extends S3Service {
 
   def listFilesInBucket(bucketName: String) = {
     Source.fromIterator(() => new S3FilesIterator(s3Client, bucketName))
+  }
+
+  def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult] = Try {
+    val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key, versionId, awsConfig.transientBucketName, key)
+    copyRequest.setNewObjectMetadata(objectMetadataWithServerSideEncryption)
+    s3Client.copyObject(copyRequest)
   }
 
 }

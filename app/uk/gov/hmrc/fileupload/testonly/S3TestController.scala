@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.testonly
 
 import akka.stream.scaladsl.Source
+import com.amazonaws.services.s3.model.CopyObjectResult
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import play.api.mvc.{Action, Controller}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.cacheFileInMemory
@@ -24,6 +25,8 @@ import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
 
 trait S3TestController { self: Controller =>
@@ -59,6 +62,16 @@ trait S3TestController { self: Controller =>
         .map(r => Ok(formatResult(r)))
     } else {
      Future.successful(BadRequest("Expected exactly one file to be attached"))
+    }
+  }
+
+  def copyFromQtoT(key: String, versionId: String) = Action { req =>
+    def formatResponse(r: CopyObjectResult) =
+      s"Successfully copied file: $key, etag: ${r.getETag}, versionId: ${r.getVersionId}"
+
+    s3Service.copyFromQtoT(key, versionId) match {
+      case Success(result) => Ok(formatResponse(result))
+      case Failure(NonFatal(ex)) => InternalServerError("Problem copying to transient: " + ex.getMessage)
     }
   }
 
