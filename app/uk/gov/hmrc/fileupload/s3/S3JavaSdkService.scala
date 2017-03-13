@@ -31,10 +31,12 @@ import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, S3Obje
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import play.api.libs.iteratee.Enumerator
+import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service._
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 trait S3Service {
   def awsConfig: AwsConfig
@@ -42,6 +44,8 @@ trait S3Service {
   def download(bucketName: String, key:  String): Source[ByteString, Future[IOResult]]
 
   def download(bucketName: String, key: String, versionId: String): Source[ByteString, Future[IOResult]]
+
+  def retrieveFileFromQuarantine(key : String, versionId: String)(implicit ec: ExecutionContext) : Future[Option[FileData]]
 
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult]
 
@@ -103,6 +107,18 @@ class S3JavaSdkService extends S3Service {
       .fromInputStream { () =>
         s3Client.getObject(new GetObjectRequest(bucketName, key, versionId)).getObjectContent
       }
+
+
+  override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext) = {
+    Future {
+      val s3Object = s3Client.getObject(new GetObjectRequest(awsConfig.quarantineBucketName, key, versionId))
+      val objectDataIS = s3Object.getObjectContent
+      val metadata = s3Object.getObjectMetadata
+
+      Some(FileData(length = metadata.getContentLength, filename = s3Object.getKey,
+        contentType = Some(metadata.getContentType), data = Enumerator.fromStream(objectDataIS)))
+    }
+  }
 
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] = {
     val upload = transferManager.upload(bucketName, key, file, objectMetadata(fileSize))

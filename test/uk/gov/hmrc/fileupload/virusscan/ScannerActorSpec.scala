@@ -65,9 +65,9 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
 
     var collector = List.empty[Any]
 
-    def scanBinaryData(fileRefId: FileRefId) = {
+    def scanBinaryData(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
-      collector = collector.::(fileRefId)
+      collector = collector.::(envelopeId, fileId, fileRefId)
       Future.successful(Xor.right(ScanResultFileClean))
     }
 
