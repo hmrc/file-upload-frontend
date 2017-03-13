@@ -31,18 +31,22 @@ import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import play.api.libs.iteratee.Enumerator
+import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service._
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
 
 trait S3Service {
   def awsConfig: AwsConfig
 
-  def download(bucketName: String, key:  String): Source[ByteString, Future[IOResult]]
+  def download(bucketName: String, key: String): Source[ByteString, Future[IOResult]]
 
   def download(bucketName: String, key: String, versionId: String): Source[ByteString, Future[IOResult]]
+
+  def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]]
 
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult]
 
@@ -75,18 +79,20 @@ class S3JavaSdkService extends S3Service {
       .withRegion(Regions.EU_WEST_2)
       .build()
 
-//  // localhost client
-//  val s3Client = {
-//    val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
-//    val s3 = new AmazonS3Client(credentials)
-//    s3.setEndpoint("http://localhost:8001")
-//    s3.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true))
-//    s3
-//  }
+  //  // localhost client
+  //  val s3Client = {
+  //    val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
+  //    val s3 = new AmazonS3Client(credentials)
+  //    s3.setEndpoint("http://localhost:8001")
+  //    s3.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true))
+  //    s3
+  //  }
 
   val transferManager =
     TransferManagerBuilder.standard()
-      .withExecutorFactory(new ExecutorFactory { def newExecutor() = Executors.newFixedThreadPool(25) })
+      .withExecutorFactory(new ExecutorFactory {
+        def newExecutor() = Executors.newFixedThreadPool(25)
+      })
       .withS3Client(s3Client)
       .build()
 
@@ -102,7 +108,7 @@ class S3JavaSdkService extends S3Service {
     om
   }
 
-  def download(bucketName: String, key:  String) =
+  def download(bucketName: String, key: String) =
     StreamConverters
       .fromInputStream(() => s3Client.getObject(bucketName, key).getObjectContent)
 
@@ -111,6 +117,18 @@ class S3JavaSdkService extends S3Service {
       .fromInputStream { () =>
         s3Client.getObject(new GetObjectRequest(bucketName, key, versionId)).getObjectContent
       }
+
+
+  override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext) = {
+    Future {
+      val s3Object = s3Client.getObject(new GetObjectRequest(awsConfig.quarantineBucketName, key, versionId))
+      val objectDataIS = s3Object.getObjectContent
+      val metadata = s3Object.getObjectMetadata
+
+      Some(FileData(length = metadata.getContentLength, filename = s3Object.getKey,
+        contentType = Some(metadata.getContentType), data = Enumerator.fromStream(objectDataIS)))
+    }
+  }
 
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] = {
     val upload = transferManager.upload(bucketName, key, file, objectMetadata(fileSize))

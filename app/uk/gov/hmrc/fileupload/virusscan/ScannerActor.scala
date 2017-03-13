@@ -21,7 +21,7 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.pipe
 import cats.data.Xor
 import play.api.Logger
-import uk.gov.hmrc.fileupload.{Event, FileRefId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
@@ -30,7 +30,7 @@ import scala.collection.immutable.Queue
 import scala.concurrent.{ExecutionContext, Future}
 
 class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                   scanBinaryData: (FileRefId) => Future[ScanResult],
+                   scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
                    notify: (AnyRef) => Future[NotifyResult])
                   (implicit executionContext: ExecutionContext) extends Actor {
 
@@ -92,7 +92,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
         scanningEvent = Some(e)
 
         Logger.info(s"Scan $e")
-        scanBinaryData(e.fileRefId)
+        scanBinaryData(e.envelopeId, e.fileId, e.fileRefId)
           .map(ScanExecuted(e.fileRefId, _)) pipeTo self
 
       case None =>
@@ -110,7 +110,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 object ScannerActor {
 
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
-            scanBinaryData: (FileRefId) => Future[ScanResult],
+            scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
             notify: (AnyRef) => Future[NotifyResult])
            (implicit executionContext: ExecutionContext) =
     Props(new ScannerActor(subscribe = subscribe, scanBinaryData = scanBinaryData, notify = notify))
