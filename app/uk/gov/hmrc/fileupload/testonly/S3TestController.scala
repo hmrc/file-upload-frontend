@@ -25,9 +25,9 @@ import akka.stream.alpakka.s3.scaladsl.{MultipartUploadResult, S3Client}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.ByteString
-import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.regions.{Region, Regions}
-import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, PutObjectRequest, SSEAlgorithm}
 import com.typesafe.config.ConfigFactory
 import play.api.libs.iteratee.Enumerator
@@ -84,7 +84,7 @@ class AwsDummyClient() {
 
   val awsConfig = new AwsConfig()
   val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
-  val s3 = new AmazonS3Client(credentials)
+  val s3 = AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(credentials)).build()
   val londonRegion = Region.getRegion(Regions.EU_WEST_2)
   s3.setRegion(londonRegion)
 
