@@ -27,7 +27,7 @@ import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.ExecutorFactory
 import com.amazonaws.event.{ProgressEvent, ProgressEventType, ProgressListener}
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, S3ObjectSummary, SSEAlgorithm}
+import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
@@ -37,15 +37,16 @@ import uk.gov.hmrc.fileupload.s3.S3Service._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.Try
 
 trait S3Service {
   def awsConfig: AwsConfig
 
-  def download(bucketName: String, key:  String): Source[ByteString, Future[IOResult]]
+  def download(bucketName: String, key: String): Source[ByteString, Future[IOResult]]
 
   def download(bucketName: String, key: String, versionId: String): Source[ByteString, Future[IOResult]]
 
-  def retrieveFileFromQuarantine(key : String, versionId: String)(implicit ec: ExecutionContext) : Future[Option[FileData]]
+  def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]]
 
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult]
 
@@ -58,6 +59,8 @@ trait S3Service {
 
   def listFilesInTransient: Source[Seq[S3ObjectSummary], NotUsed] =
     listFilesInBucket(awsConfig.transientBucketName)
+
+  def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult]
 }
 
 object S3Service {
@@ -76,29 +79,36 @@ class S3JavaSdkService extends S3Service {
       .withRegion(Regions.EU_WEST_2)
       .build()
 
-//  // localhost client
-//  val s3Client = {
-//    val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
-//    val s3 = new AmazonS3Client(credentials)
-//    s3.setEndpoint("http://localhost:8001")
-//    s3.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true))
-//    s3
-//  }
+  //  // localhost client
+  //  val s3Client = {
+  //    val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
+  //    val s3 = new AmazonS3Client(credentials)
+  //    s3.setEndpoint("http://localhost:8001")
+  //    s3.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true))
+  //    s3
+  //  }
 
   val transferManager =
     TransferManagerBuilder.standard()
-      .withExecutorFactory(new ExecutorFactory { def newExecutor() = Executors.newFixedThreadPool(25) })
+      .withExecutorFactory(new ExecutorFactory {
+        def newExecutor() = Executors.newFixedThreadPool(25)
+      })
       .withS3Client(s3Client)
       .build()
 
   def objectMetadata(fileSize: Int) = {
-    val om = new ObjectMetadata()
+    val om = objectMetadataWithServerSideEncryption
     om.setContentLength(fileSize)
+    om
+  }
+
+  def objectMetadataWithServerSideEncryption: ObjectMetadata = {
+    val om = new ObjectMetadata()
     om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
     om
   }
 
-  def download(bucketName: String, key:  String) =
+  def download(bucketName: String, key: String) =
     StreamConverters
       .fromInputStream(() => s3Client.getObject(bucketName, key).getObjectContent)
 
@@ -138,6 +148,12 @@ class S3JavaSdkService extends S3Service {
 
   def listFilesInBucket(bucketName: String) = {
     Source.fromIterator(() => new S3FilesIterator(s3Client, bucketName))
+  }
+
+  def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult] = Try {
+    val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key, versionId, awsConfig.transientBucketName, key)
+    copyRequest.setNewObjectMetadata(objectMetadataWithServerSideEncryption)
+    s3Client.copyObject(copyRequest)
   }
 
 }
