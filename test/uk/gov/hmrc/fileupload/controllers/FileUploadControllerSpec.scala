@@ -43,13 +43,14 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     val successfulNotificationFromBackend = (_: AnyRef) => Future.successful(Xor.right(NotifySuccess))
     val fakeCurrentTime = () => 10L
     val uploadToQuarantine: UploadToQuarantine = (_,_,_) => new UploadResult()
-
+    val s3Key: (EnvelopeId, FileId) => String = (_,_) => "key"
 
     new FileUploadController(
       noEnvelopeValidation,
       noParsingIsActuallyDoneHere,
       successfulNotificationFromBackend,
       uploadToQuarantine,
+      s3Key,
       fakeCurrentTime
     )
   }

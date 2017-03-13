@@ -16,13 +16,8 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import com.typesafe.config.ConfigFactory
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
-class AwsConfig {
-  protected val config = ConfigFactory.load()
-  def quarantineBucketName: String = config.getString("aws.s3.bucket.upload.quarantine")
-  def transientBucketName: String = config.getString("aws.s3.bucket.upload.transient")
-  def accessKeyId: String = config.getString("aws.access.key.id")
-  def secretAccessKey: String = config.getString("aws.secret.access.key")
-  def envSubdir: String = config.getString("aws.s3.bucket.env-subdir")
+object S3Key {
+  def forEnvSubdir(envSubdir: String) = (e: EnvelopeId, f: FileId) => s"$envSubdir/$e/$f"
 }

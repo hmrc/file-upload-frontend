@@ -36,7 +36,7 @@ import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
 import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
-import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService}
+import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService, S3Key}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
@@ -91,8 +91,10 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val uploadToQuarantine = s3Service.uploadToQuarantine
 
+  lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
+
   lazy val fileUploadController =
-    new FileUploadController(withValidEnvelope, inMemoryBodyParser, notifyAndPublish, uploadToQuarantine, now)
+    new FileUploadController(withValidEnvelope, inMemoryBodyParser, notifyAndPublish, uploadToQuarantine, createS3Key, now)
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 

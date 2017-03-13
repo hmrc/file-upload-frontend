@@ -27,17 +27,16 @@ import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.ExecutorFactory
 import com.amazonaws.event.{ProgressEvent, ProgressEventType, ProgressListener}
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.{GetObjectRequest, ObjectMetadata, S3ObjectSummary, SSEAlgorithm}
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
+import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import uk.gov.hmrc.fileupload.s3.S3Service._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Future, Promise}
-import S3Service._
 
 trait S3Service {
-
   def awsConfig: AwsConfig
 
   def download(bucketName: String, key:  String): Source[ByteString, Future[IOResult]]

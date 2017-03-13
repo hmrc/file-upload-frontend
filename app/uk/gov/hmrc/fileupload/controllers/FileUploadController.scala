@@ -35,6 +35,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            uploadParser: InMemoryMultiPartBodyParser,
                            notify: AnyRef => Future[NotifyResult],
                            uploadToQuarantine: UploadToQuarantine,
+                           createS3Key: (EnvelopeId, FileId) => String,
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
@@ -53,7 +54,8 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
           val numberOfAttachedFiles = formData.files.size
           if (numberOfAttachedFiles == 1) {
             val file = formData.files.head
-            uploadToQuarantine(fileId.value, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
+            val key = createS3Key(envelopeId, fileId)
+            uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
               val fileRefId = FileRefId(uploadResult.getVersionId)
               notify(FileInQuarantineStored(
                 envelopeId, fileId, fileRefId, created = now(), name = file.filename,
