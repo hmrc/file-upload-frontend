@@ -29,6 +29,7 @@ import scala.util.{Failure, Success, Try}
 class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
                     createS3Key: (EnvelopeId, FileId) => String,
                     commandHandler: CommandHandler,
+                    getFileLength: (EnvelopeId, FileId, FileRefId) => Long,
                     transferFile: (String, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) extends Actor {
 
   override def preStart = {
@@ -49,7 +50,7 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
   private def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId): Unit =
     transferFile(createS3Key(envelopeId, fileId), fileRefId.value) match {
       case Success(_) =>
-        commandHandler.notify(StoreFile(envelopeId, fileId, fileRefId, 0L)) // todo (konrad) missing length!!!
+        commandHandler.notify(StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId))) // todo (konrad) missing length!!!
         Logger.info(s"File successfully transferred for envelopeId: $envelopeId, fileId: $fileId and version: $fileRefId")
       case Failure(NonFatal(ex)) =>
         Logger.error(s"File not transferred for $envelopeId and $fileId and $fileRefId", ex)
@@ -61,6 +62,7 @@ object TransferActor {
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
             createS3Key: (EnvelopeId, FileId) => String,
             commandHandler: CommandHandler,
+            getFileLength: (EnvelopeId, FileId, FileRefId) => Long,
             transferFile: (String, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) =
-    Props(new TransferActor(subscribe, createS3Key, commandHandler, transferFile))
+    Props(new TransferActor(subscribe, createS3Key, commandHandler, getFileLength, transferFile))
 }

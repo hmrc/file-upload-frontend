@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.fileupload.notifier
 
-import play.api.libs.json.{JsObject, Json, Writes}
-import uk.gov.hmrc.fileupload.notifier.NotifierRepository.Notification
+import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 sealed trait BackendCommand {

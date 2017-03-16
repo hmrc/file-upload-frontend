@@ -63,6 +63,8 @@ trait S3Service {
     listFilesInBucket(awsConfig.transientBucketName)
 
   def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult]
+
+  def getFileLengthFromQuarantine(key: String, versionId: String): Long
 }
 
 object S3Service {
@@ -76,6 +78,7 @@ object S3Service {
 case class S3KeyName(value: String) extends AnyVal {
   override def toString: String = value
 }
+
 case class Metadata(
   contentType: String,
   contentLength: Long,
@@ -118,6 +121,17 @@ class S3JavaSdkService extends S3Service {
     val om = objectMetadataWithServerSideEncryption
     om.setContentLength(fileSize)
     om
+  }
+
+  def getFileLengthFromQuarantine(key: String, versionId: String) =
+    getFileLength(awsConfig.quarantineBucketName, key, versionId)
+
+  def getFileLength(bucketName: String, key: String, versionId: String): Long = {
+    getObjectMetadata(bucketName,key,versionId).getContentLength
+  }
+
+  def getObjectMetadata(bucketName: String, key: String, versionId: String): ObjectMetadata = {
+    s3Client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key, versionId))
   }
 
   def objectMetadataWithServerSideEncryption: ObjectMetadata = {

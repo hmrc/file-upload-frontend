@@ -120,9 +120,13 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   val commandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
 
+  val getFileLength = {
+    (envelopeId: EnvelopeId, fileId: FileId, version: FileRefId) =>
+      s3Service.getFileLengthFromQuarantine(createS3Key(envelopeId, fileId), version.value)
+  }
   // scanner
   actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler), "scannerActor")
-  actorSystem.actorOf(TransferActor.props(subscribe, createS3Key, commandHandler, s3Service.copyFromQtoT), "transferActor")
+  actorSystem.actorOf(TransferActor.props(subscribe, createS3Key, commandHandler, getFileLength, s3Service.copyFromQtoT), "transferActor")
 
   // db
   lazy val db = new ReactiveMongoComponentImpl(application, applicationLifecycle).mongoConnector.db

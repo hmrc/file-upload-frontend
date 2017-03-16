@@ -51,8 +51,6 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
     case e: VirusScanRequested =>
       outstandingScans = outstandingScans enqueue e
       scanNext()
-
-    case other => println(s"received other msg: $other")
   }
 
   def receiveWhenScanning: Receive = {
