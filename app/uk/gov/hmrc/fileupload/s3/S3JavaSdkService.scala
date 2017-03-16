@@ -42,15 +42,17 @@ import scala.util.Try
 trait S3Service {
   def awsConfig: AwsConfig
 
-  def download(bucketName: String, key: String): Source[ByteString, Future[IOResult]]
+  def download(bucketName: String, key: S3KeyName): StreamWithMetadata
 
-  def download(bucketName: String, key: String, versionId: String): Source[ByteString, Future[IOResult]]
+  def download(bucketName: String, key: S3KeyName, versionId: String): StreamWithMetadata
 
   def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]]
 
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult]
 
   def uploadToQuarantine: UploadToQuarantine = upload(awsConfig.quarantineBucketName, _, _, _)
+
+  def downloadFromTransient: DownloadFromTransient = download(awsConfig.transientBucketName, _)
 
   def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], NotUsed]
 
@@ -64,8 +66,24 @@ trait S3Service {
 }
 
 object S3Service {
+  type StreamResult = Source[ByteString, Future[IOResult]]
+
   type UploadToQuarantine = (String, InputStream, Int) => Future[UploadResult]
+
+  type DownloadFromTransient = (S3KeyName) => StreamWithMetadata
 }
+
+case class S3KeyName(value: String) extends AnyVal {
+  override def toString: String = value
+}
+case class Metadata(
+  contentType: String,
+  contentLength: Long,
+  versionId: String = "",
+  ETag: String = "",
+  s3Metadata: Option[Map[String, String]] = None)
+
+case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
 
 class S3JavaSdkService extends S3Service {
   val awsConfig = new AwsConfig()
@@ -108,15 +126,24 @@ class S3JavaSdkService extends S3Service {
     om
   }
 
-  def download(bucketName: String, key: String) =
-    StreamConverters
-      .fromInputStream(() => s3Client.getObject(bucketName, key).getObjectContent)
+  private def downloadByObject(s3Object: S3Object) = {
+    StreamWithMetadata(
+      StreamConverters
+        .fromInputStream(() => s3Object.getObjectContent),
+      Metadata(
+        s3Object.getObjectMetadata.getContentType,
+        s3Object.getObjectMetadata.getContentLength
+      ))
+  }
 
-  def download(bucketName: String, key: String, versionId: String) =
-    StreamConverters
-      .fromInputStream { () =>
-        s3Client.getObject(new GetObjectRequest(bucketName, key, versionId)).getObjectContent
-      }
+  def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): S3Object =
+    s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId))
+
+  def objectByKey(bucketName: String, key: S3KeyName): S3Object =
+    s3Client.getObject(bucketName, key.value)
+
+  def download(bucketName: String, key: S3KeyName, versionId: String) = downloadByObject(objectByKeyVersion(bucketName, key, versionId))
+  def download(bucketName: String, key: S3KeyName) = downloadByObject(objectByKey(bucketName, key))
 
 
   override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext) = {

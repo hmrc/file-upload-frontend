@@ -32,11 +32,11 @@ import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.Request
 import play.api.{BuiltInComponentsFromContext, LoggerConfigurator, Mode}
 import play.modules.reactivemongo.ReactiveMongoComponentImpl
-import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.controllers._
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
-import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService, S3Key}
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, InMemoryMultipartFileHandler, S3JavaSdkService, S3Key}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
@@ -72,7 +72,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   override lazy val runModeConfiguration = configuration
 
   lazy val healthRoutes = new manualdihealth.Routes(httpErrorHandler, new uk.gov.hmrc.play.health.AdminController(configuration))
-  lazy val appRoutes = new app.Routes(httpErrorHandler, fileUploadController)
+  lazy val appRoutes = new app.Routes(httpErrorHandler, fileUploadController, fileDownloadController)
 
   lazy val adminRoutes = new admin.Routes(httpErrorHandler, adminController)
 
@@ -89,9 +89,14 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val s3Service = new S3JavaSdkService()
 
+  lazy val downloadFromTransient = s3Service.downloadFromTransient
+  
   lazy val uploadToQuarantine = s3Service.uploadToQuarantine
 
   lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
+
+  lazy val fileDownloadController =
+    new FileDownloadController(downloadFromTransient, (e, f) => S3KeyName(createS3Key(e, f)), now)
 
   lazy val fileUploadController =
     new FileUploadController(withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)
