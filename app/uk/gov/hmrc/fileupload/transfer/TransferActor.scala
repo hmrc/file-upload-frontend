@@ -17,53 +17,50 @@
 package uk.gov.hmrc.fileupload.transfer
 
 import akka.actor.{Actor, ActorRef, Props}
-import cats.data.Xor
+import com.amazonaws.services.s3.model.CopyObjectResult
 import play.api.Logger
-import uk.gov.hmrc.fileupload.transfer.TransferService.{TransferResult, TransferServiceError}
+import uk.gov.hmrc.fileupload.notifier.{BackendCommand, CommandHandler, MarkFileAsClean, StoreFile}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
-import uk.gov.hmrc.fileupload.virusscan.FileScanned
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                    transferFile: (EnvelopeId, FileId, FileRefId) => Future[TransferResult])
-                   (implicit executionContext: ExecutionContext) extends Actor {
+                    createS3Key: (EnvelopeId, FileId) => String,
+                    commandHandler: CommandHandler,
+                    transferFile: (String, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) extends Actor {
 
   override def preStart = {
-    subscribe(self, classOf[FileScanned])
+    subscribe(self, classOf[MarkFileAsClean])
     subscribe(self, classOf[TransferRequested])
   }
 
   def receive = {
-    case e: FileScanned if !e.hasVirus =>
-      Logger.info(s"FileScanned received for ${e.envelopeId} and ${e.fileId} and ${e.fileRefId}")
-      transfer(e.envelopeId, e.fileId, e.fileRefId)
+    case e: MarkFileAsClean =>
+      Logger.info(s"MarkFileAsClean received for envelopeId: ${e.id} and fileId: ${e.fileId} and version: ${e.fileRefId}")
+      transfer(e.id, e.fileId, e.fileRefId)
+
     case e: TransferRequested =>
       Logger.info(s"TransferRequested received for ${e.envelopeId} and ${e.fileId} and ${e.fileRefId}")
       transfer(e.envelopeId, e.fileId, e.fileRefId)
-    case _ =>
   }
-  
+
   private def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId): Unit =
-    transferFile(envelopeId, fileId, fileRefId).map {
-      case Xor.Right(_) =>
-        Logger.info(s"File successful transferred $envelopeId and $fileId and $fileRefId")
-      case Xor.Left(TransferServiceError(_, m)) =>
-        Logger.info(s"File not transferred for $envelopeId and $fileId and $fileRefId with $m")
-      case Xor.Left(_) =>
-        Logger.info(s"File not transferred for $envelopeId and $fileId and $fileRefId")
-    } recover {
-      case NonFatal(ex) =>
-        Logger.error(
-          s"Exception while transferring (envelopeId: $envelopeId, fileId: $fileId, fileRefId: $fileRefId)",
-          ex)
+    transferFile(createS3Key(envelopeId, fileId), fileRefId.value) match {
+      case Success(_) =>
+        commandHandler.notify(StoreFile(envelopeId, fileId, fileRefId, 0L)) // todo (konrad) missing length!!!
+        Logger.info(s"File successfully transferred for envelopeId: $envelopeId, fileId: $fileId and version: $fileRefId")
+      case Failure(NonFatal(ex)) =>
+        Logger.error(s"File not transferred for $envelopeId and $fileId and $fileRefId", ex)
     }
 }
 
 object TransferActor {
 
-  def props(subscribe: (ActorRef, Class[_]) => Boolean, transferFile: (EnvelopeId, FileId, FileRefId) => Future[TransferResult])
-           (implicit executionContext: ExecutionContext) =
-    Props(new TransferActor(subscribe = subscribe, transferFile = transferFile))
+  def props(subscribe: (ActorRef, Class[_]) => Boolean,
+            createS3Key: (EnvelopeId, FileId) => String,
+            commandHandler: CommandHandler,
+            transferFile: (String, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) =
+    Props(new TransferActor(subscribe, createS3Key, commandHandler, transferFile))
 }

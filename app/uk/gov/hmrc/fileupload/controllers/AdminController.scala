@@ -17,9 +17,9 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import play.api.Logger
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
-import uk.gov.hmrc.fileupload.notifier.NotifierService._
+import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.quarantine.FileInfo
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.utils.errorAsJson
@@ -29,7 +29,7 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getChunks: (FileRefId) => Future[Int])(notify: AnyRef => Future[NotifyResult])
+class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getChunks: (FileRefId) => Future[Int])(commandHandler: CommandHandler)
                      (implicit executionContext: ExecutionContext) extends Controller {
 
   def fileInfo(fileRefId: FileRefId) = Action.async { request =>
@@ -53,12 +53,12 @@ class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getC
   }
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
+    commandHandler.notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
     Future.successful(Ok)
   }
 
   def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    notify(TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
+    commandHandler.notify(TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
     Future.successful(Ok)
   }
 }

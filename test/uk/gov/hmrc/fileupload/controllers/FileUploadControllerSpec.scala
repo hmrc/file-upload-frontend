@@ -26,12 +26,13 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload.DomainFixtures.anyFile
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
+import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
@@ -40,7 +41,9 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
   val controller = {
     val noEnvelopeValidation = null
     val noParsingIsActuallyDoneHere = InMemoryMultipartFileHandler.parser
-    val successfulNotificationFromBackend = (_: AnyRef) => Future.successful(Xor.right(NotifySuccess))
+    val commandHandler = new CommandHandler {
+      def notify(command: AnyRef)(implicit ec: ExecutionContext) = Future.successful(Xor.right(NotifySuccess))
+    }
     val fakeCurrentTime = () => 10L
     val uploadToQuarantine: UploadToQuarantine = (_,_,_) => new UploadResult()
     val s3Key: (EnvelopeId, FileId) => String = (_,_) => "key"
@@ -48,7 +51,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     new FileUploadController(
       noEnvelopeValidation,
       noParsingIsActuallyDoneHere,
-      successfulNotificationFromBackend,
+      commandHandler,
       uploadToQuarantine,
       s3Key,
       fakeCurrentTime

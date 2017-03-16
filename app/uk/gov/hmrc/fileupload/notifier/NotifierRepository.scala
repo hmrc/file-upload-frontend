@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.notifier
 
 import cats.data.Xor
 import play.api.http.Status
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.JsValue
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
@@ -44,12 +44,14 @@ object NotifierRepository {
 
   def send(httpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wsClient: WSClient)
           (notification: Notification)
-          (implicit executionContext: ExecutionContext): Future[Result] =
-    httpCall(wsClient.url(s"$baseUrl/file-upload/events/${notification.eventType}").withBody(Json.stringify(notification.event)).withMethod("POST")).map {
+          (implicit executionContext: ExecutionContext): Future[Result] = {
+    httpCall(wsClient.url(s"$baseUrl/file-upload/commands/${ notification.eventType }").withBody(notification.event).withMethod("POST")).map {
       case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, 500, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right(notification.envelopeId)
         case _ => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, response.status, response.body))
       }
     }
+  }
+
 }

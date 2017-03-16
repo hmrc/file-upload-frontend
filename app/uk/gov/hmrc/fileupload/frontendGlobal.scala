@@ -34,8 +34,7 @@ import play.api.{BuiltInComponentsFromContext, LoggerConfigurator, Mode}
 import play.modules.reactivemongo.ReactiveMongoComponentImpl
 import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
-import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
-import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
+import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService, S3Key}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
@@ -95,7 +94,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
 
   lazy val fileUploadController =
-    new FileUploadController(withValidEnvelope, inMemoryBodyParser, notifyAndPublish, uploadToQuarantine, createS3Key, now)
+    new FileUploadController(withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 
@@ -105,21 +104,20 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val testRoutes = new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, testOnlyController, prodRoutes)
 
-  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(notify = notifyAndPublish)
+  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(commandHandler)
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
-  var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
   val now: () => Long = () => System.currentTimeMillis()
 
   subscribe = actorSystem.eventStream.subscribe
   publish = actorSystem.eventStream.publish
 
-  notifyAndPublish = NotifierService.notify(sendNotification, publish) _
+  val commandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
 
   // scanner
-  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
-  actorSystem.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
+  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler), "scannerActor")
+  actorSystem.actorOf(TransferActor.props(subscribe, createS3Key, commandHandler, s3Service.copyFromQtoT), "transferActor")
 
   // db
   lazy val db = new ReactiveMongoComponentImpl(application, applicationLifecycle).mongoConnector.db
@@ -174,10 +172,6 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
       ScanningService.scanBinaryData(scanner, getFileFromQuarantine)(createS3Key)
     }
   }
-
-  // notifier
-  //TODO: inject proper toConsumerUrl function
-  lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
 
