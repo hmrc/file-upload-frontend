@@ -19,9 +19,10 @@ package uk.gov.hmrc.fileupload.testonly
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.s3.model.CopyObjectResult
 import com.amazonaws.services.s3.transfer.model.UploadResult
-import play.api.mvc.{Action, Controller}
+import play.api.http.HttpEntity
+import play.api.mvc.{Action, Controller, ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.cacheFileInMemory
-import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
+import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3KeyName}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -74,10 +75,21 @@ trait S3TestController { self: Controller =>
       case Failure(NonFatal(ex)) => InternalServerError("Problem copying to transient: " + ex.getMessage)
     }
   }
+  
+  def s3downloadFileQ(fileName: String) = s3downloadFile(fileName, quarantineBucketName)
+  def s3downloadFileT(fileName: String) = s3downloadFile(fileName, transientBucketName)
 
-  def s3downloadFile(fileName: String) = Action { req =>
-    val download = s3Service.download(quarantineBucketName, fileName)
-    Ok.chunked(download)
+  def s3downloadFile(fileName: String, bucket: String) = Action { req =>
+    val result = s3Service.download(transientBucketName, S3KeyName(fileName))
+
+    Result(
+      header = ResponseHeader(200, Map.empty),
+      body = HttpEntity.Streamed(
+        result.stream,
+        Some(result.metadata.contentLength),
+        Some(result.metadata.contentType))
+    )
+
   }
 
 }
