@@ -28,11 +28,11 @@ object QuarantineService {
   type QuarantineDownloadResult = Xor[QuarantineDownloadFileNotFound.type, File]
   case object QuarantineDownloadFileNotFound
 
-  def getFileFromQuarantine(retrieveFile: (FileRefId) => Future[Option[FileData]])
-                           (fileRefId: FileRefId)
+  def getFileFromQuarantine(retrieveFile: (String, String) => Future[Option[FileData]])
+                           (key: String, version: String)
                            (implicit executionContext: ExecutionContext): Future[QuarantineDownloadResult] =
     for {
-      maybeFileData <- retrieveFile(fileRefId)
+      maybeFileData <- retrieveFile(key, version)
     } yield
       Xor.fromOption(maybeFileData, ifNone = QuarantineDownloadFileNotFound).map { fd =>
         File(data = fd.data, length = fd.length, filename = fd.filename, contentType = fd.contentType)

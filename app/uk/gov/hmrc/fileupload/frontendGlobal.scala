@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
+import java.util.concurrent.Executors
 import javax.inject.Provider
 
 import akka.actor.ActorRef
@@ -50,7 +51,7 @@ import uk.gov.hmrc.play.graphite.GraphiteMetricsImpl
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class ApplicationLoader extends play.api.ApplicationLoader {
@@ -125,8 +126,10 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
-  lazy val retrieveFile = quarantineRepository.retrieveFile _
-  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(retrieveFile) _
+  //lazy val retrieveFileFromQuarantineBucket = s3Service.retrieveFileFromQuarantine _
+  //TODO discuss alternative thread pools
+  lazy val ec = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(25))
+  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(s3Service.retrieveFileFromQuarantine)(_: String, _: String)(ec)
   lazy val recreateCollections = () => quarantineRepository.recreate()
   lazy val getFileInfo = quarantineRepository.retrieveFileMetaData _
   lazy val getFileChunksInfo = quarantineRepository.chunksCount _
@@ -156,19 +159,19 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val envelopeStatus = transfer.TransferService.envelopeStatus(status) _
 
   lazy val streamTransferCall = transfer.TransferService.stream(
-    fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
+    fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine)(createS3Key) _
 
   // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
 
   lazy val scanner: () => AvScanIteratee = new VirusScanner(configuration, environment).scanIteratee
-  lazy val scanBinaryData: (FileRefId) => Future[ScanResult] = {
+  lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
 
     val runStubClam = configuration.getConfig(s"${environment.mode}.clam.antivirus").flatMap(_.getBoolean("runStub")).getOrElse(false)
     if (runStubClam & (environment.mode == Mode.Dev || environment.mode == Mode.Test)) {
-      (_: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
+      (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
     } else {
-      ScanningService.scanBinaryData(scanner, getFileFromQuarantine)
+      ScanningService.scanBinaryData(scanner, getFileFromQuarantine)(createS3Key)
     }
   }
 
@@ -184,6 +187,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   object LoggingFilter extends LoggingFilter {
     override def mat = materializer
+
     override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
   }
 
@@ -197,9 +201,11 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   object AuditFilter extends AuditFilter with AppName {
     override def mat = materializer
+
     override lazy val auditConnector = MicroserviceAuditConnector
 
     override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
+
     override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
   }
 
