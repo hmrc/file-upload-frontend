@@ -47,10 +47,10 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
       setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
     }
 
-  def upload(setMaxFileSize: Int)(envelopeId: EnvelopeId, fileId: FileId) = {
+  def upload(setMaxFileSize: Long)(envelopeId: EnvelopeId, fileId: FileId) = {
     Action.async(parse.maxLength(setMaxFileSize, uploadParser())) { implicit request =>
       request.body match {
-        case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
+        case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
           val numberOfAttachedFiles = formData.files.size
           if (numberOfAttachedFiles == 1) {

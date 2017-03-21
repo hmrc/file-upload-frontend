@@ -33,12 +33,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object EnvelopeChecker {
 
-  type FileSize = Int
+  type FileSize = Long
   type WithValidEnvelope = EnvelopeId => (FileSize => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
-  val defaultFileSize = 10 * 1024 * 1024
+  val defaultFileSize = (10 * 1024 * 1024).toLong //bytes
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
@@ -67,14 +67,7 @@ object EnvelopeChecker {
     val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
        definedConstraints match {
          case Some(constraints) => constraints.maxSizePerItem match {
-           case Some(maxSizePerItem) =>
-             val fileSize = maxSizePerItem.replaceAll("[^\\d.]", "").toInt
-             val fileSizeType = maxSizePerItem.toUpperCase.replaceAll("[^KMB]", "")
-             fileSizeType match {
-               case "KB" if fileSize < 1024 => fileSize * 1024
-               case "MB" if fileSize <= 10 => fileSize * 1024 * 1024
-               case _ => defaultFileSize
-             }
+           case Some(maxSizePerItem) => maxSizePerItem
            case None => defaultFileSize
          }
          case None => defaultFileSize
