@@ -76,7 +76,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
     }
-    "return 413 Entity To Large if file size exceeds 10 mb" in {
+    "return 413 Entity To Large if file size exceeds 10MB" in {
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
 
       val result = controller.upload(defaultFileSize)(EnvelopeId(), FileId())(tooLargeRequest)

@@ -112,11 +112,19 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   "When returned envelope data has file constraint: 2KB " should {
     "set the as upload size limit to 2KB" in {
-      val fileLimit2KB = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : 2048 } }""")
+      val envelopeJson = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : 2048 } }""")
 
       val expectedSetSize = 2 * 1024
+      getMaxFileSizeFromEnvelope(envelopeJson) shouldBe expectedSetSize
+    }
+  }
 
-      getMaxFileSize(fileLimit2KB) shouldBe expectedSetSize
+  "When returned envelope data has file constraint: 1MB " should {
+    "set the as upload size limit to 1MB" in {
+      val envelopeJson = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : 1048576 } }""")
+
+      val expectedSetSize = 1 * 1024 * 1024
+      getMaxFileSizeFromEnvelope(envelopeJson) shouldBe expectedSetSize
     }
   }
 
@@ -124,7 +132,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
     "set the as upload size limit to default" in {
       val emptyConstraintJson = Json.parse("""{"status" : "OPEN", "constraints": { } }""")
 
-      getMaxFileSize(emptyConstraintJson) shouldBe defaultFileSize
+      getMaxFileSizeFromEnvelope(emptyConstraintJson) shouldBe defaultFileSize
     }
   }
 
@@ -132,34 +140,9 @@ class EnvelopeCheckerSpec extends UnitSpec {
     "set the as upload size limit to default" in {
       val noConstraintJson = Json.parse("""{"status" : "OPEN" }""")
 
-      getMaxFileSize(noConstraintJson) shouldBe defaultFileSize
+      getMaxFileSizeFromEnvelope(noConstraintJson) shouldBe defaultFileSize
     }
   }
-
-  /*"When returned envelope data has file constraint: 100MB " should {
-    "set the as upload size limit to 10MB" in {
-      val fileLimit100MB = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : "100MB" } }""")
-
-      getMaxFileSize(fileLimit100MB) shouldBe defaultFileSize
-    }
-  }
-
-
-  "When returned envelope data has file constraint: 2GB " should {
-    "set the as upload size limit to default: 10MB" in {
-      val fileLimit2GB = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : "2GB" } }""")
-
-      getMaxFileSize(fileLimit2GB) shouldBe defaultFileSize
-    }
-  }
-
-  "When returned envelope data has file constraint not defined" should {
-    "set the as upload size limit to default: 10MB " in {
-      val envelopeNoConstraints = Json.parse("""{"status" : "OPEN", "constraints": { } }""")
-
-      getMaxFileSize(envelopeNoConstraints) shouldBe defaultFileSize
-    }
-  }*/
 
   def actionThatShouldNotExecute = Action(bodyParserThatShouldNotExecute) { req =>
     fail("action executed which we wanted to prevent")

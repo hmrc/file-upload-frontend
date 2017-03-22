@@ -50,9 +50,8 @@ object EnvelopeChecker {
           case Xor.Right(envelope) =>
             val status = (envelope \ "status").as[String]
             status match {
-              case "OPEN" => action(getMaxFileSize(envelope))(rh)
-              case "CLOSED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
-              case "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
+              case "OPEN" => action(getMaxFileSizeFromEnvelope(envelope))(rh)
+              case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
           case Xor.Left(EnvelopeDetailNotFoundError(_)) =>
@@ -63,7 +62,7 @@ object EnvelopeChecker {
       }
     }
 
-  def getMaxFileSize(envelope: JsValue): FileSize = {
+  def getMaxFileSizeFromEnvelope(envelope: JsValue): FileSize = {
     val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
        definedConstraints match {
          case Some(constraints) => constraints.maxSizePerItem match {
