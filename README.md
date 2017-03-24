@@ -35,7 +35,7 @@ sm --start FILE_UPLOAD_ALL
 ## Endpoints <a name="endpoints"></a>
 
 #### Upload File
-Uploads a single file to the envelope via multipart form. The file should not exceed over 11MB. If a routing request has been created for an envelope, any attempts after to upload a file will be rejected.
+Uploads a single file to the envelope via multipart form. The file should not exceed over 10MB. If a routing request has been created for an envelope, any attempts after to upload a file will be rejected.
 
 ```
 POST    /file-upload/upload/envelopes/{envelope-Id}/files/{file-Id}
