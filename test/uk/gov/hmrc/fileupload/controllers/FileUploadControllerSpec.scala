@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.play.OneServerPerSuite
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
@@ -34,6 +33,8 @@ import scala.concurrent.Future
 class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
   import scala.concurrent.ExecutionContext.Implicits.global
+
+  val defaultFileSize = 10 * 1024 * 1024
 
   val controller = {
     val noEnvelopeValidation = null
@@ -54,7 +55,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
       val file = anyFile()
       val request = validUploadRequest(List(file))
 
-      val result = controller.upload(EnvelopeId(), FileId())(request)
+      val result = controller.upload(defaultFileSize)(EnvelopeId(), FileId())(request)
 
       status(result) shouldBe Status.OK
     }
@@ -62,7 +63,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     "return 400 Bad Request if file was not found in the request" in {
       val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty), sizeExceeded = false)
 
-      val result = controller.upload(EnvelopeId(), FileId())(requestWithoutAFile)
+      val result = controller.upload(defaultFileSize)(EnvelopeId(), FileId())(requestWithoutAFile)
 
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
@@ -70,15 +71,15 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     "return 400 Bad Request if >1 files were found in the request" in {
       val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
 
-      val result = controller.upload(EnvelopeId(), FileId())(requestWith2Files)
+      val result = controller.upload(defaultFileSize)(EnvelopeId(), FileId())(requestWith2Files)
 
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
     }
-    "return 413 Entity To Large if file size exceeds 10 mb" in {
+    "return 413 Entity To Large if file size exceeds 10MB" in {
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
 
-      val result = controller.upload(EnvelopeId(), FileId())(tooLargeRequest)
+      val result = controller.upload(defaultFileSize)(EnvelopeId(), FileId())(tooLargeRequest)
 
       status(result) shouldBe Status.REQUEST_ENTITY_TOO_LARGE
     }
