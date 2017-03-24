@@ -24,6 +24,7 @@ import akka.stream.IOResult
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.client.builder.ExecutorFactory
 import com.amazonaws.event.{ProgressEvent, ProgressEventType, ProgressListener}
 import com.amazonaws.regions.Regions
@@ -31,6 +32,7 @@ import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service._
@@ -93,21 +95,15 @@ class S3JavaSdkService extends S3Service {
 
   val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
 
-  val s3Client =
-    AmazonS3ClientBuilder
-      .standard()
-      .withCredentials(new AWSStaticCredentialsProvider(credentials))
-      .withRegion(Regions.EU_WEST_2)
-      .build()
+  val s3Builder = AmazonS3ClientBuilder
+    .standard()
+    .withCredentials(new AWSStaticCredentialsProvider(credentials))
 
-  //  // localhost client
-  //  val s3Client = {
-  //    val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
-  //    val s3 = new AmazonS3Client(credentials)
-  //    s3.setEndpoint("http://localhost:8001")
-  //    s3.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true))
-  //    s3
-  //  }
+  val s3Client = awsConfig.endpoint.fold(
+    s3Builder.withRegion(Regions.EU_WEST_2)
+  ) { endpoint =>
+    s3Builder.withEndpointConfiguration(new EndpointConfiguration(endpoint, "local-test"))
+  }.build()
 
   val transferManager =
     TransferManagerBuilder.standard()

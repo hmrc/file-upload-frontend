@@ -25,4 +25,10 @@ class AwsConfig {
   def accessKeyId: String = config.getString("aws.access.key.id")
   def secretAccessKey: String = config.getString("aws.secret.access.key")
   def envSubdir: String = config.getString("aws.s3.bucket.env-subdir")
+  def endpoint: Option[String] = {
+    val endPoint = config.getString("aws.service_endpoint")
+    if (endPoint.trim.nonEmpty)
+      Some(endPoint)
+    else None
+  }
 }
