@@ -90,7 +90,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val s3Service = new S3JavaSdkService()
 
   lazy val downloadFromTransient = s3Service.downloadFromTransient
-  
+
   lazy val uploadToQuarantine = s3Service.uploadToQuarantine
 
   lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
@@ -159,11 +159,9 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
-  lazy val status = transfer.Repository.envelopeStatus(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
+  lazy val envelopeJsonResult = transfer.Repository.envelopeDetail(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
-  lazy val envelopeAvailable = transfer.TransferService.envelopeAvailable(isEnvelopeAvailable) _
-
-  lazy val envelopeStatus = transfer.TransferService.envelopeStatus(status) _
+  lazy val envelopeResult = transfer.TransferService.envelopeResult(envelopeJsonResult) _
 
   lazy val streamTransferCall = transfer.TransferService.stream(
     fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine)(createS3Key) _
@@ -182,7 +180,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     }
   }
 
-  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeStatus) _
+  lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeResult) _
 
   object ControllerConfiguration extends ControllerConfig {
     lazy val controllerConfigs = configuration.underlying.as[Config]("controllers")

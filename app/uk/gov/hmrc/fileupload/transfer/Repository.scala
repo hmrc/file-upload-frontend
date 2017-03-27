@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
 import play.api.http.Status
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
@@ -41,16 +41,18 @@ object Repository {
     }
   }
 
-  def envelopeStatus(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wSClient: WSClient)(envelopeId: EnvelopeId)
-                    (implicit executionContext: ExecutionContext): Future[EnvelopeStatusResult] = {
-
+  def envelopeDetail(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]),
+                     baseUrl: String, wSClient: WSClient)
+                    (envelopeId: EnvelopeId)
+                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] = {
     auditedHttpCall(wSClient.url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}").withMethod("GET")).map {
-      case Xor.Left(error) => Xor.left(EnvelopeStatusServiceError(envelopeId, error.message))
+      case Xor.Left(error) => Xor.left(EnvelopeDetailServiceError(envelopeId, error.message))
       case Xor.Right(response) => response.status match {
-        case Status.OK => Xor.right((Json.parse(response.body) \ "status").as[String])
-        case Status.NOT_FOUND => Xor.left(EnvelopeStatusNotFoundError(envelopeId))
-        case _ => Xor.left(EnvelopeStatusServiceError(envelopeId, response.body))
+        case Status.OK => Xor.right(Json.parse(response.body))
+        case Status.NOT_FOUND => Xor.left(EnvelopeDetailNotFoundError(envelopeId))
+        case _ => Xor.left(EnvelopeDetailServiceError(envelopeId, response.body))
       }
     }
   }
+
 }

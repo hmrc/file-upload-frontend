@@ -44,7 +44,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   def receive = {
     case e: QuarantineFile =>
-      val fileStored = FileInQuarantineStored(e.id, e.fileId, e.fileRefId, e.created, e.name, e.contentType, e.metadata)
+      val fileStored = FileInQuarantineStored(e.id, e.fileId, e.fileRefId, e.created, e.name, e.fileLength, e.contentType, e.metadata)
       outstandingScans = outstandingScans enqueue fileStored
       scanNext()
 
@@ -55,7 +55,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   def receiveWhenScanning: Receive = {
     case e: QuarantineFile =>
-      val fileStored = FileInQuarantineStored(e.id, e.fileId, e.fileRefId, e.created, e.name, e.contentType, e.metadata)
+      val fileStored = FileInQuarantineStored(e.id, e.fileId, e.fileRefId, e.created, e.name, e.fileLength, e.contentType, e.metadata)
       outstandingScans = outstandingScans enqueue fileStored
 
     case e: VirusScanRequested =>

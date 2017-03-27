@@ -38,17 +38,15 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
-  val MAX_FILE_SIZE_IN_BYTES = 1024 * 1024 * 11
-
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
     withValidEnvelope(envelopeId) {
-      upload(envelopeId, fileId)
+      setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
     }
 
-  def upload(envelopeId: EnvelopeId, fileId: FileId) =
-    Action.async(parse.maxLength(MAX_FILE_SIZE_IN_BYTES, uploadParser())) { implicit request =>
+  def upload(maxAllowedFileSize: Long)(envelopeId: EnvelopeId, fileId: FileId) = {
+    Action.async(parse.maxLength(maxAllowedFileSize, uploadParser())) { implicit request =>
       request.body match {
-        case Left(maxSizeExceeded) => Future.successful(EntityTooLarge)
+        case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
           val numberOfAttachedFiles = formData.files.size
           if (numberOfAttachedFiles == 1) {
@@ -58,7 +56,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
               val fileRefId = FileRefId(uploadResult.getVersionId)
               commandHandler.notify(QuarantineFile(
                 envelopeId, fileId, fileRefId, created = now(), name = file.filename,
-                contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))).map {
+                contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData))).map {
                 case Xor.Right(_) => Ok
                 case Xor.Left(e) => Status(e.statusCode)(e.reason)
               }
@@ -68,7 +66,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
           }
       }
     }
-
+  }
 }
 
 object FileUploadController {
@@ -83,7 +81,6 @@ object FileUploadController {
     } else {
       Json.obj()
     }
-
     metadata
   }
 }
