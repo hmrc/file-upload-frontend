@@ -17,16 +17,18 @@
 package uk.gov.hmrc.fileupload.s3
 
 import com.typesafe.config.ConfigFactory
+import play.api.Environment
 
-class AwsConfig {
+class AwsConfig(env: Environment) {
   protected val config = ConfigFactory.load()
+  def mode = play.api.Play.current.mode
   def quarantineBucketName: String = config.getString("aws.s3.bucket.upload.quarantine")
   def transientBucketName: String = config.getString("aws.s3.bucket.upload.transient")
   def accessKeyId: String = config.getString("aws.access.key.id")
   def secretAccessKey: String = config.getString("aws.secret.access.key")
   def envSubdir: String = config.getString("aws.s3.bucket.env-subdir")
   def endpoint: Option[String] = {
-    val path = "aws.service_endpoint"
+    val path = s"${env.mode}.aws.service_endpoint"
     if (config.hasPath(path)) {
       Some(config.getString(path))
     } else

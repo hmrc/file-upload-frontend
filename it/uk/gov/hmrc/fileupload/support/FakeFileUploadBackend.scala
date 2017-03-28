@@ -24,6 +24,11 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
     backend.addStubMapping(
       post(urlPathMatching("/file-upload/events/*"))
         .willReturn(aResponse().withStatus(Status.OK))
+        .build()) //commands
+
+    backend.addStubMapping(
+      post(urlPathMatching("/file-upload/commands/*"))
+        .willReturn(aResponse().withStatus(Status.OK))
         .build())
   }
 
@@ -82,12 +87,12 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
       backend.findAll(putRequestedFor(urlPathMatching(fileContentUrl(envelopeId, fileId)))).asScala.headOption
     }
 
-    def quarantinedEventTriggered() = {
-      backend.verify(postRequestedFor(urlEqualTo("/file-upload/events/FileInQuarantineStored")))
+    def quarantineFileCommandTriggered() = {
+      backend.verify(postRequestedFor(urlEqualTo("/file-upload/commands/quarantine-file")))
     }
 
-    def fileScannedEventTriggered() = {
-      backend.verify(postRequestedFor(urlEqualTo("/file-upload/events/FileScanned")))
+    def scanFileCommandTriggered() = {
+      backend.verify(postRequestedFor(urlEqualTo("/file-upload/commands/mark-file-as-clean")))
     }
 
     private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) = {

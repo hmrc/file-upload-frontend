@@ -14,7 +14,6 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
     val envelopeId = anyEnvelopeId
 
     scenario("transfer a file to the back-end") {
-      pending
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
@@ -22,12 +21,15 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
 
       result.status should be(200)
 
-      Wiremock.quarantinedEventTriggered()
+      Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.fileScannedEventTriggered()
+        Wiremock.scanFileCommandTriggered()
       }(PatienceConfig(timeout = Span(30, Seconds)))
       eventually {
-        Wiremock.uploadedFile(envelopeId, fileId).map(_.getBodyAsString) shouldBe Some("someTextContents")
+        val res = download(envelopeId, fileId)
+        res.status shouldBe 200
+        res.body shouldBe "someTextContents"
+
       }(PatienceConfig(timeout = Span(30, Seconds)))
     }
 
@@ -46,17 +48,17 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
 
     scenario("""Ensure we continue to allow uploading if envelope is in "OPEN" state"""") {
 
-      pending
+      val secondFileId = anyFileId
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
 
-      val repository = new ChunksMongoRepository(mongo)
-      repository.removeAll().futureValue
-      def numberOfChunks = repository.findAll().futureValue.size
-      numberOfChunks shouldBe 0
-
-      val result = uploadDummyFile(envelopeId, fileId)
+      val result = uploadDummyFile(envelopeId, secondFileId)
       result.status should be(200)
-      numberOfChunks should be > 0
+
+      eventually {
+        val res = download(envelopeId, secondFileId)
+        res.status shouldBe 200
+
+      }(PatienceConfig(timeout = Span(30, Seconds)))
     }
 
   }
