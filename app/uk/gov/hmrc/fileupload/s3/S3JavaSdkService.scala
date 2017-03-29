@@ -32,8 +32,8 @@ import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import play.api.Logger
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service._
 
@@ -67,6 +67,12 @@ trait S3Service {
   def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult]
 
   def getFileLengthFromQuarantine(key: String, versionId: String): Long
+
+  def getBucketProperties(bucketName: String): JsValue
+
+  def getQuarantineBucketProperties = getBucketProperties(awsConfig.quarantineBucketName)
+
+  def getTransientBucketProperties = getBucketProperties(awsConfig.transientBucketName)
 }
 
 object S3Service {
@@ -191,6 +197,13 @@ class S3JavaSdkService extends S3Service {
     val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key, versionId, awsConfig.transientBucketName, key)
     copyRequest.setNewObjectMetadata(objectMetadataWithServerSideEncryption)
     s3Client.copyObject(copyRequest)
+  }
+
+  def getBucketProperties(bucketName: String) = {
+    val versioningStatus = s3Client.getBucketVersioningConfiguration(bucketName).getStatus
+    Json.obj(
+      "versioningStatus" -> versioningStatus
+    )
   }
 
 }

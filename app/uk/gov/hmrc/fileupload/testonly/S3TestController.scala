@@ -94,4 +94,12 @@ trait S3TestController { self: Controller =>
 
   }
 
+  def getQuarantineProperties = Action {
+    Ok(s3Service.getQuarantineBucketProperties)
+  }
+
+  def getTransientProperties = Action {
+    Ok(s3Service.getTransientBucketProperties)
+  }
+
 }
