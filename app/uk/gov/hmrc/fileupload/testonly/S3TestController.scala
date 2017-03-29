@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload.testonly
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.s3.model.CopyObjectResult
 import com.amazonaws.services.s3.transfer.model.UploadResult
+import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.mvc.{Action, Controller, ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.cacheFileInMemory
@@ -80,7 +81,8 @@ trait S3TestController { self: Controller =>
   def s3downloadFileT(fileName: String) = s3downloadFile(fileName, transientBucketName)
 
   def s3downloadFile(fileName: String, bucket: String) = Action { req =>
-    val result = s3Service.download(transientBucketName, S3KeyName(fileName))
+    Logger.info(s"downloading $fileName from bucket: $bucket")
+    val result = s3Service.download(bucket, S3KeyName(fileName))
 
     Result(
       header = ResponseHeader(200, Map.empty),
