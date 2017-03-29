@@ -28,8 +28,8 @@ DELETE      /file-upload/test-only/transfer/delete-envelope/:envelopeId         
 GET         /file-upload/test-only/s3/quarantine/files                                          uk.gov.hmrc.fileupload.testonly.TestOnlyController.filesInQuarantine()
 GET         /file-upload/test-only/s3/transient/files                                           uk.gov.hmrc.fileupload.testonly.TestOnlyController.filesInTransient()
 POST        /file-upload/test-only/s3/upload-test-file-quarantine/:fileName                     uk.gov.hmrc.fileupload.testonly.TestOnlyController.uploadFile(fileName: String)
-GET         /file-upload/test-only/s3/download/q/:fileName                                        uk.gov.hmrc.fileupload.testonly.TestOnlyController.s3downloadFileQ(fileName: String)
-GET         /file-upload/test-only/s3/download/t/:fileName                                        uk.gov.hmrc.fileupload.testonly.TestOnlyController.s3downloadFileT(fileName: String)
+GET         /file-upload/test-only/s3/download/q/*fileName                                      uk.gov.hmrc.fileupload.testonly.TestOnlyController.s3downloadFileQ(fileName: String)
+GET         /file-upload/test-only/s3/download/t/*fileName                                      uk.gov.hmrc.fileupload.testonly.TestOnlyController.s3downloadFileT(fileName: String)
 GET         /file-upload/test-only/s3/copy-to-transient/:fileName/:versionId                    uk.gov.hmrc.fileupload.testonly.TestOnlyController.copyFromQtoT(fileName: String, versionId: String)
 
 # Add all the application routes to the prod.routes file
