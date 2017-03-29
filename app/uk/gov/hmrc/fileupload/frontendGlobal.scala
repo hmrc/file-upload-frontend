@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
+import java.util.concurrent.Executors
 import javax.inject.Provider
 
 import akka.actor.ActorRef
@@ -31,11 +32,11 @@ import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.Request
 import play.api.{BuiltInComponentsFromContext, LoggerConfigurator, Mode}
 import play.modules.reactivemongo.ReactiveMongoComponentImpl
-import uk.gov.hmrc.fileupload.controllers.{AdminController, EnvelopeChecker, FileUploadController, UploadParser}
+import uk.gov.hmrc.fileupload.controllers._
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
-import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
-import uk.gov.hmrc.fileupload.notifier.{NotifierRepository, NotifierService}
+import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, InMemoryMultipartFileHandler, S3JavaSdkService, S3Key}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
@@ -49,7 +50,7 @@ import uk.gov.hmrc.play.graphite.GraphiteMetricsImpl
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class ApplicationLoader extends play.api.ApplicationLoader {
@@ -71,7 +72,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   override lazy val runModeConfiguration = configuration
 
   lazy val healthRoutes = new manualdihealth.Routes(httpErrorHandler, new uk.gov.hmrc.play.health.AdminController(configuration))
-  lazy val appRoutes = new app.Routes(httpErrorHandler, fileUploadController)
+  lazy val appRoutes = new app.Routes(httpErrorHandler, fileUploadController, fileDownloadController)
 
   lazy val adminRoutes = new admin.Routes(httpErrorHandler, adminController)
 
@@ -84,12 +85,21 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val router = if (configuration.getString("application.router").get == "testOnlyDoNotUseInAppConf.Routes") testRoutes else prodRoutes
 
-  lazy val fileUploadController = new FileUploadController(
-    withValidEnvelope = withValidEnvelope,
-    uploadParser = uploadParser,
-    notify = notifyAndPublish,
-    now = now
-  )
+  lazy val inMemoryBodyParser = InMemoryMultipartFileHandler.parser
+
+  lazy val s3Service = new S3JavaSdkService()
+
+  lazy val downloadFromTransient = s3Service.downloadFromTransient
+
+  lazy val uploadToQuarantine = s3Service.uploadToQuarantine
+
+  lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
+
+  lazy val fileDownloadController =
+    new FileDownloadController(downloadFromTransient, (e, f) => S3KeyName(createS3Key(e, f)), now)
+
+  lazy val fileUploadController =
+    new FileUploadController(withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 
@@ -99,29 +109,34 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val testRoutes = new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, testOnlyController, prodRoutes)
 
-  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(notify = notifyAndPublish)
+  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(commandHandler)
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
-  var notifyAndPublish: (AnyRef) => Future[NotifyResult] = _
   val now: () => Long = () => System.currentTimeMillis()
 
   subscribe = actorSystem.eventStream.subscribe
   publish = actorSystem.eventStream.publish
 
-  notifyAndPublish = NotifierService.notify(sendNotification, publish) _
+  val commandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
 
+  val getFileLength = {
+    (envelopeId: EnvelopeId, fileId: FileId, version: FileRefId) =>
+      s3Service.getFileLengthFromQuarantine(createS3Key(envelopeId, fileId), version.value)
+  }
   // scanner
-  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, notifyAndPublish), "scannerActor")
-  actorSystem.actorOf(TransferActor.props(subscribe, streamTransferCall), "transferActor")
+  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler), "scannerActor")
+  actorSystem.actorOf(TransferActor.props(subscribe, createS3Key, commandHandler, getFileLength, s3Service.copyFromQtoT), "transferActor")
 
   // db
   lazy val db = new ReactiveMongoComponentImpl(application, applicationLifecycle).mongoConnector.db
 
   // quarantine
   lazy val quarantineRepository = quarantine.Repository(db)
-  lazy val retrieveFile = quarantineRepository.retrieveFile _
-  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(retrieveFile) _
+  //lazy val retrieveFileFromQuarantineBucket = s3Service.retrieveFileFromQuarantine _
+  //TODO discuss alternative thread pools
+  lazy val ec = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(25))
+  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(s3Service.retrieveFileFromQuarantine)(_: String, _: String)(ec)
   lazy val recreateCollections = () => quarantineRepository.recreate()
   lazy val getFileInfo = quarantineRepository.retrieveFileMetaData _
   lazy val getFileChunksInfo = quarantineRepository.chunksCount _
@@ -149,25 +164,21 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val envelopeResult = transfer.TransferService.envelopeResult(envelopeJsonResult) _
 
   lazy val streamTransferCall = transfer.TransferService.stream(
-    fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine) _
+    fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine)(createS3Key) _
 
   // upload
   lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
 
   lazy val scanner: () => AvScanIteratee = new VirusScanner(configuration, environment).scanIteratee
-  lazy val scanBinaryData: (FileRefId) => Future[ScanResult] = {
+  lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
 
     val runStubClam = configuration.getConfig(s"${environment.mode}.clam.antivirus").flatMap(_.getBoolean("runStub")).getOrElse(false)
     if (runStubClam & (environment.mode == Mode.Dev || environment.mode == Mode.Test)) {
-      (_: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
+      (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
     } else {
-      ScanningService.scanBinaryData(scanner, getFileFromQuarantine)
+      ScanningService.scanBinaryData(scanner, getFileFromQuarantine)(createS3Key)
     }
   }
-
-  // notifier
-  //TODO: inject proper toConsumerUrl function
-  lazy val sendNotification = NotifierRepository.send(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeResult) _
 
@@ -177,6 +188,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   object LoggingFilter extends LoggingFilter {
     override def mat = materializer
+
     override def controllerNeedsLogging(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsLogging
   }
 
@@ -190,9 +202,11 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   object AuditFilter extends AuditFilter with AppName {
     override def mat = materializer
+
     override lazy val auditConnector = MicroserviceAuditConnector
 
     override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
+
     override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
   }
 

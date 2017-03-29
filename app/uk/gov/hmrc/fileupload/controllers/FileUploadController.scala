@@ -16,20 +16,14 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import cats.data.Xor
-import org.reactivestreams.Publisher
-import play.api.http.HttpEntity
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsString, Json}
-import play.api.libs.streams.Streams
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
-import uk.gov.hmrc.fileupload.fileupload._
-import uk.gov.hmrc.fileupload.notifier.NotifierService._
-import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
+import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
+import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
+import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
@@ -37,8 +31,10 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadController(withValidEnvelope: WithValidEnvelope,
-                           uploadParser: () => BodyParser[MultipartFormData[Future[JSONReadFile]]],
-                           notify: AnyRef => Future[NotifyResult],
+                           uploadParser: InMemoryMultiPartBodyParser,
+                           commandHandler: CommandHandler,
+                           uploadToQuarantine: UploadToQuarantine,
+                           createS3Key: (EnvelopeId, FileId) => String,
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
@@ -55,21 +51,14 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
           val numberOfAttachedFiles = formData.files.size
           if (numberOfAttachedFiles == 1) {
             val file = formData.files.head
-            file.ref.flatMap { fileRef =>
-              val fileRefId = fileRef.id match {
-                case JsString(value) => FileRefId(value)
-                case _ => throw new Exception("invalid reference")
-              }
-              notify(FileInQuarantineStored(
-                envelopeId, fileId, fileRefId, created = fileRef.uploadDate.getOrElse(now()), name = file.filename, fileRef.length,
-                contentType = file.contentType.getOrElse(""), metadata = metadataAsJson(formData))) map {
+            val key = createS3Key(envelopeId, fileId)
+            uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
+              val fileRefId = FileRefId(uploadResult.getVersionId)
+              commandHandler.notify(QuarantineFile(
+                envelopeId, fileId, fileRefId, created = now(), name = file.filename,
+                contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData))).map {
                 case Xor.Right(_) => Ok
-                case Xor.Left(e) =>
-                  val bodyEnumerator = Enumerator(ByteString.fromArray(e.reason.getBytes))
-                  val bodyPublisher: Publisher[ByteString] = Streams.enumeratorToPublisher(bodyEnumerator)
-                  val bodySource: Source[ByteString, _] = Source.fromPublisher(bodyPublisher)
-                  val entity: HttpEntity = HttpEntity.Streamed(bodySource, None, None)
-                  Result(ResponseHeader(e.statusCode), entity)
+                case Xor.Left(e) => Status(e.statusCode)(e.reason)
               }
             }
           } else {
@@ -81,8 +70,7 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
 }
 
 object FileUploadController {
-
-  def metadataAsJson(formData: MultipartFormData[Future[JSONReadFile]]): JsObject = {
+  def metadataAsJson(formData: MultipartFormData[FileCachedInMemory]): JsObject = {
     val metadataParams = formData.dataParts.collect {
       case (key, singleValue :: Nil) => key -> JsString(singleValue)
       case (key, values: Seq[String]) if values.nonEmpty => key -> Json.toJson(values)

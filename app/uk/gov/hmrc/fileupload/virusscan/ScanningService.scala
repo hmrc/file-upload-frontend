@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.virusscan
 import cats.data.Xor
 import play.api.libs.iteratee.Iteratee
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
-import uk.gov.hmrc.fileupload.FileRefId
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,11 +36,15 @@ object ScanningService {
 
   type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
 
-  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]], getFile: (FileRefId) => Future[QuarantineDownloadResult])
-                    (fileRefId: FileRefId)
-                    (implicit ec: ExecutionContext): Future[ScanResult] =
-    getFile(fileRefId).flatMap {
+  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]],
+                     getFile: (String, String) => Future[QuarantineDownloadResult])
+                    (s3KeyAppender: (EnvelopeId, FileId) => String)
+                    (envelopeId: EnvelopeId, fileId : FileId, fileRefId: FileRefId)
+                    (implicit ec: ExecutionContext): Future[ScanResult] = {
+    val appendedKey = s3KeyAppender(envelopeId, fileId)
+    getFile(appendedKey, fileRefId.value).flatMap {
       case Xor.Right(file) => file.streamTo(scanner()).flatMap(identity)
       case Xor.Left(e) => Future.successful(Xor.Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
     }
+  }
 }

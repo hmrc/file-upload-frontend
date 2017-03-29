@@ -21,9 +21,9 @@ import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.mvc.Request
+import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
-import uk.gov.hmrc.fileupload._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -59,11 +59,12 @@ object TransferService {
   def stream(baseUrl: String,
              publish: (AnyRef) => Unit,
              toHttpBodyStreamer: (String, EnvelopeId, FileId, FileRefId, Request[_]) => Iteratee[Array[Byte], HttpStreamingBody.Result],
-             getFile: (FileRefId) => Future[QuarantineDownloadResult])
+             getFile: (String, String) => Future[QuarantineDownloadResult])
+            (s3KeyAppender: (EnvelopeId, FileId) => String)
             (envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId)
             (implicit executionContext: ExecutionContext): Future[TransferResult] = {
-
-    getFile(fileRefId) flatMap {
+    val appendedKey = s3KeyAppender(envelopeId, fileId)
+    getFile(appendedKey, fileRefId.value) flatMap {
       case Xor.Right(file) =>
         // TODO check request
         val iterator = toHttpBodyStreamer(baseUrl, envelopeId, fileId, fileRefId, null)

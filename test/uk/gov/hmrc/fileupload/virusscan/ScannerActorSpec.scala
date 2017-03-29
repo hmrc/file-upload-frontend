@@ -24,18 +24,18 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
-import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
+import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, QuarantineFile}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.ScanResultFileClean
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSender with UnitSpec with Matchers with Eventually with StopSystemAfterAll {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(1, Seconds)), interval = scaled(Span(1, Seconds)))
+  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)), interval = scaled(Span(2, Seconds)))
 
   "ScannerActor" should {
     "scan files" in new ScanFixture {
@@ -65,29 +65,31 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
 
     var collector = List.empty[Any]
 
-    def scanBinaryData(fileRefId: FileRefId) = {
+    def scanBinaryData(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
       collector = collector.::(fileRefId)
       Future.successful(Xor.right(ScanResultFileClean))
     }
 
-    def notify_(ref: AnyRef) = {
-      collector = collector.::(ref)
-      Future.successful(Xor.Right(NotifySuccess))
+    val commandHandler = new CommandHandler {
+      def notify(command: AnyRef)(implicit ec: ExecutionContext) = {
+        collector = collector.::(command)
+        Future.successful(Xor.Right(NotifySuccess))
+      }
     }
 
     def fillEvents(n: Int) = List.fill(n) {
-      FileInQuarantineStored(EnvelopeId(), FileId(), FileRefId(), 0, "name", 10, "pdf", Json.obj())
+      QuarantineFile(EnvelopeId(), FileId(), FileRefId(), 0, "name", "pdf", 10, Json.obj())
     }
 
-    def expectedCollector(events: List[FileInQuarantineStored]): List[Any] =
+    def expectedCollector(events: List[QuarantineFile]): List[Any] =
       events.reverse.flatMap(e => {
-        List(FileScanned(e.envelopeId, e.fileId, e.fileRefId, hasVirus = false), e.fileRefId)
+        List(MarkFileAsClean(e.id, e.fileId, e.fileRefId), e.fileRefId)
       })
 
-    val actor = system.actorOf(ScannerActor.props(subscribe, scanBinaryData, notify_))
+    val actor = system.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler))
 
-    def send(eventsToSend: List[FileInQuarantineStored]) =
+    def send(eventsToSend: List[QuarantineFile]) =
       eventsToSend.foreach {
         actor ! _
     }

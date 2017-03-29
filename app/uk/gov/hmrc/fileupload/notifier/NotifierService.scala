@@ -18,10 +18,7 @@ package uk.gov.hmrc.fileupload.notifier
 
 import cats.data.Xor
 import play.api.Logger
-import play.api.libs.json.Json
-import uk.gov.hmrc.fileupload.notifier.NotifierRepository.Notification
-import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
-import uk.gov.hmrc.fileupload.virusscan.FileScanned
+import play.api.libs.json.Writes
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,30 +32,33 @@ object NotifierService {
 
   val notifySuccess = Xor.right(NotifySuccess)
 
-  def notify(send: Notification => Future[NotifierRepository.Result], publish: AnyRef => Unit)
-            (event: AnyRef)
+  def notify(send: BackendCommand => Future[NotifierRepository.Result], publish: AnyRef => Unit)
+            (command: AnyRef)
             (implicit executionContext: ExecutionContext): Future[NotifyResult] = {
-    event match {
-      case e: FileInQuarantineStored =>
-        val result = sendNotification(send, Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
-        result.map(r => r.foreach(_ => publish(event)))
-        result
-      case e: FileScanned =>
-        val result = sendNotification(send, Notification(e.envelopeId, e.fileId, e.getClass.getSimpleName, Json.toJson(e)))
-        result.map(r => r.foreach(_ => publish(event)))
-        result
+
+    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T) = {
+      val result = sendNotification(send, backendCommand)
+      result.map(r => r.foreach(_ => publish(command)))
+      result
+    }
+
+    command match {
+      case c: QuarantineFile => sendCommandToBackendAndPublish(c)
+      case c: MarkFileAsClean => sendCommandToBackendAndPublish(c)
+      case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c)
+      case c: StoreFile => sendCommandToBackendAndPublish(c)
       case _ =>
-        publish(event)
+        publish(command)
         Future.successful(notifySuccess)
     }
   }
 
-  private def sendNotification(send: Notification => Future[NotifierRepository.Result], notification: Notification)
+  private def sendNotification(send: BackendCommand => Future[NotifierRepository.Result], c: BackendCommand)
                               (implicit executionContext: ExecutionContext): Future[NotifyResult] =
-    send(notification).map {
+    send(c).map {
       case Xor.Right(_) => Xor.right(NotifySuccess)
       case Xor.Left(e) =>
-        Logger.warn(s"Sending event to external system failed ${e.statusCode} ${e.reason} ${notification}")
+        Logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
         Xor.left(NotifyError(e.statusCode, e.reason))
     }
 

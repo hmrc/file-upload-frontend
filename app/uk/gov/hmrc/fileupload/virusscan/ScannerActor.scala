@@ -21,42 +21,42 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.pipe
 import cats.data.Xor
 import play.api.Logger
-import uk.gov.hmrc.fileupload.{Event, FileRefId}
-import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifyResult
+import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
+import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
 
 import scala.collection.immutable.Queue
 import scala.concurrent.{ExecutionContext, Future}
 
 class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                   scanBinaryData: (FileRefId) => Future[ScanResult],
-                   notify: (AnyRef) => Future[NotifyResult])
+                   scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
+                   commandHandler: CommandHandler)
                   (implicit executionContext: ExecutionContext) extends Actor {
 
   private var outstandingScans = Queue.empty[Event]
   private var scanningEvent: Option[Event] = None
 
   override def preStart = {
-    subscribe(self, classOf[FileInQuarantineStored])
+    subscribe(self, classOf[QuarantineFile])
     subscribe(self, classOf[VirusScanRequested])
   }
 
   def receive = {
-    case e: FileInQuarantineStored =>
-      outstandingScans = outstandingScans enqueue e
+    case e: QuarantineFile =>
+      val fileStored = FileInQuarantineStored(e.id, e.fileId, e.fileRefId, e.created, e.name, e.fileLength, e.contentType, e.metadata)
+      outstandingScans = outstandingScans enqueue fileStored
       scanNext()
 
     case e: VirusScanRequested =>
       outstandingScans = outstandingScans enqueue e
       scanNext()
-
-    case _ =>
   }
 
   def receiveWhenScanning: Receive = {
-    case e: FileInQuarantineStored =>
-      outstandingScans = outstandingScans enqueue e
+    case e: QuarantineFile =>
+      val fileStored = FileInQuarantineStored(e.id, e.fileId, e.fileRefId, e.created, e.name, e.fileLength, e.contentType, e.metadata)
+      outstandingScans = outstandingScans enqueue fileStored
 
     case e: VirusScanRequested =>
       outstandingScans = outstandingScans enqueue e
@@ -92,7 +92,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
         scanningEvent = Some(e)
 
         Logger.info(s"Scan $e")
-        scanBinaryData(e.fileRefId)
+        scanBinaryData(e.envelopeId, e.fileId, e.fileRefId)
           .map(ScanExecuted(e.fileRefId, _)) pipeTo self
 
       case None =>
@@ -103,15 +103,20 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   def notify(hasVirus: Boolean): Unit =
     scanningEvent.foreach { e =>
-      notify(FileScanned(e.envelopeId, e.fileId, e.fileRefId, hasVirus = hasVirus))
+      val command = if(hasVirus) {
+        MarkFileAsInfected(e.envelopeId, e.fileId, e.fileRefId)
+      } else {
+        MarkFileAsClean(e.envelopeId, e.fileId, e.fileRefId)
+      }
+      commandHandler.notify(command)
     }
 }
 
 object ScannerActor {
 
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
-            scanBinaryData: (FileRefId) => Future[ScanResult],
-            notify: (AnyRef) => Future[NotifyResult])
+            scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
+            commandHandler: CommandHandler)
            (implicit executionContext: ExecutionContext) =
-    Props(new ScannerActor(subscribe = subscribe, scanBinaryData = scanBinaryData, notify = notify))
+    Props(new ScannerActor(subscribe, scanBinaryData, commandHandler))
 }

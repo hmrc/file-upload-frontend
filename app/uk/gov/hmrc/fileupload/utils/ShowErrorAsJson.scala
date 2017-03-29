@@ -42,6 +42,7 @@ class ShowErrorAsJson(environment: Environment, configuration: Configuration,
   implicit val erFormats = Json.format[ErrorResponse]
 
   override def onServerError(request: RequestHeader, ex: Throwable) = {
+    Logger.error(ex.getMessage, ex)
     Future.successful {
       val (code, message) = ex match {
         case e: HttpException => (e.responseCode, e.getMessage)
