@@ -24,13 +24,15 @@ import akka.stream.IOResult
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.client.builder.ExecutorFactory
 import com.amazonaws.event.{ProgressEvent, ProgressEventType, ProgressListener}
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
-import com.amazonaws.services.s3.{AmazonS3, AmazonS3Client, AmazonS3ClientBuilder}
-import play.api.Environment
+import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service._
@@ -88,20 +90,23 @@ case class Metadata(
 
 case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
 
-class S3JavaSdkService(environment: Environment = Environment.simple()) extends S3Service {
-  val awsConfig = new AwsConfig(environment)
+class S3JavaSdkService extends S3Service {
+  val awsConfig = new AwsConfig()
 
   val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
 
   val s3Builder = AmazonS3ClientBuilder
     .standard()
-    .withCredentials(new AWSStaticCredentialsProvider(credentials)).build()
+    .withCredentials(new AWSStaticCredentialsProvider(credentials))
 
-  val s3Client = new AmazonS3Client(credentials)
-  s3Client.setRegion(Region.EU_London.toAWSRegion)
-  s3Client.setEndpoint(awsConfig.endpoint.getOrElse("http://127.0.0.1:8001"))
+  val s3Client = awsConfig.endpoint.fold(
+    s3Builder.withRegion(Regions.EU_WEST_2)
+  ) { endpoint =>
+    s3Builder.withEndpointConfiguration(new EndpointConfiguration(endpoint, "local-test"))
+  }.build()
 
-  val transferManager = TransferManagerBuilder.standard()
+  val transferManager =
+    TransferManagerBuilder.standard()
       .withExecutorFactory(new ExecutorFactory {
         def newExecutor() = Executors.newFixedThreadPool(25)
       })
@@ -148,7 +153,6 @@ class S3JavaSdkService(environment: Environment = Environment.simple()) extends 
     s3Client.getObject(bucketName, key.value)
 
   def download(bucketName: String, key: S3KeyName, versionId: String) = downloadByObject(objectByKeyVersion(bucketName, key, versionId))
-
   def download(bucketName: String, key: S3KeyName) = downloadByObject(objectByKey(bucketName, key))
 
 

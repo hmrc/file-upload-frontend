@@ -34,9 +34,9 @@ import play.api.{BuiltInComponentsFromContext, LoggerConfigurator, Mode}
 import play.modules.reactivemongo.ReactiveMongoComponentImpl
 import uk.gov.hmrc.fileupload.controllers._
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
-import uk.gov.hmrc.fileupload.notifier.{CommandHandler, CommandHandlerImpl}
+import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
-import uk.gov.hmrc.fileupload.s3._
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, InMemoryMultipartFileHandler, S3JavaSdkService, S3Key}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
@@ -87,7 +87,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val inMemoryBodyParser = InMemoryMultipartFileHandler.parser
 
-  lazy val s3Service = new S3JavaSdkService(environment)
+  lazy val s3Service = new S3JavaSdkService()
 
   lazy val downloadFromTransient = s3Service.downloadFromTransient
 
@@ -118,7 +118,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   subscribe = actorSystem.eventStream.subscribe
   publish = actorSystem.eventStream.publish
 
-  val commandHandler:CommandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
+  val commandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
 
   val getFileLength = {
     (envelopeId: EnvelopeId, fileId: FileId, version: FileRefId) =>
