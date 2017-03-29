@@ -43,7 +43,7 @@ POST    /file-upload/upload/envelopes/{envelope-Id}/files/{file-Id}
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Ok  | 200   | File successfully uploaded.  |
-| Bad Request  | 400   | Request must have exactly one file attached. |
+| Bad Request  | 400   | Explanation what went wrong, e.g.: Request must have exactly one file attached. |
 | Not Found | 404   |  Envelope not found. |
 | Entity Too Large  | 413   |  File size exceeds limit to upload.  |
 | Unsupported Media Type  | 415   |  File type other than the supported type.  |
