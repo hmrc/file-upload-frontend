@@ -50,7 +50,11 @@ trait S3TestController { self: Controller =>
     Ok.chunked(header.concat(files))
   }
 
-  def uploadFile(fileName: String) = Action.async(parse.multipartFormData(cacheFileInMemory)) { req =>
+  def uploadToQuarantine(fileName: String) = uploadFile(fileName, quarantineBucketName)
+
+  def uploadToTransient(fileName: String) = uploadFile(fileName, transientBucketName)
+
+  def uploadFile(fileName: String, bucketName: String) = Action.async(parse.multipartFormData(cacheFileInMemory)) { req =>
     val numberOfFiles = req.body.files.size
     if (numberOfFiles == 1) {
       val uploadedFile = req.body.files.head.ref
@@ -60,7 +64,7 @@ trait S3TestController { self: Controller =>
         s"key $getKey, version: $getVersionId, eTag: $getETag"
       }
 
-      s3Service.upload(quarantineBucketName, fileName, uploadedFile.inputStream, uploadedFile.size)
+      s3Service.upload(bucketName, fileName, uploadedFile.inputStream, uploadedFile.size)
         .map(r => Ok(formatResult(r)))
     } else {
      Future.successful(BadRequest("Expected exactly one file to be attached"))
@@ -77,12 +81,15 @@ trait S3TestController { self: Controller =>
     }
   }
   
-  def s3downloadFileQ(fileName: String) = s3downloadFile(fileName, quarantineBucketName)
-  def s3downloadFileT(fileName: String) = s3downloadFile(fileName, transientBucketName)
+  def s3downloadFileQ(fileName: String, version: Option[String]) = s3downloadFile(quarantineBucketName, fileName, version)
+  def s3downloadFileT(fileName: String, version: Option[String]) = s3downloadFile(transientBucketName, fileName, version)
 
-  def s3downloadFile(fileName: String, bucket: String) = Action { req =>
+  def s3downloadFile(bucket: String, fileName: String, version: Option[String]) = Action { req =>
     Logger.info(s"downloading $fileName from bucket: $bucket")
-    val result = s3Service.download(bucket, S3KeyName(fileName))
+    val result = version match {
+      case Some(v) => s3Service.download(bucket, S3KeyName(fileName), v)
+      case None => s3Service.download(bucket, S3KeyName(fileName))
+    }
 
     Result(
       header = ResponseHeader(200, Map.empty),
