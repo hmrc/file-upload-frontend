@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.s3.S3KeyName
@@ -33,6 +34,8 @@ class FileDownloadController(
   def download(envelopeId: EnvelopeId, fileId: FileId) = Action { implicit request =>
     val key = createS3Key(envelopeId, fileId)
     val result = downloadFromTransient(key)
+
+    Logger.info(s"download result: contentType: ${result.metadata.contentType} &  length: ${result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")
 
     Result(
       header = ResponseHeader(200, Map.empty),
