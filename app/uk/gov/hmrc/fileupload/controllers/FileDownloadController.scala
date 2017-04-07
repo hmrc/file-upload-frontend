@@ -32,6 +32,7 @@ class FileDownloadController(
   (implicit executionContext: ExecutionContext) extends Controller {
 
   def download(envelopeId: EnvelopeId, fileId: FileId) = Action { implicit request =>
+    Logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
     val key = createS3Key(envelopeId, fileId)
     val result = downloadFromTransient(key)
 
