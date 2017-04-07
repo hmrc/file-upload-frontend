@@ -32,6 +32,7 @@ import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.fileupload.quarantine.FileData
@@ -143,6 +144,7 @@ class S3JavaSdkService extends S3Service {
   }
 
   private def downloadByObject(s3Object: S3Object) = {
+    Logger.info(s"Downloading $s3Object from S3")
     StreamWithMetadata(
       StreamConverters
         .fromInputStream(() => s3Object.getObjectContent),
@@ -152,8 +154,10 @@ class S3JavaSdkService extends S3Service {
       ))
   }
 
-  def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): S3Object =
+  def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): S3Object = {
+    Logger.info(s"Retrieving an object from $bucketName with $S3KeyName and $versionId")
     s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId))
+  }
 
   def objectByKey(bucketName: String, key: S3KeyName): S3Object =
     s3Client.getObject(bucketName, key.value)
@@ -194,6 +198,7 @@ class S3JavaSdkService extends S3Service {
   }
 
   def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult] = Try {
+    Logger.info(s"Copying a file key $key and version: $versionId")
     val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key, versionId, awsConfig.transientBucketName, key)
     copyRequest.setNewObjectMetadata(objectMetadataWithServerSideEncryption)
     s3Client.copyObject(copyRequest)
@@ -205,7 +210,6 @@ class S3JavaSdkService extends S3Service {
       "versioningStatus" -> versioningStatus
     )
   }
-
 }
 
 class S3FilesIterator(s3Client: AmazonS3, bucketName: String) extends Iterator[Seq[S3ObjectSummary]] {
