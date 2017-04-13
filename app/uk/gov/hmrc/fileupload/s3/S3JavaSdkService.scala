@@ -89,11 +89,11 @@ case class S3KeyName(value: String) extends AnyVal {
 }
 
 case class Metadata(
-  contentType: String,
-  contentLength: Long,
-  versionId: String = "",
-  ETag: String = "",
-  s3Metadata: Option[Map[String, String]] = None)
+                     contentType: String,
+                     contentLength: Long,
+                     versionId: String = "",
+                     ETag: String = "",
+                     s3Metadata: Option[Map[String, String]] = None)
 
 case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
 
@@ -130,7 +130,7 @@ class S3JavaSdkService extends S3Service {
     getFileLength(awsConfig.quarantineBucketName, key, versionId)
 
   def getFileLength(bucketName: String, key: String, versionId: String): Long = {
-    getObjectMetadata(bucketName,key,versionId).getContentLength
+    getObjectMetadata(bucketName, key, versionId).getContentLength
   }
 
   def getObjectMetadata(bucketName: String, key: String, versionId: String): ObjectMetadata = {

@@ -54,9 +54,9 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
             val key = createS3Key(envelopeId, fileId)
             uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
               val fileRefId = FileRefId(uploadResult.getVersionId)
-              commandHandler.notify(QuarantineFile(
-                envelopeId, fileId, fileRefId, created = now(), name = file.filename,
-                contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData))).map {
+              commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
+                contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
+                .map {
                 case Xor.Right(_) => Ok
                 case Xor.Left(e) => Status(e.statusCode)(e.reason)
               }

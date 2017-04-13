@@ -105,7 +105,8 @@ private object AppDependencies {
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope,
-        "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope
+        "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope,
+        "io.findify" %% "s3mock" % "0.1.9" % scope
       )
     }.test
   }
