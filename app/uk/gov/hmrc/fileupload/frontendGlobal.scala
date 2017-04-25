@@ -87,7 +87,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val inMemoryBodyParser = InMemoryMultipartFileHandler.parser
 
-  lazy val s3Service = new S3JavaSdkService()
+  lazy val s3Service = new S3JavaSdkService(configuration.underlying)
 
   lazy val downloadFromTransient = s3Service.downloadFromTransient
 
@@ -118,9 +118,9 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   subscribe = actorSystem.eventStream.subscribe
   publish = actorSystem.eventStream.publish
 
-  val commandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
+  lazy val commandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
 
-  val getFileLength = {
+  lazy val getFileLength = {
     (envelopeId: EnvelopeId, fileId: FileId, version: FileRefId) =>
       s3Service.getFileLengthFromQuarantine(createS3Key(envelopeId, fileId), version.value)
   }

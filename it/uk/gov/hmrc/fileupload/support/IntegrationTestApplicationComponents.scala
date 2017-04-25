@@ -41,7 +41,8 @@ trait IntegrationTestApplicationComponents extends OneServerPerSuite with MongoS
       "auditing.enabled" -> "false",
       "Test.clam.antivirus.runStub" -> "true",
       "Test.microservice.services.file-upload-backend.port" -> backendPort.toString,
-      "mongodb.uri" -> s"mongodb://localhost:27017/$databaseName"
+      "mongodb.uri" -> s"mongodb://localhost:27017/$databaseName",
+      "aws.service_endpoint" -> "http://127.0.0.1:8001"
     ))
   }
 

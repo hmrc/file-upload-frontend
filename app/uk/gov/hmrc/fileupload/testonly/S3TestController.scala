@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload.testonly
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.s3.model.CopyObjectResult
 import com.amazonaws.services.s3.transfer.model.UploadResult
+import com.typesafe.config.ConfigFactory
 import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.mvc.{Action, Controller, ResponseHeader, Result}
@@ -33,7 +34,7 @@ import scala.util.{Failure, Success}
 
 trait S3TestController { self: Controller =>
 
-  val s3Service = new S3JavaSdkService()
+  val s3Service = new S3JavaSdkService(ConfigFactory.load())
   import s3Service.awsConfig._
 
   def filesInQuarantine() = listFilesInBucket(quarantineBucketName)

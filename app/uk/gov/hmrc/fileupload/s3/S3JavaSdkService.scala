@@ -97,8 +97,8 @@ case class Metadata(
 
 case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
 
-class S3JavaSdkService extends S3Service {
-  val awsConfig = new AwsConfig()
+class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Service {
+  val awsConfig = new AwsConfig(configuration)
 
   val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
 
