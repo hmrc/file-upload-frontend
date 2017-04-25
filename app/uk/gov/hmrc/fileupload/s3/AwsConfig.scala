@@ -16,10 +16,7 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import com.typesafe.config.ConfigFactory
-
-class AwsConfig {
-  protected val config = ConfigFactory.load()
+class AwsConfig(config: com.typesafe.config.Config) {
   def quarantineBucketName: String = config.getString("aws.s3.bucket.upload.quarantine")
   def transientBucketName: String = config.getString("aws.s3.bucket.upload.transient")
   def accessKeyId: String = config.getString("aws.access.key.id")
