@@ -53,7 +53,7 @@ object EnvelopeChecker {
           case Xor.Right(envelope) =>
             val status = (envelope \ "status").as[String]
             status match {
-              case "OPEN" => action(getMaxFileSizeFromEnvelope(envelope))(getFileTypesFromEnvelope(envelope))(rh)
+              case "OPEN" => action(getMaxFileSizeFromEnvelope(envelope))(getContentTypeFromEnvelope(envelope))(rh)
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
@@ -76,21 +76,15 @@ object EnvelopeChecker {
       }
   }
 
-  def getFileTypesFromEnvelope(envelope: JsValue): ContentType = {
+  def getContentTypeFromEnvelope(envelope: JsValue): ContentType = {
     val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
-    definedConstraints match {
-      case Some(constraints) => constraints.contentType match {
-        case Some(contentType) => contentType
-        case None => defaultContentTypes
-      }
-      case None => defaultContentTypes
-    }
+    definedConstraints.flatMap(_.contentType).getOrElse(defaultContentTypes)
   }
 
   def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
     getFormContentType.files match {
       case Nil => ""
-      case contentType => contentType.head.contentType match {
+      case file  => file.head.contentType match {
         case Some(fileContentType) => fileContentType
         case None => ""
       }
