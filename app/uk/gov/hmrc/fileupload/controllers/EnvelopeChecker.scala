@@ -23,9 +23,11 @@ import play.api.libs.iteratee.Done
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.Accumulator
 import play.api.mvc.Results._
-import play.api.mvc.{EssentialAction, RequestHeader, Result}
+import play.api.mvc.{EssentialAction, MultipartFormData, RequestHeader, Result}
 import uk.gov.hmrc.fileupload.EnvelopeId
+import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.quarantine.Constraints
+import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.utils.StreamsConverter
 
@@ -34,15 +36,17 @@ import scala.concurrent.{ExecutionContext, Future}
 object EnvelopeChecker {
 
   type FileSize = Long
-  type WithValidEnvelope = EnvelopeId => (FileSize => EssentialAction) => EssentialAction
+  type ContentType = String
+  type WithValidEnvelope = EnvelopeId => (FileSize => ContentType => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize = (10 * 1024 * 1024).toLong //bytes
+  val defaultContentTypes = "application/pdf,image/jpeg,application/xml"
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
-                       (action: FileSize => EssentialAction)
+                       (action: FileSize => ContentType => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
@@ -50,7 +54,7 @@ object EnvelopeChecker {
           case Xor.Right(envelope) =>
             val status = (envelope \ "status").as[String]
             status match {
-              case "OPEN" => action(getMaxFileSizeFromEnvelope(envelope))(rh)
+              case "OPEN" => action(getMaxFileSizeFromEnvelope(envelope))(getFileTypesFromEnevelope(envelope))(rh)
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
@@ -71,6 +75,32 @@ object EnvelopeChecker {
          }
          case None => defaultFileSize
       }
+  }
+
+  def getFileTypesFromEnevelope(envelope: JsValue): ContentType = {
+    val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
+    definedConstraints match {
+      case Some(constraints) => constraints.contentType match {
+        case Some(contentType) => contentType
+        case None => defaultContentTypes
+      }
+      case None => defaultContentTypes
+    }
+  }
+
+  def getFormContentType(getformContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
+    getformContentType.files match {
+      case Nil => defaultContentTypes
+      case contentType => contentType.head.contentType match {
+        case Some(fileContentType) => fileContentType
+        case None => defaultContentTypes
+      }
+    }
+  }
+
+  def containsContentType(formContentType: ContentType, envelopeContentType: ContentType): Boolean = {
+    val allowedContentTypes = envelopeContentType.split(",").toList
+    allowedContentTypes.contains(formContentType)
   }
 
   private def logAndReturn(statusCode: Int, problem: String)(implicit rh: RequestHeader) = {

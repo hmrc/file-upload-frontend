@@ -21,6 +21,7 @@ import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
@@ -40,26 +41,30 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
     withValidEnvelope(envelopeId) {
-      setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
+      setMaxFileSize => setContentType => upload(setMaxFileSize)(setContentType)(envelopeId, fileId)
     }
 
-  def upload(maxAllowedFileSize: Long)(envelopeId: EnvelopeId, fileId: FileId) = {
+  def upload(maxAllowedFileSize: Long)(contentType: String)(envelopeId: EnvelopeId, fileId: FileId) = {
     Action.async(parse.maxLength(maxAllowedFileSize, uploadParser())) { implicit request =>
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
           val numberOfAttachedFiles = formData.files.size
           if (numberOfAttachedFiles == 1) {
-            val file = formData.files.head
-            val key = createS3Key(envelopeId, fileId)
-            uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
-              val fileRefId = FileRefId(uploadResult.getVersionId)
-              commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
-                contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
-                .map {
-                case Xor.Right(_) => Ok
-                case Xor.Left(e) => Status(e.statusCode)(e.reason)
+            if (containsContentType(getFormContentType(formData), contentType)) {
+              val file = formData.files.head
+              val key = createS3Key(envelopeId, fileId)
+              uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
+                val fileRefId = FileRefId(uploadResult.getVersionId)
+                commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
+                  contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
+                  .map {
+                    case Xor.Right(_) => Ok
+                    case Xor.Left(e) => Status(e.statusCode)(e.reason)
+                  }
               }
+            } else {
+              Future.successful(UnsupportedMediaType(errorAsJson("Request must have exactly 1 file with a valid file type")))
             }
           } else {
             Future.successful(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
