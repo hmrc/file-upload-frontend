@@ -25,9 +25,8 @@ import play.api.libs.streams.Accumulator
 import play.api.mvc.Results._
 import play.api.mvc.{EssentialAction, MultipartFormData, RequestHeader, Result}
 import uk.gov.hmrc.fileupload.EnvelopeId
-import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload.quarantine.Constraints
-import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
+import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.utils.StreamsConverter
 
