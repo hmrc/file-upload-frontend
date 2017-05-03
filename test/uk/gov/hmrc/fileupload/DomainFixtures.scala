@@ -29,8 +29,10 @@ object DomainFixtures {
 
   def anyFile() = anyFileFor()
 
-  def temporaryTexFile(data: Option[String] = None) = {
-    val temporaryFile = java.io.File.createTempFile("tmp", ".txt")
+  def anyInvalidFile() = anyInvalidFileFor()
+
+  def temporaryFile(fileType: String, data: Option[String] = None) = {
+    val temporaryFile = java.io.File.createTempFile("tmp", fileType)
 
     data.foreach(FileUtils.writeStringToFile(temporaryFile, _))
 
@@ -38,7 +40,11 @@ object DomainFixtures {
     temporaryFile
   }
 
-  def anyFileFor(file: java.io.File = temporaryTexFile()) = {
+  def anyFileFor(file: java.io.File = temporaryFile(".pdf")) = {
+    File(null, 0, file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)))
+  }
+
+  def anyInvalidFileFor(file: java.io.File = temporaryFile(".txt")) = {
     File(null, 0, file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)))
   }
 
