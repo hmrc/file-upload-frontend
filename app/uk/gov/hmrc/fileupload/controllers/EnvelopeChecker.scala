@@ -36,16 +36,16 @@ object EnvelopeChecker {
 
   type FileSize = Long
   type ContentType = String
-  type WithValidEnvelope = EnvelopeId => (FileSize => ContentType => EssentialAction) => EssentialAction
+  type WithValidEnvelope = EnvelopeId => (FileSize => List[ContentType] => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
-  val defaultContentTypes: ContentType = "application/pdf,image/jpeg,application/xml"
+  val defaultContentTypes: List[ContentType] = List("application/pdf","image/jpeg","application/xml")
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
-                       (action: FileSize => ContentType => EssentialAction)
+                       (action: FileSize => List[ContentType] => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
@@ -76,7 +76,7 @@ object EnvelopeChecker {
       }
   }
 
-  def getContentTypeFromEnvelope(envelope: JsValue): ContentType = {
+  def getContentTypeFromEnvelope(envelope: JsValue): List[ContentType] = {
     val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
     definedConstraints.flatMap(_.contentType).getOrElse(defaultContentTypes)
   }
@@ -87,9 +87,8 @@ object EnvelopeChecker {
       .headOption.getOrElse("")
   }
 
-  def containsContentType(formContentType: ContentType, envelopeContentType: ContentType): Boolean = {
-    val allowedContentTypes = envelopeContentType.split(",").toList
-    allowedContentTypes.contains(formContentType)
+  def containsContentType(formContentType: ContentType, envelopeContentType: List[ContentType]): Boolean = {
+    envelopeContentType.contains(formContentType)
   }
 
   private def logAndReturn(statusCode: Int, problem: String)(implicit rh: RequestHeader) = {
