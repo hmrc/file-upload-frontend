@@ -40,8 +40,8 @@ object EnvelopeChecker {
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
-  val defaultFileSize = (10 * 1024 * 1024).toLong //bytes
-  val defaultContentTypes = "application/pdf,image/jpeg,application/xml"
+  val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
+  val defaultContentTypes: ContentType = "application/pdf,image/jpeg,application/xml"
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
@@ -82,13 +82,9 @@ object EnvelopeChecker {
   }
 
   def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
-    getFormContentType.files match {
-      case Nil => ""
-      case file  => file.head.contentType match {
-        case Some(fileContentType) => fileContentType
-        case None => ""
-      }
-    }
+    getFormContentType.files
+      .flatMap(_.contentType)
+      .headOption.getOrElse("")
   }
 
   def containsContentType(formContentType: ContentType, envelopeContentType: ContentType): Boolean = {
