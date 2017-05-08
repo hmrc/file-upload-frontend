@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import java.net.{MalformedURLException, URL}
+
 import cats.data.Xor
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
@@ -30,6 +32,8 @@ import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
+import RedirectionFeature.redirect
 
 class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            uploadParser: InMemoryMultiPartBodyParser,
@@ -39,12 +43,20 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
-  def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId) =
+  def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
+                            successUrl: Option[String], failureUrl: Option[String]): EssentialAction = {
+    redirect(successUrl, failureUrl) {
+      uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
+    }
+  }
+
+  def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId): EssentialAction =
     withValidEnvelope(envelopeId) {
       setMaxFileSize => setContentType => upload(setMaxFileSize)(setContentType)(envelopeId, fileId)
     }
 
-  def upload(maxAllowedFileSize: Long)(contentType: List[ContentType])(envelopeId: EnvelopeId, fileId: FileId) = {
+  def upload(maxAllowedFileSize: Long)(contentType: List[ContentType])
+            (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
     Action.async(parse.maxLength(maxAllowedFileSize, uploadParser())) { implicit request =>
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
