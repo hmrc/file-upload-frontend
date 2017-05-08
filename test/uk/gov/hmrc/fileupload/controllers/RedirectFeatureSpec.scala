@@ -44,6 +44,10 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
   import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
   import scala.concurrent.ExecutionContext.Implicits.global
 
+  val allowedHosts = Seq[String]("gov.uk")
+  val redirectionFeature = new RedirectionFeature(allowedHosts)
+  import redirectionFeature.redirect
+
   "Redirection feature" should {
     val okAction: EssentialAction = Action { request =>
       val value = (request.body.asJson.get \ "field").as[String]
@@ -52,7 +56,7 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
     val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
 
     "be backward compatible" in {
-      val redirectA = RedirectionFeature.redirect(None, None)(okAction)
+      val redirectA = redirect(None, None)(okAction)
 
       val result = call(redirectA, request)
 
@@ -61,7 +65,7 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
     }
 
     "fail on incorrect redirect URL" in {
-      val redirectA = RedirectionFeature.redirect(None, Some("asdf//:asdf.asdf.pl"))(okAction)
+      val redirectA = redirect(None, Some("asdf//:asdf.asdf.pl"))(okAction)
 
       val result = call(redirectA, request)
 
@@ -69,9 +73,10 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
     }
 
     val OK_URL_ALLOWED = "https://gov.uk"
+    val OK_URL_NOT_ALLOWED = "https://www.o2.pl"
 
     "redirect on success" in {
-      val redirectA = RedirectionFeature.redirect(Some(OK_URL_ALLOWED), None)(okAction)
+      val redirectA = redirect(Some(OK_URL_ALLOWED), None)(okAction)
       val resultF = call(redirectA, request)
 
 
@@ -84,7 +89,7 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
       val badAction: EssentialAction = Action { request =>
         NotFound(errorMsg)
       }
-      val redirectA = RedirectionFeature.redirect(None, Some(OK_URL_ALLOWED))(badAction)
+      val redirectA = redirect(None, Some(OK_URL_ALLOWED))(badAction)
       val resultF = call(redirectA, request)
 
 
@@ -98,7 +103,7 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
       val badAction: EssentialAction = Action { request =>
         NotFound(errorMsg)
       }
-      val redirectA = RedirectionFeature.redirect(None, Some(OK_URL_ALLOWED))(badAction)
+      val redirectA = redirect(None, Some(OK_URL_ALLOWED))(badAction)
       val resultF = call(redirectA, request)
 
 
@@ -106,10 +111,9 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
 
       getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode:404&reason=" + errorMsg)
     }
-    val OK_URL_NOT_ALLOWED = "https://www.o2.pl"
 
     "block not allowed domains" in {
-      val redirectA = RedirectionFeature.redirect(None, Some(OK_URL_NOT_ALLOWED))(okAction)
+      val redirectA = redirect(None, Some(OK_URL_NOT_ALLOWED))(okAction)
 
       val result = call(redirectA, request)
 

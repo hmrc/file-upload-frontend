@@ -32,8 +32,6 @@ import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
-import RedirectionFeature.redirect
 
 class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            uploadParser: InMemoryMultiPartBodyParser,
@@ -43,9 +41,11 @@ class FileUploadController(withValidEnvelope: WithValidEnvelope,
                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
 
+  val helper = new RedirectionFeature(Seq()) // FIXME configuration
+
   def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
                             successUrl: Option[String], failureUrl: Option[String]): EssentialAction = {
-    redirect(successUrl, failureUrl) {
+    helper.redirect(successUrl, failureUrl) {
       uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
     }
   }

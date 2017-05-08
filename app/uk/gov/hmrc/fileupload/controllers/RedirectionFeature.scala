@@ -27,13 +27,11 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 
-object RedirectionFeature {
+class RedirectionFeature(allowedHosts: Seq[String]) {
   import EnvelopeChecker.logAndReturn
 
   case class ValidatedUrl(url: String)
   case class RedirectUrlsO(succ: Option[ValidatedUrl], fail: Option[ValidatedUrl])
-
-  val allowedHosts = Seq[String]("gov.uk") //FIXME make it from config
 
   def redirect(successUrlO: Option[String], failureUrlO: Option[String])
               (task: => EssentialAction)
