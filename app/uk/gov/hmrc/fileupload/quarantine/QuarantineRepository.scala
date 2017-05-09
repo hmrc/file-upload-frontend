@@ -40,10 +40,10 @@ case class FileData(length: Long = 0, filename: String, contentType: Option[Stri
 
 case class FileInfo(_id: String, filename:String, chunkSize:Int, uploadDate: DateTime, length: Long, contentType: String)
 
-case class Constraints(maxNumFiles: Option[Int],
+case class Constraints(maxItems: Option[Int],
                        maxSize: Option[Long],
                        maxSizePerItem: Option[Long],
-                       contentType:Option[List[String]])
+                       contentTypes:Option[List[String]])
 
 object Constraints {
   implicit val constraintsFormat: Format[Constraints] = Json.format[Constraints]

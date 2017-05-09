@@ -78,7 +78,7 @@ object EnvelopeChecker {
 
   def getContentTypeFromEnvelope(envelope: JsValue): List[ContentType] = {
     val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
-    definedConstraints.flatMap(_.contentType).getOrElse(defaultContentTypes)
+    definedConstraints.flatMap(_.contentTypes).getOrElse(defaultContentTypes)
   }
 
   def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
