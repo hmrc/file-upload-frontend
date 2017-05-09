@@ -147,6 +147,16 @@ class EnvelopeCheckerSpec extends UnitSpec {
     }
   }
 
+  "When envelope data has specified contentType field in constraints" should {
+    "return as List of Content Types" in {
+      val contentTypeConstraintJson = Json.parse("""{"status": "OPEN", "constraints": {"contentTypes": ["application/pdf","image/jpeg"]}}""")
+
+      val expectedList = List("application/pdf","image/jpeg")
+
+      getContentTypeFromEnvelope(contentTypeConstraintJson) shouldBe expectedList
+    }
+  }
+
   def actionThatShouldNotExecute = Action(bodyParserThatShouldNotExecute) { req =>
     fail("action executed which we wanted to prevent")
   }
