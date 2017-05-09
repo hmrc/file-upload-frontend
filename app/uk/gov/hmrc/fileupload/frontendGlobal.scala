@@ -95,11 +95,13 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
 
+  val redirectionFeature = new RedirectionFeature(configuration.underlying)
+
   lazy val fileDownloadController =
     new FileDownloadController(downloadFromTransient, (e, f) => S3KeyName(createS3Key(e, f)), now)
 
   lazy val fileUploadController =
-    new FileUploadController(withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)
+    new FileUploadController(redirectionFeature, withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 
