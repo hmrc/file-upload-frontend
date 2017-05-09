@@ -43,8 +43,8 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
                           (implicit executionContext: ExecutionContext) extends Controller {
 
   def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
-                            successUrl: Option[String], failureUrl: Option[String]): EssentialAction = {
-    redirectionFeature.redirect(successUrl, failureUrl) {
+                            `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction = {
+    redirectionFeature.redirect(`redirect-success-url`, `redirect-error-url`) {
       uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
     }
   }
