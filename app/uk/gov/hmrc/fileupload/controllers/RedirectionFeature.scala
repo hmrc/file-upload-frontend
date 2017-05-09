@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import java.net.{MalformedURLException, URL}
 
+import com.typesafe.config.Config
 import play.api.http.HttpEntity
 import play.api.http.Status.{BAD_REQUEST, MOVED_PERMANENTLY}
 import play.api.mvc._
@@ -28,6 +29,12 @@ import scala.util.{Failure, Success, Try}
 
 
 class RedirectionFeature(allowedHosts: Seq[String]) {
+
+  def this(config: Config) =
+    this(config.getString("controllers.redirection.allowedHosts")
+      .split(",").toSeq
+      .map(_.trim))
+
   import EnvelopeChecker.logAndReturn
 
   case class ValidatedUrl(url: String)
@@ -70,16 +77,16 @@ class RedirectionFeature(allowedHosts: Seq[String]) {
     baseUrl => ValidatedUrl(baseUrl.url + s"?errorCode:$status&reason=$msg")
 
   def extractErrorMsg(result: Result): String = {
-    result.body.asInstanceOf[HttpEntity.Strict].data.decodeString("utf-8") // FIXME how to do it cleanly
+    result.body.asInstanceOf[HttpEntity.Strict].data.decodeString("utf-8") // how to do it cleanly?
   }
 
   def validateAndSanitize(url: String): Try[ValidatedUrl] = {
     Try{
       val suspect = new URL(url)
       if(suspect.getProtocol != "https")
-        throw new MalformedURLException("Https is required.")
-      if(!allowedHosts.contains(suspect.getHost))
-        throw new MalformedURLException("Given domain is not allowed.")
+        throw new MalformedURLException("Https is required for the redirection.")
+      if(!allowedHosts.exists(base => suspect.getHost.endsWith(base)))
+        throw new MalformedURLException("Given redirection domain is not allowed.")
     }.map( _ => ValidatedUrl(
     url.takeWhile( c => !(c=='?' || c=='#'))
     ))

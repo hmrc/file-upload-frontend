@@ -33,19 +33,18 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadController(withValidEnvelope: WithValidEnvelope,
-                           uploadParser: InMemoryMultiPartBodyParser,
-                           commandHandler: CommandHandler,
-                           uploadToQuarantine: UploadToQuarantine,
-                           createS3Key: (EnvelopeId, FileId) => String,
-                           now: () => Long)
+class FileUploadController( redirectionFeature: RedirectionFeature,
+                            withValidEnvelope: WithValidEnvelope,
+                            uploadParser: InMemoryMultiPartBodyParser,
+                            commandHandler: CommandHandler,
+                            uploadToQuarantine: UploadToQuarantine,
+                            createS3Key: (EnvelopeId, FileId) => String,
+                            now: () => Long)
                           (implicit executionContext: ExecutionContext) extends Controller {
-
-  val helper = new RedirectionFeature(Seq()) // FIXME configuration
 
   def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
                             successUrl: Option[String], failureUrl: Option[String]): EssentialAction = {
-    helper.redirect(successUrl, failureUrl) {
+    redirectionFeature.redirect(successUrl, failureUrl) {
       uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
     }
   }

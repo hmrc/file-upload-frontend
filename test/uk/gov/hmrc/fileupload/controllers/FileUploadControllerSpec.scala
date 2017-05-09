@@ -50,6 +50,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     val s3Key: (EnvelopeId, FileId) => String = (_,_) => "key"
 
     new FileUploadController(
+      null,
       noEnvelopeValidation,
       noParsingIsActuallyDoneHere,
       commandHandler,

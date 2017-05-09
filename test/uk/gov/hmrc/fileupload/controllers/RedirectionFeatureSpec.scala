@@ -39,7 +39,7 @@ import play.api.test.{FakeApplication, FakeRequest}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 
-class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
+class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
   import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -73,6 +73,7 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
     }
 
     val OK_URL_ALLOWED = "https://gov.uk"
+    val OK_URL_ALLOWED_EXTENDED = "https://service.gov.uk"
     val OK_URL_NOT_ALLOWED = "https://www.o2.pl"
 
     "redirect on success" in {
@@ -82,6 +83,14 @@ class RedirectFeatureSpec extends UnitSpec with ScalaFutures with TestApplicatio
 
       status(resultF) shouldEqual MOVED_PERMANENTLY
       getResultLocation(resultF) shouldEqual OK_URL_ALLOWED
+    }
+
+    "redirect with right domain base" in {
+      val redirectA = redirect(Some(OK_URL_ALLOWED_EXTENDED), None)(okAction)
+      val resultF = call(redirectA, request)
+
+
+      status(resultF) shouldEqual MOVED_PERMANENTLY
     }
 
     "redirect on failure with simple msg error" in {
