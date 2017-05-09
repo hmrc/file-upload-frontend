@@ -30,20 +30,21 @@ import scala.concurrent.{Await, Future}
 
 class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
+  private val allowedHosts = Seq[String]("gov.uk","localhost")
+  private val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
+
+  val redirectionFeature = new RedirectionFeature(allowedHosts)
+
+  val okAction: EssentialAction = Action { request =>
+    val value = (request.body.asJson.get \ "field").as[String]
+    Ok(value)
+  }
+
+  import redirectionFeature.redirect
+  import scala.concurrent.ExecutionContext.Implicits.global
   import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  private val allowedHosts = Seq[String]("gov.uk","localhost")
-  val redirectionFeature = new RedirectionFeature(allowedHosts)
-  import redirectionFeature.redirect
-
   "Redirection feature" should {
-    val okAction: EssentialAction = Action { request =>
-      val value = (request.body.asJson.get \ "field").as[String]
-      Ok(value)
-    }
-    val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
 
     "be backward compatible" in {
       val redirectA = redirect(None, None)(okAction)
@@ -70,7 +71,6 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
       val redirectA = redirect(Some(OK_URL_ALLOWED), None)(okAction)
       val resultF = call(redirectA, request)
 
-
       status(resultF) shouldEqual MOVED_PERMANENTLY
       getResultLocation(resultF) shouldEqual OK_URL_ALLOWED
     }
@@ -78,7 +78,6 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
     "redirect with right domain base" in {
       val redirectA = redirect(Some(OK_URL_ALLOWED_EXTENDED), None)(okAction)
       val resultF = call(redirectA, request)
-
 
       status(resultF) shouldEqual MOVED_PERMANENTLY
     }
@@ -90,7 +89,6 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
       }
       val redirectA = redirect(None, Some(OK_URL_ALLOWED))(badAction)
       val resultF = call(redirectA, request)
-
 
       status(resultF) shouldEqual MOVED_PERMANENTLY
 
@@ -105,7 +103,6 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
       val redirectA = redirect(None, Some(OK_URL_ALLOWED))(badAction)
       val resultF = call(redirectA, request)
 
-
       status(resultF) shouldEqual MOVED_PERMANENTLY
 
       getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode:404&reason=" + errorMsg)
@@ -118,6 +115,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
 
       status(result) shouldEqual BAD_REQUEST
     }
+
     "allow http for localhost if set" in {
       val redirectA = redirect(None, Some("http://localhost"))(okAction)
 
