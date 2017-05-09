@@ -16,35 +16,25 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import cats.data.Xor
-import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.scalatest.concurrent.ScalaFutures
-import play.api.http.Status
-import play.api.libs.json.Json
-import play.api.mvc.{Action, EssentialAction, MultipartFormData, Result}
-import play.api.test.Helpers._
-import uk.gov.hmrc.fileupload.DomainFixtures._
-import uk.gov.hmrc.fileupload.RestFixtures._
-import uk.gov.hmrc.fileupload._
-import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
-import uk.gov.hmrc.fileupload.notifier.CommandHandler
-import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
-import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler
-import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
-import uk.gov.hmrc.play.test.UnitSpec
 import play.api.libs.json.Json
 import play.api.mvc.Results._
-import play.api.test.{FakeApplication, FakeRequest}
+import play.api.mvc.{Action, EssentialAction, Result}
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
+import uk.gov.hmrc.fileupload._
+import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.concurrent.{Await, Future}
 
 class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
   import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val allowedHosts = Seq[String]("gov.uk")
+  private val allowedHosts = Seq[String]("gov.uk","localhost")
   val redirectionFeature = new RedirectionFeature(allowedHosts)
   import redirectionFeature.redirect
 
@@ -127,6 +117,13 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
       val result = call(redirectA, request)
 
       status(result) shouldEqual BAD_REQUEST
+    }
+    "allow http for localhost if set" in {
+      val redirectA = redirect(None, Some("http://localhost"))(okAction)
+
+      val result = call(redirectA, request)
+
+      status(result) shouldEqual OK
     }
   }
   def getResultLocation(resultF: Future[Result] )(implicit timeout: Duration): String =

@@ -35,6 +35,9 @@ class RedirectionFeature(allowedHosts: Seq[String]) {
       .split(",").toSeq
       .map(_.trim))
 
+  val LOCAL_HOST = "localhost"
+  private val isLocalHostAllowed = allowedHosts.contains(LOCAL_HOST)
+
   import EnvelopeChecker.logAndReturn
 
   case class ValidatedUrl(url: String)
@@ -83,7 +86,7 @@ class RedirectionFeature(allowedHosts: Seq[String]) {
   def validateAndSanitize(url: String): Try[ValidatedUrl] = {
     Try{
       val suspect = new URL(url)
-      if(suspect.getProtocol != "https")
+      if(!(suspect.getProtocol == "https" || (isLocalHostAllowed && suspect.getHost == LOCAL_HOST)))
         throw new MalformedURLException("Https is required for the redirection.")
       if(!allowedHosts.exists(base => suspect.getHost.endsWith(base)))
         throw new MalformedURLException("Given redirection domain is not allowed.")
