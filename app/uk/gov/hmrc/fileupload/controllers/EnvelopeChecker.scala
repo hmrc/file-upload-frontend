@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import akka.util.ByteString
 import cats.data.Xor
 import play.api.Logger
 import play.api.http.Status._
@@ -36,7 +37,8 @@ object EnvelopeChecker {
 
   type FileSize = Long
   type ContentType = String
-  type WithValidEnvelope = EnvelopeId => (FileSize => List[ContentType] => EssentialAction) => EssentialAction
+  type WithValidEnvelope =
+    EnvelopeId => (FileSize => List[ContentType] => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
@@ -91,7 +93,8 @@ object EnvelopeChecker {
     envelopeContentType.contains(formContentType)
   }
 
-  private def logAndReturn(statusCode: Int, problem: String)(implicit rh: RequestHeader) = {
+  def logAndReturn(statusCode: Int, problem: String)
+                          (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
     Logger.warn(s"Request: $rh failed because: $problem")
     val iteratee = Done[Array[Byte], Result](new Status(statusCode).apply(Json.obj("message" -> problem)))
     StreamsConverter.iterateeToAccumulator(iteratee)
