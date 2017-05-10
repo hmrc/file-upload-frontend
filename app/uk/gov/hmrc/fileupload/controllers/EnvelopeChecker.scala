@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import akka.util.ByteString
 import cats.data.Xor
-import play.api.{Configuration, Logger}
+import play.api.Logger
 import play.api.http.Status._
 import play.api.libs.iteratee.Done
 import play.api.libs.json.{JsValue, Json}
