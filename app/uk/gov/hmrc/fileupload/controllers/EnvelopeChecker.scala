@@ -71,7 +71,14 @@ object EnvelopeChecker {
     val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
        definedConstraints match {
          case Some(constraints) => constraints.maxSizePerItem match {
-           case Some(maxSizePerItem) => maxSizePerItem
+           case Some(maxSizePerItem) =>
+             val fileSize = maxSizePerItem.replaceAll("[^\\d.]", "").toLong
+             val fileSizeType = maxSizePerItem.toUpperCase.replaceAll("[^KMB]", "")
+             fileSizeType match {
+               case "KB" if fileSize < 1024 => fileSize * 1024
+               case "MB" if fileSize <= 10 => fileSize * 1024 * 1024
+               case _ => defaultFileSize
+             }
            case None => defaultFileSize
          }
          case None => defaultFileSize
