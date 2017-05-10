@@ -76,7 +76,7 @@ object EnvelopeChecker {
              val fileSizeType = maxSizePerItem.toUpperCase.replaceAll("[^KMB]", "")
              fileSizeType match {
                case "KB" if fileSize < 1024 => fileSize * 1024
-               case "MB" if fileSize <= 10 => fileSize * 1024 * 1024
+               case "MB" if fileSize <= 100 => fileSize * 1024 * 1024
              }
            case None => defaultFileSize
          }
