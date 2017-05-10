@@ -102,6 +102,15 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
       status(result) shouldBe Status.UNSUPPORTED_MEDIA_TYPE
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file with a valid file type"}}"""
     }
+
+    "upload file if browser content type for xml files return as text/xml" in {
+      val file = anyXml()
+      val supportedXMLFileType = validUploadRequest(List(file))
+
+      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(supportedXMLFileType)
+
+      status(result) shouldBe Status.OK
+    }
   }
 
   "function metadataToJson" should {
