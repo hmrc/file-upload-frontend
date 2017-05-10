@@ -90,10 +90,11 @@ object EnvelopeChecker {
   }
 
   def containsContentType(formContentType: ContentType, envelopeContentType: List[ContentType]): Boolean = {
-    if(formContentType.equals("text/xml")){
+    if(envelopeContentType.contains(formContentType)){
       true
     } else {
-      envelopeContentType.contains(formContentType)
+      Logger.warn(s"File Upload return an invalid content type: $formContentType")
+      true
     }
   }
 
