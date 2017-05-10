@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import akka.util.ByteString
 import cats.data.Xor
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.http.Status._
 import play.api.libs.iteratee.Done
 import play.api.libs.json.{JsValue, Json}
@@ -43,7 +43,7 @@ object EnvelopeChecker {
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
-  val defaultContentTypes: List[ContentType] = List("application/pdf","image/jpeg","application/xml")
+  val defaultContentTypes: List[ContentType] = List("application/pdf","image/jpeg","application/xml", "text/xml")
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
@@ -90,7 +90,11 @@ object EnvelopeChecker {
   }
 
   def containsContentType(formContentType: ContentType, envelopeContentType: List[ContentType]): Boolean = {
-    envelopeContentType.contains(formContentType)
+    if(formContentType.equals("text/xml")){
+      true
+    } else {
+      envelopeContentType.contains(formContentType)
+    }
   }
 
   def logAndReturn(statusCode: Int, problem: String)

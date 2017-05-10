@@ -48,5 +48,9 @@ object DomainFixtures {
     File(null, 0, file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)))
   }
 
+  def anyXml(file: java.io.File = temporaryFile(".xml")) = {
+    File(null, 0, file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)))
+  }
+
   private def randomUUID = UUID.randomUUID().toString
 }
