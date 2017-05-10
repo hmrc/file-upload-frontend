@@ -21,11 +21,12 @@ import play.api.http.MimeTypes
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.Json
 import play.api.mvc.Results._
-import play.api.mvc.{Action, BodyParser}
+import play.api.mvc.{Action, BodyParser, MultipartFormData}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.mvc.BodyParser.AnyContent
-import uk.gov.hmrc.fileupload.EnvelopeId
+import uk.gov.hmrc.fileupload.RestFixtures._
+import uk.gov.hmrc.fileupload.{EnvelopeId, File}
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeDetailNotFoundError, EnvelopeDetailServiceError}
 import uk.gov.hmrc.fileupload.utils.StreamsConverter
@@ -204,6 +205,55 @@ class EnvelopeCheckerSpec extends UnitSpec {
       getContentTypeFromEnvelope(contentTypeConstraintJson) shouldBe expectedList
     }
   }
+
+  "When form data returns file type: application/pdf and envelope file type constraint: application/pdf" should {
+    "return true" in {
+
+      val fileTypeConstraintPDF = Json.parse("""{"status" : "OPEN", "constraints" : { "contentTypes" : ["application/pdf"]  } }""")
+      val envelopeContentType = getContentTypeFromEnvelope(fileTypeConstraintPDF)
+
+      val files = File(null,0, "fake", Some("application/pdf"))
+      val form = MultipartFormData(Map(), Seq(filePart(files.filename,files.filename, files.contentType)), Seq.empty)
+      val formContentType = getFormContentType(form)
+
+      val testConstraint = containsContentType(formContentType, envelopeContentType)
+
+      testConstraint shouldBe true
+    }
+  }
+
+  "When form data returns file type: application/xml and envelope file type constraint: application/xml" should {
+    "return true" in {
+
+      val fileTypeConstraintPDF = Json.parse("""{"status" : "OPEN", "constraints" : { "contentTypes" : ["application/xml"]  } }""")
+      val envelopeContentType = getContentTypeFromEnvelope(fileTypeConstraintPDF)
+
+      val files = File(null,0, "fake", Some("application/xml"))
+      val form = MultipartFormData(Map(), Seq(filePart(files.filename,files.filename, files.contentType)), Seq.empty)
+      val formContentType = getFormContentType(form)
+
+      val testConstraint = containsContentType(formContentType, envelopeContentType)
+
+      testConstraint shouldBe true
+    }
+  }
+
+  "When form data returns file type: application/pdf and envelope file type constraint: image/jpeg" should {
+    "return false" in {
+
+      val fileTypeConstraintPDF = Json.parse("""{"status" : "OPEN", "constraints" : { "contentTypes" : ["image/jpeg"]  } }""")
+      val envelopeContentType = getContentTypeFromEnvelope(fileTypeConstraintPDF)
+
+      val files = File(null,0, "fake", Some("application/pdf"))
+      val form = MultipartFormData(Map(), Seq(filePart(files.filename,files.filename, files.contentType)), Seq.empty)
+      val formContentType = getFormContentType(form)
+
+      val testConstraint = containsContentType(formContentType, envelopeContentType)
+
+      testConstraint shouldBe false
+    }
+  }
+
 
   def actionThatShouldNotExecute = Action(bodyParserThatShouldNotExecute) { req =>
     fail("action executed which we wanted to prevent")
