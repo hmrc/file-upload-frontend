@@ -62,7 +62,7 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
         case Right(formData) =>
           val numberOfAttachedFiles = formData.files.size
           if (numberOfAttachedFiles == 1) {
-            if (containsContentType(getFormContentType(formData), contentType)) {
+            if (containsContentType(getFormContentType(formData), contentType, envelopeId)) {
               val file = formData.files.head
               val key = createS3Key(envelopeId, fileId)
               uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>

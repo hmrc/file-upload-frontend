@@ -89,11 +89,11 @@ object EnvelopeChecker {
       .headOption.getOrElse("")
   }
 
-  def containsContentType(formContentType: ContentType, envelopeContentType: List[ContentType]): Boolean = {
+  def containsContentType(formContentType: ContentType, envelopeContentType: List[ContentType], envelopeId: EnvelopeId): Boolean = {
     if(envelopeContentType.contains(formContentType)){
       true
     } else {
-      Logger.warn(s"File Upload return an invalid content type: $formContentType")
+      Logger.warn(s"File uploaded is an invalid content type: $formContentType and does not meet the list $envelopeContentType provided from envelope: $envelopeId")
       true
     }
   }
