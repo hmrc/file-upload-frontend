@@ -115,7 +115,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   "When returned envelope data has file constraint: 2KB " should {
     "set the as upload size limit to 2KB" in {
-      val envelopeJson = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : 2048 } }""")
+      val envelopeJson = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : "2KB" } }""")
 
       val expectedSetSize = 2 * 1024
       getMaxFileSizeFromEnvelope(envelopeJson) shouldBe expectedSetSize
@@ -124,18 +124,29 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   "When returned envelope data has file constraint: 1MB " should {
     "set the as upload size limit to 1MB" in {
-      val envelopeJson = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : 1048576 } }""")
+      val envelopeJson = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : "1MB" } }""")
 
       val expectedSetSize = 1 * 1024 * 1024
       getMaxFileSizeFromEnvelope(envelopeJson) shouldBe expectedSetSize
     }
   }
 
+  "When returned envelope data has file constraint: 100MB " should {
+    "set the as upload size limit to 100MB" in {
+      val fileLimit100MB = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : "100MB" } }""")
+
+      val expectedSetSize = 100 * 1024 * 1024
+
+      getMaxFileSizeFromEnvelope(fileLimit100MB) shouldBe expectedSetSize
+    }
+  }
+
   "When returned envelope data has empty constraints field " should {
-    "set the as upload size limit to default" in {
+    "set the as upload size limit and content type to default" in {
       val emptyConstraintJson = Json.parse("""{"status" : "OPEN", "constraints": { } }""")
 
       getMaxFileSizeFromEnvelope(emptyConstraintJson) shouldBe defaultFileSize
+      getContentTypeFromEnvelope(emptyConstraintJson) shouldBe defaultContentTypes
     }
   }
 
