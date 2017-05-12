@@ -68,14 +68,21 @@ object EnvelopeChecker {
     }
 
   def getMaxFileSizeFromEnvelope(envelope: JsValue): FileSize = {
+    val sizeRegex = "([1-9][0-9]{0,3})([KB,MB]{2})".r
     val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
-       definedConstraints match {
-         case Some(constraints) => constraints.maxSizePerItem match {
-           case Some(maxSizePerItem) => maxSizePerItem
-           case None => defaultFileSize
-         }
-         case None => defaultFileSize
-      }
+    definedConstraints.map(_.maxSizePerItem match {
+      case Some(maxSizePerItem) =>
+        maxSizePerItem match {
+          case sizeRegex(size, fileSizeType) =>
+            val fileSize = size.toLong
+            fileSizeType match {
+              case "KB" => fileSize * 1024
+              case "MB" => fileSize * 1024 * 1024
+            }
+          case _ => defaultFileSize
+        }
+      case _ => defaultFileSize
+    }).getOrElse(defaultFileSize)
   }
 
   def getContentTypeFromEnvelope(envelope: JsValue): List[ContentType] = {

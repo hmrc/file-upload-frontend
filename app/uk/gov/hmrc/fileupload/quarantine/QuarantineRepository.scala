@@ -41,8 +41,8 @@ case class FileData(length: Long = 0, filename: String, contentType: Option[Stri
 case class FileInfo(_id: String, filename:String, chunkSize:Int, uploadDate: DateTime, length: Long, contentType: String)
 
 case class Constraints(maxItems: Option[Int],
-                       maxSize: Option[Long],
-                       maxSizePerItem: Option[Long],
+                       maxSize: Option[String],
+                       maxSizePerItem: Option[String],
                        contentTypes:Option[List[String]])
 
 object Constraints {

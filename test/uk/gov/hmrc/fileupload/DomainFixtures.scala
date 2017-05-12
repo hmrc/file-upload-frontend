@@ -29,7 +29,7 @@ object DomainFixtures {
 
   def anyFile() = anyFileFor()
 
-  def anyInvalidFile() = anyInvalidFileFor()
+  def anyUnSupportedFile() = anyUnsupportedFileFor()
 
   def temporaryFile(fileType: String, data: Option[String] = None) = {
     val temporaryFile = java.io.File.createTempFile("tmp", fileType)
@@ -44,7 +44,7 @@ object DomainFixtures {
     File(null, 0, file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)))
   }
 
-  def anyInvalidFileFor(file: java.io.File = temporaryFile(".txt")) = {
+  def anyUnsupportedFileFor(file: java.io.File = temporaryFile(".txt")) = {
     File(null, 0, file.getName, Some(URLConnection.guessContentTypeFromName(file.getName)))
   }
 
