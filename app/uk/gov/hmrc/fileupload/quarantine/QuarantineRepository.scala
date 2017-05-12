@@ -40,13 +40,28 @@ case class FileData(length: Long = 0, filename: String, contentType: Option[Stri
 
 case class FileInfo(_id: String, filename:String, chunkSize:Int, uploadDate: DateTime, length: Long, contentType: String)
 
-case class Constraints(maxItems: Option[Int],
-                       maxSize: Option[String],
-                       maxSizePerItem: Option[String],
-                       contentTypes:Option[List[String]])
+case class EnvelopeReport(id: Option[EnvelopeId] = None,
+                          callbackUrl: Option[String] = None,
+                          expiryDate: Option[DateTime] = None,
+                          metadata: Option[JsObject] = None,
+                          constraints: Option[EnvelopeConstraints] = None,
+                          status: Option[String] = None,
+                          destination: Option[String] = None,
+                          application: Option[String] = None,
+                          files: Option[Seq[JsObject]] = None)
 
-object Constraints {
-  implicit val constraintsFormat: Format[Constraints] = Json.format[Constraints]
+object EnvelopeReport{
+  implicit val envelopeFormat: OFormat[EnvelopeReport] = Json.format[EnvelopeReport]
+}
+
+
+case class EnvelopeConstraints(maxItems: Int,
+                               maxSize: String,
+                               maxSizePerItem: String,
+                               contentTypes: List[String])
+
+object EnvelopeConstraints {
+  implicit val constraintsFormat: Format[EnvelopeConstraints] = Json.format[EnvelopeConstraints]
 }
 
 object FileInfo {
