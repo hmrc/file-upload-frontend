@@ -43,4 +43,28 @@ trait FileActions extends ActionsSupport {
       .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\nContent-Type: application/pdf\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
       .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
   }
+
+  def uploadDummyLargeFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse = {
+    client.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
+      .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
+        "X-Request-ID" -> "someId",
+        "X-Session-ID" -> "someId",
+        "X-Requested-With" -> "someId")
+      .post(s"-----011000010111000001101001\r\n" +
+        "Content-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\n" +
+        "Content-Type: application/pdf\r\n\r\n" +
+        ("someTextCo" * 1024 * 1024) +
+        "-----011000010111000001101001--")
+      .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
+  }
+
+  def uploadDummyInvalidContentTypeFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse = {
+    client.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
+      .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
+        "X-Request-ID" -> "someId",
+        "X-Session-ID" -> "someId",
+        "X-Requested-With" -> "someId")
+      .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.txt\"\r\nContent-Type: text/plain\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
+      .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
+  }
 }
