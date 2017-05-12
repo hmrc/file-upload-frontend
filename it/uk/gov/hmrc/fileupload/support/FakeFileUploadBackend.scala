@@ -57,7 +57,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   val ENVELOPE_OPEN_RESPONSE =
     """ { "status" : "OPEN",
           "constraints" : {
-            "maxNumFiles" : 100,
+            "maxItems" : 100,
             "maxSize" : "25MB",
             "maxSizePerItem" : "10MB",
             "contentTypes": [
@@ -71,7 +71,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   val ENVELOPE_CLOSED_RESPONSE =
     """ { "status" : "CLOSED",
           "constraints" : {
-            "maxNumFiles" : 100,
+            "maxItems" : 100,
             "maxSize" : "25MB",
             "maxSizePerItem" : "10MB",
             "contentTypes": [
