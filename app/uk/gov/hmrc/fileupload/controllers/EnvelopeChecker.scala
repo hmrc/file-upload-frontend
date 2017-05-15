@@ -54,10 +54,10 @@ object EnvelopeChecker {
         checkEnvelopeDetails(envelopeId).map {
           case Xor.Right(envelope) =>
             val envelopeDetails = extractEnvelopeDetails(envelope)
-            val status = extractStatus(envelopeDetails)
+            val status = envelopeDetails.status.getOrElse("")
             status match {
               case "OPEN" =>
-                val constraints = extractConstraints(envelopeDetails)
+                val constraints = extractEnvelopeDetails(envelope).constraints
                 action(getMaxFileSizeFromEnvelope(constraints))(getContentTypeFromEnvelope(constraints))(rh)
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
@@ -71,10 +71,6 @@ object EnvelopeChecker {
     }
 
   def extractEnvelopeDetails(envelope: JsValue): EnvelopeReport = envelope.as[EnvelopeReport]
-
-  def extractStatus(envelopeReport: EnvelopeReport) = envelopeReport.status.getOrElse("")
-
-  def extractConstraints(envelopeReport: EnvelopeReport): Option[EnvelopeConstraints] = envelopeReport.constraints
 
   def getMaxFileSizeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): FileSize = {
     val sizeRegex = "([1-9][0-9]{0,3})([KB,MB]{2})".r

@@ -134,7 +134,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
   "When returned envelope data has file constraint: 2KB " should {
     "set the as upload size limit to 2KB" in {
       val expectedSetSize = 2 * 1024
-      val constraints2KB = extractConstraints(extractEnvelopeDetails(envelopeMaxSizePerItemJson("2KB")))
+      val constraints2KB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("2KB")).constraints
       getMaxFileSizeFromEnvelope(constraints2KB) shouldBe expectedSetSize
     }
   }
@@ -142,7 +142,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
   "When returned envelope data has file constraint: 10KB " should {
     "set the as upload size limit to 10KB" in {
       val expectedSetSize = 10 * 1024
-      val constraints10KB = extractConstraints(extractEnvelopeDetails(envelopeMaxSizePerItemJson("10KB")))
+      val constraints10KB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("10KB")).constraints
       getMaxFileSizeFromEnvelope(constraints10KB) shouldBe expectedSetSize
     }
   }
@@ -150,7 +150,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
   "When returned envelope data has file constraint: 100KB " should {
     "set the as upload size limit to 100KB" in {
       val expectedSetSize = 100 * 1024
-      val constraints100KB = extractConstraints(extractEnvelopeDetails(envelopeMaxSizePerItemJson("100KB")))
+      val constraints100KB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("100KB")).constraints
       getMaxFileSizeFromEnvelope(constraints100KB) shouldBe expectedSetSize
     }
   }
@@ -158,7 +158,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
   "When returned envelope data has file constraint: 1MB " should {
     "set the as upload size limit to 1MB" in {
       val expectedSetSize = 1 * 1024 * 1024
-      val constraints1MB = extractConstraints(extractEnvelopeDetails(envelopeMaxSizePerItemJson("1MB")))
+      val constraints1MB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("1MB")).constraints
       getMaxFileSizeFromEnvelope(constraints1MB) shouldBe expectedSetSize
     }
   }
@@ -166,7 +166,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
   "When returned envelope data has file constraint: 10MB " should {
     "set the as upload size limit to 10MB" in {
       val expectedSetSize = 10 * 1024 * 1024
-      val constraints10MB = extractConstraints(extractEnvelopeDetails(envelopeMaxSizePerItemJson("10MB")))
+      val constraints10MB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("10MB")).constraints
       getMaxFileSizeFromEnvelope(constraints10MB) shouldBe expectedSetSize
     }
   }
@@ -174,7 +174,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
   "When returned envelope data has file constraint: 100MB " should {
     "set the as upload size limit to 100MB" in {
       val expectedSetSize = 100 * 1024 * 1024
-      val constraints100MB = extractConstraints(extractEnvelopeDetails(envelopeMaxSizePerItemJson("100MB")))
+      val constraints100MB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("100MB")).constraints
       getMaxFileSizeFromEnvelope(constraints100MB) shouldBe expectedSetSize
     }
   }
@@ -182,7 +182,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
   "When returned envelope data has no constraints field " should {
     "set the as upload size limit and content type to default" in {
       val emptyConstraintJson = Json.parse("""{"status" : "OPEN" }""")
-      val constraintsEmpty = extractConstraints(extractEnvelopeDetails(emptyConstraintJson))
+      val constraintsEmpty = extractEnvelopeDetails(emptyConstraintJson).constraints
       getMaxFileSizeFromEnvelope(constraintsEmpty) shouldBe defaultFileSize
       getContentTypeFromEnvelope(constraintsEmpty) shouldBe defaultContentTypes
     }
@@ -191,7 +191,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
   "When envelope data has specified contentType field in constraints" should {
     "return as List of Content Types" in {
       val expectedList = List("application/pdf","image/jpeg")
-      val constraintsContentType = extractConstraints(extractEnvelopeDetails(envelopeContentTypesJson(s""""application/pdf","image/jpeg"""")))
+      val constraintsContentType = extractEnvelopeDetails(envelopeContentTypesJson(s""""application/pdf","image/jpeg"""")).constraints
       getContentTypeFromEnvelope(constraintsContentType) shouldBe expectedList
     }
   }

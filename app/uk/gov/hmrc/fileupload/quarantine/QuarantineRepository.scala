@@ -40,6 +40,7 @@ case class FileData(length: Long = 0, filename: String, contentType: Option[Stri
 
 case class FileInfo(_id: String, filename:String, chunkSize:Int, uploadDate: DateTime, length: Long, contentType: String)
 
+//This class is added to keep in sync with backend
 case class EnvelopeReport(id: Option[EnvelopeId] = None,
                           callbackUrl: Option[String] = None,
                           expiryDate: Option[DateTime] = None,
