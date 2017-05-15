@@ -20,13 +20,13 @@ import akka.util.ByteString
 import cats.data.Xor
 import play.api.Logger
 import play.api.http.Status._
+import play.api.mvc.Results._
 import play.api.libs.iteratee.Done
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.Accumulator
-import play.api.mvc.Results._
 import play.api.mvc.{EssentialAction, MultipartFormData, RequestHeader, Result}
 import uk.gov.hmrc.fileupload.EnvelopeId
-import uk.gov.hmrc.fileupload.quarantine.Constraints
+import uk.gov.hmrc.fileupload.quarantine.{EnvelopeConstraints, EnvelopeReport}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.transfer.TransferService._
 import uk.gov.hmrc.fileupload.utils.StreamsConverter
@@ -38,12 +38,12 @@ object EnvelopeChecker {
   type FileSize = Long
   type ContentType = String
   type WithValidEnvelope =
-    EnvelopeId => (FileSize => List[ContentType] => EssentialAction) => EssentialAction
+  EnvelopeId => (FileSize => List[ContentType] => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
-  val defaultContentTypes: List[ContentType] = List("application/pdf","image/jpeg","application/xml", "text/xml")
+  val defaultContentTypes: List[ContentType] = List("application/pdf", "image/jpeg", "application/xml", "text/xml")
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
@@ -53,9 +53,12 @@ object EnvelopeChecker {
       Accumulator.flatten {
         checkEnvelopeDetails(envelopeId).map {
           case Xor.Right(envelope) =>
-            val status = (envelope \ "status").as[String]
+            val envelopeDetails = extractEnvelopeDetails(envelope)
+            val status = envelopeDetails.status.getOrElse("")
             status match {
-              case "OPEN" => action(getMaxFileSizeFromEnvelope(envelope))(getContentTypeFromEnvelope(envelope))(rh)
+              case "OPEN" =>
+                val constraints = extractEnvelopeDetails(envelope).constraints
+                action(getMaxFileSizeFromEnvelope(constraints))(getContentTypeFromEnvelope(constraints))(rh)
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
@@ -67,20 +70,23 @@ object EnvelopeChecker {
       }
     }
 
-  def getMaxFileSizeFromEnvelope(envelope: JsValue): FileSize = {
-    val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
-       definedConstraints match {
-         case Some(constraints) => constraints.maxSizePerItem match {
-           case Some(maxSizePerItem) => maxSizePerItem
-           case None => defaultFileSize
-         }
-         case None => defaultFileSize
-      }
+  def extractEnvelopeDetails(envelope: JsValue): EnvelopeReport = envelope.as[EnvelopeReport]
+
+  def getMaxFileSizeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): FileSize = {
+    val sizeRegex = "([1-9][0-9]{0,3})([KB,MB]{2})".r
+    definedConstraints.map(_.maxSizePerItem match {
+      case sizeRegex(size, fileSizeType) =>
+        val fileSize = size.toLong
+        fileSizeType match {
+          case "KB" => fileSize * 1024
+          case "MB" => fileSize * 1024 * 1024
+        }
+      case _ => defaultFileSize
+    }).getOrElse(defaultFileSize)
   }
 
-  def getContentTypeFromEnvelope(envelope: JsValue): List[ContentType] = {
-    val definedConstraints = (envelope \ "constraints").asOpt[Constraints]
-    definedConstraints.flatMap(_.contentTypes).getOrElse(defaultContentTypes)
+  def getContentTypeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): List[ContentType] = {
+    definedConstraints.map(_.contentTypes).getOrElse(defaultContentTypes)
   }
 
   def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
@@ -90,7 +96,7 @@ object EnvelopeChecker {
   }
 
   def containsContentType(formContentType: ContentType, envelopeContentType: List[ContentType], envelopeId: EnvelopeId): Boolean = {
-    if(envelopeContentType.contains(formContentType)){
+    if (envelopeContentType.contains(formContentType)) {
       true
     } else {
       Logger.warn(s"File uploaded is an invalid content type: $formContentType and does not meet the list $envelopeContentType provided from envelope: $envelopeId")
@@ -99,7 +105,7 @@ object EnvelopeChecker {
   }
 
   def logAndReturn(statusCode: Int, problem: String)
-                          (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
+                  (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
     Logger.warn(s"Request: $rh failed because: $problem")
     val iteratee = Done[Array[Byte], Result](new Status(statusCode).apply(Json.obj("message" -> problem)))
     StreamsConverter.iterateeToAccumulator(iteratee)

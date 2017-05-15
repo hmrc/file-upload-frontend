@@ -44,11 +44,29 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   val defaultFileSize = 10 * 1024 * 1024
 
+  def envelopeMaxSizePerItemJson(size:String) = Json.parse(
+    s"""{"status" : "OPEN",
+            "constraints": {
+            "maxItems":100,
+            "maxSize": "25MB",
+            "maxSizePerItem" : "$size",
+            "contentTypes": ["application/pdf","image/jpeg","application/xml","text/xml"]
+            } }""".stripMargin)
+
+  def envelopeContentTypesJson(contentTypes:String) = Json.parse(
+    s"""{"status" : "OPEN",
+            "constraints": {
+            "maxItems":100,
+            "maxSize": "25MB",
+            "maxSizePerItem" : "10MB",
+            "contentTypes": [$contentTypes]
+            } }""".stripMargin)
+
   "When an envelope is OPEN it" should {
     "be possible to execute an Action" in {
       val expectedAction = Action { req => Ok }
 
-      val envelopeOpen = Json.parse("""{ "status" : "OPEN", "constraints" : {} }""")
+      val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
 
       val wrappedAction = withValidEnvelope(_ => Future(Xor.right(envelopeOpen)))(testEnvelopeId)(defaultMaxFileSize => defaultContentType => expectedAction)
       val result = wrappedAction(testRequest).run // this for some reason causes exceptions when running with testOnly
@@ -75,7 +93,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
     "prevent both action's body and the body parser from running and return 423 Locked" in {
       val statusClosed = "CLOSED"
 
-      val envelopeClosed = Json.parse("""{"status" : "CLOSED", "constraints": {} }""")
+      val envelopeClosed = Json.parse("""{"status" : "CLOSED" }""")
 
       val wrappedAction = withValidEnvelope(_ =>
         Future(Xor.right(envelopeClosed)))(testEnvelopeId)(defaultMaxFileSize => defaultContentType => actionThatShouldNotExecute)
@@ -115,45 +133,66 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   "When returned envelope data has file constraint: 2KB " should {
     "set the as upload size limit to 2KB" in {
-      val envelopeJson = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : 2048 } }""")
-
       val expectedSetSize = 2 * 1024
-      getMaxFileSizeFromEnvelope(envelopeJson) shouldBe expectedSetSize
+      val constraints2KB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("2KB")).constraints
+      getMaxFileSizeFromEnvelope(constraints2KB) shouldBe expectedSetSize
+    }
+  }
+
+  "When returned envelope data has file constraint: 10KB " should {
+    "set the as upload size limit to 10KB" in {
+      val expectedSetSize = 10 * 1024
+      val constraints10KB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("10KB")).constraints
+      getMaxFileSizeFromEnvelope(constraints10KB) shouldBe expectedSetSize
+    }
+  }
+
+  "When returned envelope data has file constraint: 100KB " should {
+    "set the as upload size limit to 100KB" in {
+      val expectedSetSize = 100 * 1024
+      val constraints100KB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("100KB")).constraints
+      getMaxFileSizeFromEnvelope(constraints100KB) shouldBe expectedSetSize
     }
   }
 
   "When returned envelope data has file constraint: 1MB " should {
     "set the as upload size limit to 1MB" in {
-      val envelopeJson = Json.parse("""{"status" : "OPEN", "constraints": { "maxSizePerItem" : 1048576 } }""")
-
       val expectedSetSize = 1 * 1024 * 1024
-      getMaxFileSizeFromEnvelope(envelopeJson) shouldBe expectedSetSize
+      val constraints1MB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("1MB")).constraints
+      getMaxFileSizeFromEnvelope(constraints1MB) shouldBe expectedSetSize
     }
   }
 
-  "When returned envelope data has empty constraints field " should {
-    "set the as upload size limit to default" in {
-      val emptyConstraintJson = Json.parse("""{"status" : "OPEN", "constraints": { } }""")
+  "When returned envelope data has file constraint: 10MB " should {
+    "set the as upload size limit to 10MB" in {
+      val expectedSetSize = 10 * 1024 * 1024
+      val constraints10MB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("10MB")).constraints
+      getMaxFileSizeFromEnvelope(constraints10MB) shouldBe expectedSetSize
+    }
+  }
 
-      getMaxFileSizeFromEnvelope(emptyConstraintJson) shouldBe defaultFileSize
+  "When returned envelope data has file constraint: 100MB " should {
+    "set the as upload size limit to 100MB" in {
+      val expectedSetSize = 100 * 1024 * 1024
+      val constraints100MB = extractEnvelopeDetails(envelopeMaxSizePerItemJson("100MB")).constraints
+      getMaxFileSizeFromEnvelope(constraints100MB) shouldBe expectedSetSize
     }
   }
 
   "When returned envelope data has no constraints field " should {
-    "set the as upload size limit to default" in {
-      val noConstraintJson = Json.parse("""{"status" : "OPEN" }""")
-
-      getMaxFileSizeFromEnvelope(noConstraintJson) shouldBe defaultFileSize
+    "set the as upload size limit and content type to default" in {
+      val emptyConstraintJson = Json.parse("""{"status" : "OPEN" }""")
+      val constraintsEmpty = extractEnvelopeDetails(emptyConstraintJson).constraints
+      getMaxFileSizeFromEnvelope(constraintsEmpty) shouldBe defaultFileSize
+      getContentTypeFromEnvelope(constraintsEmpty) shouldBe defaultContentTypes
     }
   }
 
   "When envelope data has specified contentType field in constraints" should {
     "return as List of Content Types" in {
-      val contentTypeConstraintJson = Json.parse("""{"status": "OPEN", "constraints": {"contentTypes": ["application/pdf","image/jpeg"]}}""")
-
       val expectedList = List("application/pdf","image/jpeg")
-
-      getContentTypeFromEnvelope(contentTypeConstraintJson) shouldBe expectedList
+      val constraintsContentType = extractEnvelopeDetails(envelopeContentTypesJson(s""""application/pdf","image/jpeg"""")).constraints
+      getContentTypeFromEnvelope(constraintsContentType) shouldBe expectedList
     }
   }
 

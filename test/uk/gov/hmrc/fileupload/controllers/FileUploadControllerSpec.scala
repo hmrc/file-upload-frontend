@@ -93,15 +93,15 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
 
       status(result) shouldBe Status.REQUEST_ENTITY_TOO_LARGE
     }
-//    "return 415 Unsupported File Type if file is not one of the specified content types" in {
-//      val file = anyInvalidFile()
-//      val unsupportedFileType = validUploadRequest(List(file))
-//
-//      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(unsupportedFileType)
-//
-//      status(result) shouldBe Status.UNSUPPORTED_MEDIA_TYPE
-//      contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file with a valid file type"}}"""
-//    }
+
+    "return 200 if file is not one of the specified content types in envelope" in {
+      val file = anyUnSupportedFile()
+      val unsupportedFileType = validUploadRequest(List(file))
+
+      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(unsupportedFileType)
+
+      status(result) shouldBe Status.OK
+    }
 
     "upload file if browser content type for xml files return as text/xml" in {
       val file = anyXml()

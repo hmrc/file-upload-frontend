@@ -54,8 +54,33 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
     //File(workDir).delete()
   }
 
-  val ENVELOPE_OPEN_RESPONSE = """ { "status" : "OPEN", "constraints" : { "maxNumFiles" : 100, "maxSize" : "25MB", "maxSizePerItem" : "10MB" } } """
-  val ENVELOPE_CLOSED_RESPONSE = """ { "status" : "CLOSED", "constraints" : { "maxNumFiles" : 100, "maxSize" : "25MB", "maxSizePerItem" : "10MB" }  } """
+  val ENVELOPE_OPEN_RESPONSE =
+    """ { "status" : "OPEN",
+          "constraints" : {
+            "maxItems" : 100,
+            "maxSize" : "25MB",
+            "maxSizePerItem" : "10MB",
+            "contentTypes": [
+              "application/pdf",
+              "image/jpeg",
+              "application/xml",
+              "text/xml"
+            ]}
+          } """.stripMargin
+
+  val ENVELOPE_CLOSED_RESPONSE =
+    """ { "status" : "CLOSED",
+          "constraints" : {
+            "maxItems" : 100,
+            "maxSize" : "25MB",
+            "maxSizePerItem" : "10MB",
+            "contentTypes": [
+              "application/pdf",
+              "image/jpeg",
+              "application/xml",
+              "text/xml"
+              ]}
+          } """.stripMargin
 
   object Wiremock {
 
