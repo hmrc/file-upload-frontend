@@ -36,7 +36,7 @@ sm --start FILE_UPLOAD_ALL
 
 #### Upload File
 Uploads a single file to the envelope via multipart form. 
-The file should not exceed over constraints.maxSizePerItem. 
+File constraints (such as file type, max no of files and file size) are managed via the file-upload (back end) service.
 If a routing request has been created for an envelope, any attempts after to upload a file will be rejected.
 
 ```
