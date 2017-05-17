@@ -67,7 +67,9 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSCli
 
   def transferGetEnvelopes() = Action.async { request =>
     wSClient.url(s"$baseUrl/file-transfer/envelopes").get().map { response =>
-      Ok(Json.parse(response.body))
+      val body = Json.parse(response.body)
+      if(response.status!=200) InternalServerError(body + s" backendStatus:${response.status}")
+      else Ok(body)
     }
   }
 
