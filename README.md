@@ -51,15 +51,25 @@ POST    /file-upload/upload/envelopes/{envelope-Id}/files/{file-Id}
 | Unsupported Media Type  | 415   |  File type other than the supported type.  |
 | Locked  | 423   |  Routing request has been made for this Envelope.  |
 
-#### Example
+##### Example
 Request (POST): localhost:8899/file-upload/upload/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/file-id-1
 
 Body (Multipart Form): A single binary file.  
          
 Note: constraints.contentTypes and constraints.maxSizePerItem are applied when the file is uploaded. If validation fails, the user will receive an error.
 
-
 Response: 200
+
+##### Optional redirection
+You can provide optional URL as a callbacks for success/failure(redirect-success-url/redirect-error-url). They have to provided as URL querry prameters.
+ex.: `?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar`
+
+On error we add "?errorCode:SOME_ERROR_CODE_AS_NUMBER&reason=BODY_OF_ERROR_RESPONSE" to your `redirect-error-url`.
+
+- The URL must begin with https (can be dissabled on local instance).
+- The URL must be to a valid tax domain.
+- The URL decorattion will be sanitized (no request parameters and anchors).
+- both redirection urls are not required.
 
 ## TEST-ONLY ENDPOINTS <a name="testonly"></a>
 These are endpoints used for testing purposes only and are not available in production. <i>**PLEASE DO NOT USE WITHOUT PERMISSION**</i>
