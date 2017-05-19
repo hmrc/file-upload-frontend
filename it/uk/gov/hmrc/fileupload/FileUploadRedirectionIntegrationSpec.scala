@@ -7,7 +7,7 @@ import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions}
 
 
-class FileUploadRedirectionIntegrationSpec extends FeatureSpecLike with GivenWhenThen with FileActions with EnvelopeActions with Eventually with Matchers{
+class FileUploadRedirectionIntegrationSpec extends FeatureSpecLike with GivenWhenThen with FileActions with EnvelopeActions with Eventually with Matchers {
 
   feature("Redirect End User when provided with redirect parameters as part of upload file request") {
 
@@ -59,11 +59,11 @@ class FileUploadRedirectionIntegrationSpec extends FeatureSpecLike with GivenWhe
       val queryParam = s"redirect-success-url=$redirectSuccessUrl"
       val uploadFileResponse = uploadDummyFileWithRedirects(envelopeId, fileId, queryParam)
 
-      Then("a Bad Requst response should be received")
+      Then("a Bad Request response should be received")
       uploadFileResponse.status should be(400)
 
-      And("The message should indicate https required")
-      val expectedMessage = "java.net.MalformedURLException: Https is required for the redirection."
+      And("The message should indicate URL is invalid")
+      val expectedMessage = "URL is invalid"
       val parsedBody = Json.parse(uploadFileResponse.body)
       val message = (parsedBody \ "message").as[String]
       message shouldBe expectedMessage
@@ -79,11 +79,11 @@ class FileUploadRedirectionIntegrationSpec extends FeatureSpecLike with GivenWhe
       val queryParam = s"redirect-error-url=$redirectErrorUrl"
       val uploadFileResponse = uploadDummyFileWithRedirects(envelopeId, fileId, queryParam)
 
-      Then("upon success the user should be redirected to the url specified in the query parameter")
+      Then("a Bad Request response should be received")
       uploadFileResponse.status should be(400)
 
-      And("The message should indicate https required")
-      val expectedMessage = "java.net.MalformedURLException: Https is required for the redirection."
+      And("The message should indicate URL is invalid")
+      val expectedMessage = "URL is invalid"
       val parsedBody = Json.parse(uploadFileResponse.body)
       val message = (parsedBody \ "message").as[String]
       message shouldBe expectedMessage
@@ -100,11 +100,11 @@ class FileUploadRedirectionIntegrationSpec extends FeatureSpecLike with GivenWhe
       val queryParam = s"redirect-success-url=$redirectSuccessUrl"
       val uploadFileResponse = uploadDummyFileWithRedirects(envelopeId, fileId, queryParam)
 
-      Then("a Bad Requst response should be received")
+      Then("a Bad Request response should be received")
       uploadFileResponse.status should be(400)
 
-      And("The message should indicate domain not allowed")
-      val expectedMessage = "java.net.MalformedURLException: Given redirection domain is not allowed."
+      And("The message should indicate URL is invalid")
+      val expectedMessage = "URL is invalid"
       val parsedBody = Json.parse(uploadFileResponse.body)
       val message = (parsedBody \ "message").as[String]
       message shouldBe expectedMessage
@@ -115,16 +115,16 @@ class FileUploadRedirectionIntegrationSpec extends FeatureSpecLike with GivenWhe
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
-      When("a file is uploaded provided a redirect on success to a https://www-dev.tax.service.gov.uk url")
+      When("a file is uploaded provided a redirect on error to an https but non gov.uk url")
       val redirectErrorUrl = "https://www.playframework.com/documentation/2.5.x/ScalaTestingWithScalaTest"
       val queryParam = s"redirect-error-url=$redirectErrorUrl"
       val uploadFileResponse = uploadDummyFileWithRedirects(envelopeId, fileId, queryParam)
 
-      Then("upon success the user should be redirected to the url specified in the query parameter")
+      Then("a Bad Request response should be received")
       uploadFileResponse.status should be(400)
 
-      And("The message should indicate https required")
-      val expectedMessage = "java.net.MalformedURLException: Given redirection domain is not allowed."
+      And("The message should indicate URL is invalid")
+      val expectedMessage = "URL is invalid"
       val parsedBody = Json.parse(uploadFileResponse.body)
       val message = (parsedBody \ "message").as[String]
       message shouldBe expectedMessage
