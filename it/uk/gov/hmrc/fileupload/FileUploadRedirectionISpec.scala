@@ -27,7 +27,7 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
 
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
-      uploadFileResponse.header("Location") shouldBe redirectSuccessUrl
+      uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
     }
 
     scenario("Redirect upon success to valid url - both success and error urls provided") {
@@ -44,7 +44,7 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
 
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
-      uploadFileResponse.header("Location") shouldBe redirectSuccessUrl
+      uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
     }
 
 //    scenario("Redirect upon error to valid url - both success and error urls provided") {
