@@ -66,7 +66,7 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
 
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
-      uploadFileResponse.header("Location") shouldBe redirectErrorUrl
+      uploadFileResponse.header("Location").get.startsWith(redirectErrorUrl) shouldBe true
     }
 
 
