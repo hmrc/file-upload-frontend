@@ -44,7 +44,7 @@ trait FileActions extends ActionsSupport {
       .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
   }
 
-  def uploadDummyFileWithRedirects(envelopeId: EnvelopeId, fileId: FileId, redirectParams: String): WSResponse = {
+  def uploadDummyFileWithoutRedirects(envelopeId: EnvelopeId, fileId: FileId, redirectParams: String): WSResponse = {
     client.url(s"$url/upload/envelopes/$envelopeId/files/$fileId?$redirectParams")
       .withFollowRedirects(false)
       .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
