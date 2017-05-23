@@ -71,6 +71,8 @@ On error we append to the provided error-url: `s"?errorCode:$ERROR_CODE&reason=$
 - The URL decorattion will be sanitized (no request parameters and anchors).
 - both redirection urls are not required.
 
+Response: 301 on any redirection
+
 ## TEST-ONLY ENDPOINTS <a name="testonly"></a>
 These are endpoints used for testing purposes only and are not available in production. <i>**PLEASE DO NOT USE WITHOUT PERMISSION**</i>
 
