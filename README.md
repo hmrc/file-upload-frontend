@@ -61,8 +61,8 @@ Note: constraints.contentTypes and constraints.maxSizePerItem are applied when t
 Response: 200
 
 ##### Optional redirection
-You can provide optional URL as a callbacks for success/failure(redirect-success-url/redirect-error-url). They have to provided as URL querry prameters.
-ex.: `?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar`
+You can provide optional URL as a callbacks for success/failure(redirect-success-url/redirect-error-url). They need to be provided as URL querry prameters.
+ex.: `$UPLOAD_ENDPOINT?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar`
 
 On error we add "?errorCode:SOME_ERROR_CODE_AS_NUMBER&reason=BODY_OF_ERROR_RESPONSE" to your `redirect-error-url`.
 
