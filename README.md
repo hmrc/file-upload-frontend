@@ -64,7 +64,7 @@ Response: 200
 You can provide optional URL as a callbacks for success/failure(redirect-success-url/redirect-error-url). They need to be provided as URL querry prameters.
 ex.: `$UPLOAD_ENDPOINT?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar`
 
-On error we add `?errorCode:SOME_ERROR_CODE_AS_NUMBER&reason=BODY_OF_ERROR_RESPONSE` to your `redirect-error-url`.
+On error we add `?errorCode:$ERROR_CODE&reason=$BODY_OF_ERROR_RESPONSE` to your `redirect-error-url`.
 
 - The URL must begin with https (can be dissabled on local instance).
 - The URL must be to a valid tax domain.
