@@ -51,7 +51,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
 
     println("Stopping mock s3 api")
     s3MockServer.stop
-    //File(workDir).delete()
+    File(workDir).delete()
   }
 
   val ENVELOPE_OPEN_RESPONSE =

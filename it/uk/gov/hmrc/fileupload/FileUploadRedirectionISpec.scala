@@ -2,6 +2,7 @@ package uk.gov.hmrc.fileupload
 
 import org.scalatest.{FeatureSpecLike, GivenWhenThen, Matchers}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Seconds, Span}
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions}
@@ -34,6 +35,14 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
       uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
+
+      And("able to download file")
+      eventually {
+        val res = download(envelopeId, fileId)
+        res.status shouldBe 200
+        res.body shouldBe "someTextContents"
+
+      }(PatienceConfig(timeout = Span(30, Seconds)))
     }
 
     scenario("Redirect upon success to valid url - both success and error urls provided") {
@@ -51,6 +60,14 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
       uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
+
+      And("able to download file")
+      eventually {
+        val res = download(envelopeId, fileId)
+        res.status shouldBe 200
+        res.body shouldBe "someTextContents"
+
+      }(PatienceConfig(timeout = Span(30, Seconds)))
     }
 
     scenario("Redirect upon error to valid url - both success and error urls provided") {
@@ -67,8 +84,15 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
       uploadFileResponse.header("Location").get.startsWith(redirectErrorUrl) shouldBe true
-    }
 
+      And("able to download file")
+      eventually {
+        val res = download(envelopeId, fileId)
+        res.status shouldBe 200
+        res.body shouldBe "someTextContents"
+
+      }(PatienceConfig(timeout = Span(30, Seconds)))
+    }
 
     scenario("Redirect upon success to invalid url - not https") {
       Given("Envelope created with default parameters")
@@ -110,7 +134,6 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       message shouldBe expectedMessage
     }
 
-
     scenario("Redirect upon success to invalid url - not service.gov.uk") {
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
@@ -150,7 +173,6 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       val message = (parsedBody \ "message").as[String]
       message shouldBe expectedMessage
     }
-
 
   }
 
