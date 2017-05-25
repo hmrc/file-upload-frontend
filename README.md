@@ -34,7 +34,7 @@ sm --start FILE_UPLOAD_ALL
 
 ## Endpoints <a name="endpoints"></a>
 
-#### Upload File
+### Upload File
 Uploads a single file to the envelope via multipart form. 
 File constraints (such as file type, max no of files and file size) are managed via the file-upload (back end) service.
 If a routing request has been created for an envelope, any attempts after to upload a file will be rejected.
@@ -61,15 +61,17 @@ Note: constraints.contentTypes and constraints.maxSizePerItem are applied when t
 Response: 200
 
 ##### Optional redirection
-You can provide optional URL as a callbacks for success/failure(redirect-success-url/redirect-error-url). They have to provided as URL querry prameters.
-ex.: `?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar`
+You can provide optional URL as a callbacks for success/failure(redirect-success-url/redirect-error-url). They need to be provided as URL querry prameters.
+ex.: `s"$UPLOAD_ENDPOINT?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar"`
 
-On error we add "?errorCode:SOME_ERROR_CODE_AS_NUMBER&reason=BODY_OF_ERROR_RESPONSE" to your `redirect-error-url`.
+On error we append to the provided error-url: `s"?errorCode:$ERROR_CODE&reason=$BODY_OF_ERROR_RESPONSE"`.
 
 - The URL must begin with https (can be dissabled on local instance).
 - The URL must be to a valid tax domain.
 - The URL decorattion will be sanitized (no request parameters and anchors).
 - both redirection urls are not required.
+
+Response: 301 on any redirection
 
 ## TEST-ONLY ENDPOINTS <a name="testonly"></a>
 These are endpoints used for testing purposes only and are not available in production. <i>**PLEASE DO NOT USE WITHOUT PERMISSION**</i>
