@@ -156,10 +156,12 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
 
   def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): S3Object = {
     Logger.info(s"Retrieving an object from $bucketName with $S3KeyName and $versionId")
+    // TODO handle exceptions for 404 and similar
     s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId))
   }
 
   def objectByKey(bucketName: String, key: S3KeyName): S3Object =
+    // TODO handle exceptions for 404 and similar
     s3Client.getObject(bucketName, key.value)
 
   def download(bucketName: String, key: S3KeyName, versionId: String) = downloadByObject(objectByKeyVersion(bucketName, key, versionId))
