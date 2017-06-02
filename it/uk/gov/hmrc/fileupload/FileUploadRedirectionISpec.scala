@@ -36,13 +36,7 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       uploadFileResponse.status should be(301)
       uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
 
-      And("able to download file")
-      eventually {
-        val res = download(envelopeId, fileId)
-        res.status shouldBe 200
-        res.body shouldBe "someTextContents"
-
-      }(PatienceConfig(timeout = Span(30, Seconds)))
+      Thread.sleep(1000)
     }
 
     scenario("Redirect upon success to valid url - both success and error urls provided") {
@@ -61,13 +55,7 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       uploadFileResponse.status should be(301)
       uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
 
-      And("able to download file")
-      eventually {
-        val res = download(envelopeId, fileId)
-        res.status shouldBe 200
-        res.body shouldBe "someTextContents"
-
-      }(PatienceConfig(timeout = Span(30, Seconds)))
+      Thread.sleep(1000)
     }
 
     scenario("Redirect upon error to valid url - both success and error urls provided") {
@@ -85,13 +73,7 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       uploadFileResponse.status should be(301)
       uploadFileResponse.header("Location").get.startsWith(redirectErrorUrl) shouldBe true
 
-      And("able to download file")
-      eventually {
-        val res = download(envelopeId, fileId)
-        res.status shouldBe 200
-        res.body shouldBe "someTextContents"
-
-      }(PatienceConfig(timeout = Span(30, Seconds)))
+      Thread.sleep(1000)
     }
 
     scenario("Redirect upon success to invalid url - not https") {

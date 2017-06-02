@@ -29,13 +29,6 @@ class FileUploadConstraintsISpec extends FeatureSpecLike with FileActions with E
       Then("Return 200")
       result.status shouldBe 200
 
-      And("able to download file")
-      eventually {
-        val res = download(envelopeId, fileId)
-        res.status shouldBe 200
-        res.body shouldBe "someTextContents"
-
-      }(PatienceConfig(timeout = Span(30, Seconds)))
     }
 
     scenario("Prevent uploading file that is larger than maxSizePerItem specified in envelope") {
