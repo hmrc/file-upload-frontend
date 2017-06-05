@@ -29,6 +29,7 @@ class FileUploadConstraintsISpec extends FeatureSpecLike with FileActions with E
       Then("Return 200")
       result.status shouldBe 200
 
+      Thread.sleep(1000)
     }
 
     scenario("Prevent uploading file that is larger than maxSizePerItem specified in envelope") {
