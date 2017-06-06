@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import akka.util.ByteString
 import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.mvc._
@@ -34,16 +35,22 @@ class FileDownloadController(
   def download(envelopeId: EnvelopeId, fileId: FileId) = Action { implicit request =>
     Logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
     val key = createS3Key(envelopeId, fileId)
-    val result = downloadFromTransient(key)
+    downloadFromTransient(key) match {
+      case Some(result) =>
+        Logger.info(s"download result: contentType: ${result.metadata.contentType} &  length: ${
+          result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")
 
-    Logger.info(s"download result: contentType: ${result.metadata.contentType} &  length: ${result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")
-
-    Result(
-      header = ResponseHeader(200, Map.empty),
-      body = HttpEntity.Streamed(
-        result.stream,
-        Some(result.metadata.contentLength),
-        Some(result.metadata.contentType))
-    )
+        Result(
+          header = ResponseHeader(200, Map.empty),
+          body = HttpEntity.Streamed(
+            result.stream,
+            Some(result.metadata.contentLength),
+            Some(result.metadata.contentType))
+        )
+      case None => Result(
+        header = ResponseHeader(404, Map.empty),
+        body = HttpEntity.Strict(ByteString("{\"msg\":\"File not found\"}"), Some("application/json"))
+      )
+    }
   }
 }

@@ -45,9 +45,9 @@ import scala.util.Try
 trait S3Service {
   def awsConfig: AwsConfig
 
-  def download(bucketName: String, key: S3KeyName): StreamWithMetadata
+  def download(bucketName: String, key: S3KeyName): Option[StreamWithMetadata]
 
-  def download(bucketName: String, key: S3KeyName, versionId: String): StreamWithMetadata
+  def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata]
 
   def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]]
 
@@ -81,7 +81,7 @@ object S3Service {
 
   type UploadToQuarantine = (String, InputStream, Int) => Future[UploadResult]
 
-  type DownloadFromTransient = (S3KeyName) => StreamWithMetadata
+  type DownloadFromTransient = (S3KeyName) => Option[StreamWithMetadata]
 }
 
 case class S3KeyName(value: String) extends AnyVal {
@@ -154,19 +154,27 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
       ))
   }
 
-  def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): S3Object = {
-    Logger.info(s"Retrieving an object from $bucketName with $S3KeyName and $versionId")
-    // TODO handle exceptions for 404 and similar
-    s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId))
+  def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): Option[S3Object] = {
+    if (s3Client.doesObjectExist(bucketName, key.value)) {
+      Logger.info(s"Retrieving an existing S3 object from $bucketName with $S3KeyName) and $versionId")
+      Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId)))
+    }
+    else None
   }
 
-  def objectByKey(bucketName: String, key: S3KeyName): S3Object =
-    // TODO handle exceptions for 404 and similar
-    s3Client.getObject(bucketName, key.value)
+  def objectByKey(bucketName: String, key: S3KeyName): Option[S3Object] = {
+    if (s3Client.doesObjectExist(bucketName, key.value)) {
+      Logger.info(s"Retrieving an existing S3 object from $bucketName with $S3KeyName)")
+      Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value)))
+    }
+    else None
+  }
 
-  def download(bucketName: String, key: S3KeyName, versionId: String) = downloadByObject(objectByKeyVersion(bucketName, key, versionId))
-  def download(bucketName: String, key: S3KeyName) = downloadByObject(objectByKey(bucketName, key))
+  def download(bucketName: String, key: S3KeyName, versionId: String) =
+    objectByKeyVersion(bucketName, key, versionId).map(downloadByObject)
 
+  def download(bucketName: String, key: S3KeyName) =
+    objectByKey(bucketName, key).map(downloadByObject)
 
   override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext) = {
     Future {
