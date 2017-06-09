@@ -183,9 +183,10 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
     upload.addProgressListener(new ProgressListener {
       def progressChanged(progressEvent: ProgressEvent) = {
         if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+          Logger.info(s"Successful: $progressEvent")
           promise.trySuccess(upload.waitForUploadResult())
         } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT) {
-          promise.failure(new Exception("transfer failed"))
+          promise.failure(new Exception(s"transfer failed: $progressEvent because of Bucket: $bucketName and Key: $key"))
         }
         // handle other event types?
       }
