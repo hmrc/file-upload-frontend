@@ -190,7 +190,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
           Logger.debug(s"upload-transfer completed: $fileInfo")
           promise.trySuccess(upload.waitForUploadResult())
         } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT) {
-          Logger.error(events.map(_.toString).mkString("\n"))
+          Logger.debug(events.reverse.map(_.toString).mkString("\n"))
           Logger.error(s"upload: event type=${progressEvent.getEventType}")
           promise.failure(new Exception("transfer failed"))
         }
