@@ -156,7 +156,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
 
   def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): Option[S3Object] = {
     if (s3Client.doesObjectExist(bucketName, key.value)) {
-      Logger.info(s"Retrieving an existing S3 object from $bucketName with $S3KeyName) and $versionId")
+      Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $S3KeyName and version: $versionId")
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId)))
     }
     else None
@@ -164,7 +164,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
 
   def objectByKey(bucketName: String, key: S3KeyName): Option[S3Object] = {
     if (s3Client.doesObjectExist(bucketName, key.value)) {
-      Logger.info(s"Retrieving an existing S3 object from $bucketName with $S3KeyName)")
+      Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $S3KeyName)")
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value)))
     }
     else None
