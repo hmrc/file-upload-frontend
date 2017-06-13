@@ -181,16 +181,16 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
     val fileInfo = s"bucket=$bucketName key=$key filSizee=$fileSize"
     val upload = transferManager.upload(bucketName, key, file, objectMetadata(fileSize))
     val promise = Promise[UploadResult]
-    Logger.debug(s"upload start: $fileInfo")
+    Logger.info(s"upload start: $fileInfo")
     upload.addProgressListener(new ProgressListener {
       var events:List[ProgressEvent] = List.empty
       def progressChanged(progressEvent: ProgressEvent) = {
         events = progressEvent :: events
         if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-          Logger.debug(s"upload-transfer completed: $fileInfo")
+          Logger.info(s"upload-transfer completed: $fileInfo")
           promise.trySuccess(upload.waitForUploadResult())
         } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT) {
-          Logger.debug(s"""Transfer events: ${events.reverse.map(_.toString).mkString("\n")}""")
+          Logger.error(s"""Transfer events: ${events.reverse.map(_.toString).mkString("\n")}""")
           Logger.error(s"upload error: transfer failed: $fileInfo")
           promise.failure(new Exception("transfer failed"))
         }
