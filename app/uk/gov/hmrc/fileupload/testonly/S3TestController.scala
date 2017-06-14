@@ -86,11 +86,11 @@ trait S3TestController { self: Controller =>
   def s3downloadFileT(fileName: String, version: Option[String]) = s3downloadFile(transientBucketName, fileName, version)
 
   def s3downloadFile(bucket: String, fileName: String, version: Option[String]) = Action { req =>
-    Logger.info(s"downloading $fileName from bucket: $bucket")
-    val result = version match {
+    Logger.info(s"downloading $fileName from bucket: $bucket, versionO: $version")
+    val result = (version match {
       case Some(v) => s3Service.download(bucket, S3KeyName(fileName), v)
       case None => s3Service.download(bucket, S3KeyName(fileName))
-    }
+    }).get
 
     Result(
       header = ResponseHeader(200, Map.empty),
