@@ -92,7 +92,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
 
       status(resultF) shouldEqual MOVED_PERMANENTLY
 
-      getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode:404&reason=" + errorMsg)
+      getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode=404&reason=" + errorMsg)
     }
 
     "redirect on failure with complex msg error" in {
@@ -105,7 +105,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
 
       status(resultF) shouldEqual MOVED_PERMANENTLY
 
-      getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode:404&reason=" + errorMsg)
+      getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode=404&reason=" + errorMsg)
     }
 
     "block not allowed domains" in {

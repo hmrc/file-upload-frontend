@@ -115,7 +115,7 @@ object RedirectionFeature {
     Results.Redirect(url.url, MOVED_PERMANENTLY)
 
   def addErrorDataToUrl(status: Int, msg: String): ValidatedUrl => ValidatedUrl =
-    baseUrl => ValidatedUrl(baseUrl.url + s"?errorCode:$status&reason=$msg")
+    baseUrl => ValidatedUrl(baseUrl.url + s"?errorCode=$status&reason=$msg")
 
   def extractErrorMsg(result: Result): String = {
     result.body.asInstanceOf[HttpEntity.Strict].data.decodeString("utf-8") // how to do it cleanly?
