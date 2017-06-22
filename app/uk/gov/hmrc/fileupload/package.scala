@@ -62,8 +62,7 @@ object FileId {
     }
   }
   implicit val binder: PathBindable[FileId] =
-    new SimpleObjectBinder[FileId](
-      str => FileId(UriEncoding.decodePathSegment(str, charset)),
+    new SimpleObjectBinder[FileId](FileId.apply, // reading is already decoded by routes as parameters
       fId => UriEncoding.encodePathSegment(fId.value, charset) )
 }
 
