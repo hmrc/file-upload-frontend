@@ -7,16 +7,32 @@ Frontend for uploading files to the Tax Platform. Please <i>**DO NOT USE**</i> T
 ## Software Requirements
 *   ClamAv Version 0.99 or later - the [clam-av client ReadMe](https://github.com/hmrc/clamav-client) provides documentation on how to install or alternatively you can download and run the [docker-clamav image](https://hub.docker.com/r/mkodockx/docker-clamav). ClamAv is also configured to block Macros.
 *   MongoDB Version 3.2 (3.4 will not work currently)
+*   Requires an AWS Account
 
 ## Run the application locally
 
-Before you attempt to run file-upload-frontend locally ensure you have ClamAV running and the correct version of Mongo as per the Software Requirements above.
+Before you attempt to run file-upload-frontend locally ensure:
+ 
+* You have ClamAV running and the correct version of Mongo as per the Software Requirements above.
+
+* You need to configure the following environment variables:
+
+```
+  S3_BUCKET_TRANSIENT="your-bucket-name-for-transient"
+  S3_BUCKET_QUARANTINE="your-bucket-name-for-quarantine"
+  AWS_KEY="your-aws-key"
+  AWS_SECRET="your-aws-secret"
+```
+
+Note: Setting the environment variables for S3 will cause the integration tests to fail because they use a mock library .
 
 To run the application execute
 
 ```
 sbt run
 ```
+
+Alternatively, you can write up a bash script to have your terminal run with the environment variables mentioned.
 
 The endpoints can then be accessed with the base url http://localhost:8899/
 
@@ -56,7 +72,7 @@ Request (POST): localhost:8899/file-upload/upload/envelopes/0b215e97-11d4-4006-9
 
 Body (Multipart Form): A single binary file.  
          
-Note: constraints.contentTypes and constraints.maxSizePerItem are applied when the file is uploaded. If validation fails, the user will receive an error.
+Note: If maxSizePerItem is specified in the [envelope](https://github.com/hmrc/file-upload#create-an-envelope), then it is applied when the file is uploaded. Otherwise the default is 10MB. 
 
 Response: 200
 
@@ -68,7 +84,7 @@ On error we append to the provided error-url: `s"?errorCode=$ERROR_CODE&reason=$
 
 - The URL must begin with https (can be dissabled on local instance).
 - The URL must be to a valid tax domain.
-- The URL decorattion will be sanitized (no request parameters and anchors).
+- The URL decoration will be sanitized (no request parameters and anchors).
 - both redirection urls are not required.
 
 Response: 301 on any redirection
