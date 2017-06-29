@@ -29,8 +29,10 @@ sm --start FILE_UPLOAD_ALL
 ## Table of Contents
 
 *   [Endpoints](#endpoints)
+*   [Optional Redirection](#redirection)
 *   [Test-Only Endpoints](#testonly)
 *   [Internal-Use-Only Endpoints](#internal)
+
 
 ## Endpoints <a name="endpoints"></a>
 
@@ -60,15 +62,17 @@ Note: constraints.contentTypes and constraints.maxSizePerItem are applied when t
 
 Response: 200
 
-##### Optional redirection
+##### Optional redirection <a name="redirection"></a>
+Upload File With Redirection-URL:
 You can provide optional URL as a callbacks for success/failure(redirect-success-url/redirect-error-url). They need to be provided as URL querry prameters.
 ex.: `s"$UPLOAD_ENDPOINT?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar"`
 
 On error we append to the provided error-url: `s"?errorCode=$ERROR_CODE&reason=$BODY_OF_ERROR_RESPONSE"`.
 
-- The URL must begin with https (can be dissabled on local instance).
+- The URL must begin with https (can be disabled on local instance).
 - The URL must be to a valid tax domain.
-- The URL decorattion will be sanitized (no request parameters and anchors).
+- The URL decoration will be sanitized (no request parameters and anchors).
+- The URL request parameter's keys i.e. "redirect-success-url". If wrongly entered, they will be ignored and if there are no other errors response 200 will be given.
 - both redirection urls are not required.
 
 Response: 301 on any redirection
