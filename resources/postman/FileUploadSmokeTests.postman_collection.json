@@ -2,7 +2,7 @@
 	"variables": [],
 	"info": {
 		"name": "File Upload Smoke Tests",
-		"_postman_id": "f2b23a80-010c-f7e7-1e71-643939d1ca4d",
+		"_postman_id": "ea2dc76b-10a2-bef2-9f7c-d3fc7db5deab",
 		"description": "",
 		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
 	},
@@ -14,7 +14,15 @@
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
-						"exec": "tests[\"Status code is 201\"] = responseCode.code === 201;\ntests[\"Status code name has Created\"] = responseCode.name.has(\"Created\");\n\nvar envelopeId = JSON.parse(responseBody).envelopeId\n\ntests[\"Response body contains Envelope ID\"] = envelopeId !== null\npostman.setGlobalVariable(\"envelopeId\", envelopeId);"
+						"exec": [
+							"tests[\"Status code is 201\"] = responseCode.code === 201;",
+							"tests[\"Status code name has Created\"] = responseCode.name.has(\"Created\");",
+							"",
+							"var envelopeId = JSON.parse(responseBody).envelopeId",
+							"",
+							"tests[\"Response body contains Envelope ID\"] = envelopeId !== null",
+							"postman.setGlobalVariable(\"envelopeId\", envelopeId);"
+						]
 					}
 				}
 			],
@@ -43,7 +51,15 @@
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
-						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\nvar jsonData = JSON.parse(responseBody);\ntests[\"Check envelope ID returned\"] = jsonData.id === postman.getGlobalVariable(\"envelopeId\");\n\ntests[\"Check Status is OPEN\"] = jsonData.status === \"OPEN\"\n"
+						"exec": [
+							"tests[\"Status code is 200\"] = responseCode.code === 200;",
+							"",
+							"var jsonData = JSON.parse(responseBody);",
+							"tests[\"Check envelope ID returned\"] = jsonData.id === postman.getGlobalVariable(\"envelopeId\");",
+							"",
+							"tests[\"Check Status is OPEN\"] = jsonData.status === \"OPEN\"",
+							""
+						]
 					}
 				}
 			],
@@ -51,23 +67,19 @@
 				"url": "{{fe-url}}/file-upload/test-only/envelopes/{{envelopeId}} ",
 				"method": "GET",
 				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": []
-				},
+				"body": {},
 				"description": ""
 			},
 			"response": [
 				{
+					"id": "91672241-f4ef-40f4-ab9f-b2f54274d7a3",
 					"name": "Success",
 					"originalRequest": {
 						"url": "{{url}}/file-upload/envelopes/{{locationHeader}}",
 						"method": "GET",
 						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": []
-						}
+						"body": {},
+						"description": ""
 					},
 					"status": "OK",
 					"code": 200,
@@ -100,14 +112,20 @@
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
-						"exec": "tests[\"Status code is 201\"] = responseCode.code === 201;\ntests[\"Status code name is Created\"] = responseCode.name.has(\"Created\");"
+						"exec": [
+							"tests[\"Status code is 201\"] = responseCode.code === 201;",
+							"tests[\"Status code name is Created\"] = responseCode.name.has(\"Created\");"
+						]
 					}
 				},
 				{
 					"listen": "prerequest",
 					"script": {
 						"type": "text/javascript",
-						"exec": "var timestamp = Date.now()\npostman.setGlobalVariable(\"fileId\", timestamp);"
+						"exec": [
+							"var timestamp = Date.now()",
+							"postman.setGlobalVariable(\"fileId\", timestamp);"
+						]
 					}
 				}
 			],
@@ -127,14 +145,98 @@
 						{
 							"key": "{{fileId}}",
 							"type": "file",
-							"enabled": true,
-							"src": "1473167513.pdf"
+							"src": "1473167513.pdf",
+							"value": ""
 						},
 						{
 							"key": "foo",
 							"value": "1",
-							"type": "text",
-							"enabled": true
+							"type": "text"
+						}
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Upload File With Redirection (front-end)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"tests[\"Status code is 201\"] = responseCode.code === 201;",
+							"tests[\"Status code name is Created\"] = responseCode.name.has(\"Created\");"
+						]
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var timestamp = Date.now()",
+							"postman.setGlobalVariable(\"fileId\", timestamp);"
+						]
+					}
+				}
+			],
+			"request": {
+				"url": {
+					"raw": "{{fe-url}}/file-upload/upload/envelopes/{{envelopeId}}/files/{{fileId}}?redirect-success-url=https://www.tax.service.gov.uk/estimate-paye-take-home-pay/&redirect-error-url=https://www.gov.uk/help",
+					"protocol": "{{fe-url}}/file-upload/upload/envelopes/{{envelopeId}}/files/{{fileId}}?redirect-success-url=https",
+					"host": [
+						"www",
+						"tax",
+						"service",
+						"gov",
+						"uk"
+					],
+					"path": [
+						"estimate-paye-take-home-pay",
+						"&redirect-error-url=https:",
+						"",
+						"www.gov.uk",
+						"help"
+					],
+					"query": [
+						{
+							"key": "redirect-success-url",
+							"value": "https://www.tax.service.gov.uk/estimate-paye-take-home-pay/",
+							"equals": true,
+							"description": ""
+						},
+						{
+							"key": "redirect-error-url",
+							"value": "https://www.gov.uk/help",
+							"equals": true,
+							"description": ""
+						}
+					],
+					"variable": []
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Requested-With",
+						"value": "Craig",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "{{fileId}}",
+							"type": "file",
+							"src": "FileUploadSmokeTests.postman_collection.json"
+						},
+						{
+							"key": "foo",
+							"value": "1",
+							"type": "text"
 						}
 					]
 				},
@@ -149,7 +251,26 @@
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
-						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\nvar jsonData = JSON.parse(responseBody);\ntests[\"Check envelope ID returned\"] = jsonData.id === postman.getGlobalVariable(\"envelopeId\");\n\ntests[\"Check Env Status is OPEN\"] = jsonData.status === \"OPEN\"\ntests[\"Check fileId is present\"] = jsonData.files[0].id === postman.getGlobalVariable(\"fileId\");\n\n\n\ntests[\"Check File Status is QUARANTINED\"] = jsonData.files[0].status ===\"QUARANTINED\"\n\nvar callbackUrl = jsonData.files[0].href\npostman.setGlobalVariable(\"callbackUrl\", callbackUrl)\nvar expectedCallbackUrl = \"/file-upload/envelopes/\" + postman.getGlobalVariable(\"envelopeId\")+ \"/files/\" + postman.getGlobalVariable(\"fileId\") + \"/content\"\n\ntests[\"Check callback url correct\"] = callbackUrl === expectedCallbackUrl\n"
+						"exec": [
+							"tests[\"Status code is 200\"] = responseCode.code === 200;",
+							"",
+							"var jsonData = JSON.parse(responseBody);",
+							"tests[\"Check envelope ID returned\"] = jsonData.id === postman.getGlobalVariable(\"envelopeId\");",
+							"",
+							"tests[\"Check Env Status is OPEN\"] = jsonData.status === \"OPEN\"",
+							"tests[\"Check fileId is present\"] = jsonData.files[0].id === postman.getGlobalVariable(\"fileId\");",
+							"",
+							"",
+							"",
+							"tests[\"Check File Status is QUARANTINED\"] = jsonData.files[0].status ===\"QUARANTINED\"",
+							"",
+							"var callbackUrl = jsonData.files[0].href",
+							"postman.setGlobalVariable(\"callbackUrl\", callbackUrl)",
+							"var expectedCallbackUrl = \"/file-upload/envelopes/\" + postman.getGlobalVariable(\"envelopeId\")+ \"/files/\" + postman.getGlobalVariable(\"fileId\") + \"/content\"",
+							"",
+							"tests[\"Check callback url correct\"] = callbackUrl === expectedCallbackUrl",
+							""
+						]
 					}
 				}
 			],
@@ -157,23 +278,19 @@
 				"url": "{{fe-url}}/file-upload/test-only/envelopes/{{envelopeId}} ",
 				"method": "GET",
 				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": []
-				},
+				"body": {},
 				"description": ""
 			},
 			"response": [
 				{
+					"id": "ae284586-a346-41b5-9662-e6aff3ee7bc6",
 					"name": "Success",
 					"originalRequest": {
 						"url": "{{url}}/file-upload/envelopes/{{locationHeader}}",
 						"method": "GET",
 						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": []
-						}
+						"body": {},
+						"description": ""
 					},
 					"status": "OK",
 					"code": 200,
@@ -206,7 +323,10 @@
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
-						"exec": "tests[\"Status code is 201\"] = responseCode.code === 201;\ntests[\"Status code name is Created\"] = responseCode.name.has(\"Created\");"
+						"exec": [
+							"tests[\"Status code is 201\"] = responseCode.code === 201;",
+							"tests[\"Status code name is Created\"] = responseCode.name.has(\"Created\");"
+						]
 					}
 				}
 			],
@@ -235,7 +355,15 @@
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
-						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\nvar jsonData = JSON.parse(responseBody);\ntests[\"Check envelope ID returned\"] = jsonData.id === postman.getGlobalVariable(\"envelopeId\");\n\ntests[\"Check Env Status is CLOSED\"] = jsonData.status === \"CLOSED\"\ntests[\"Check Destination is DMS\"] = jsonData.destination === \"DMS\""
+						"exec": [
+							"tests[\"Status code is 200\"] = responseCode.code === 200;",
+							"",
+							"var jsonData = JSON.parse(responseBody);",
+							"tests[\"Check envelope ID returned\"] = jsonData.id === postman.getGlobalVariable(\"envelopeId\");",
+							"",
+							"tests[\"Check Env Status is CLOSED\"] = jsonData.status === \"CLOSED\"",
+							"tests[\"Check Destination is DMS\"] = jsonData.destination === \"DMS\""
+						]
 					}
 				}
 			],
@@ -243,23 +371,19 @@
 				"url": "{{fe-url}}/file-upload/test-only/envelopes/{{envelopeId}} ",
 				"method": "GET",
 				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": []
-				},
+				"body": {},
 				"description": ""
 			},
 			"response": [
 				{
+					"id": "068b64d8-c1df-43b5-bf06-a68606bdf3e7",
 					"name": "Success",
 					"originalRequest": {
 						"url": "{{url}}/file-upload/envelopes/{{locationHeader}}",
 						"method": "GET",
 						"header": [],
-						"body": {
-							"mode": "formdata",
-							"formdata": []
-						}
+						"body": {},
+						"description": ""
 					},
 					"status": "OK",
 					"code": 200,
@@ -292,14 +416,26 @@
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
-						"exec": "tests[\"Status code is 423\"] = responseCode.code === 423;\ntests[\"Status code name is Locked\"] = responseCode.name.has(\"Locked\");\n\nvar jsonData = JSON.parse(responseBody);\ntests[\"Check error message syntax\"] = jsonData.error.msg === \"Routing request already received for envelope: \" + postman.getGlobalVariable(\"envelopeId\")\n\n\n"
+						"exec": [
+							"tests[\"Status code is 423\"] = responseCode.code === 423;",
+							"tests[\"Status code name is Locked\"] = responseCode.name.has(\"Locked\");",
+							"",
+							"var jsonData = JSON.parse(responseBody);",
+							"tests[\"Check error message syntax\"] = jsonData.error.msg === \"Routing request already received for envelope: \" + postman.getGlobalVariable(\"envelopeId\")",
+							"",
+							"",
+							""
+						]
 					}
 				},
 				{
 					"listen": "prerequest",
 					"script": {
 						"type": "text/javascript",
-						"exec": "var timestamp = Date.now()\npostman.setGlobalVariable(\"fileId2\", timestamp);"
+						"exec": [
+							"var timestamp = Date.now()",
+							"postman.setGlobalVariable(\"fileId2\", timestamp);"
+						]
 					}
 				}
 			],
@@ -319,14 +455,13 @@
 						{
 							"key": "{{fileId}}",
 							"type": "file",
-							"enabled": true,
-							"src": "team_sandcastle.xml"
+							"src": "team_sandcastle.xml",
+							"value": ""
 						},
 						{
 							"key": "foo",
 							"value": "1",
-							"type": "text",
-							"enabled": true
+							"type": "text"
 						}
 					]
 				},
@@ -341,7 +476,32 @@
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
-						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\nvar envelopeId = postman.getGlobalVariable(\"envelopeId\");\ntests[\"Check envelope ID present\"] = responseBody.has(envelopeId);\n\nvar fileId = postman.getGlobalVariable(\"fileId\");\n\nvar jsonData = JSON.parse(responseBody);\nvar noOfEnvelopes = jsonData._embedded.envelopes.length;\nvar x;\nfor(x=0; x<noOfEnvelopes; x++) {\n    if (jsonData._embedded.envelopes[x].id === envelopeId) {\n        break;\n    }\n}\n\ntests[\"Check envelopeId is present is available\"] = jsonData._embedded.envelopes[x].id === envelopeId\ntests[\"Check Destination is DMS\"] = jsonData._embedded.envelopes[x].destination === \"DMS\"\ntests[\"Check file size is not 0\"] = jsonData._embedded.envelopes[x]._embedded.files[0].length !== 0\n\nvar callbackUrl = jsonData._embedded.envelopes[x]._links.package.href;\ntests[\"Validate File Transfer Package callbackUrl\"] = callbackUrl === \"/file-transfer/envelopes/\" + envelopeId\npostman.setGlobalVariable(\"callbackUrl\", callbackUrl);\n"
+						"exec": [
+							"tests[\"Status code is 200\"] = responseCode.code === 200;",
+							"",
+							"var envelopeId = postman.getGlobalVariable(\"envelopeId\");",
+							"tests[\"Check envelope ID present\"] = responseBody.has(envelopeId);",
+							"",
+							"var fileId = postman.getGlobalVariable(\"fileId\");",
+							"",
+							"var jsonData = JSON.parse(responseBody);",
+							"var noOfEnvelopes = jsonData._embedded.envelopes.length;",
+							"var x;",
+							"for(x=0; x<noOfEnvelopes; x++) {",
+							"    if (jsonData._embedded.envelopes[x].id === envelopeId) {",
+							"        break;",
+							"    }",
+							"}",
+							"",
+							"tests[\"Check envelopeId is present is available\"] = jsonData._embedded.envelopes[x].id === envelopeId",
+							"tests[\"Check Destination is DMS\"] = jsonData._embedded.envelopes[x].destination === \"DMS\"",
+							"tests[\"Check file size is not 0\"] = jsonData._embedded.envelopes[x]._embedded.files[0].length !== 0",
+							"",
+							"var callbackUrl = jsonData._embedded.envelopes[x]._links.package.href;",
+							"tests[\"Validate File Transfer Package callbackUrl\"] = callbackUrl === \"/file-transfer/envelopes/\" + envelopeId",
+							"postman.setGlobalVariable(\"callbackUrl\", callbackUrl);",
+							""
+						]
 					}
 				}
 			],
@@ -349,10 +509,7 @@
 				"url": "{{fe-url}}/file-upload/test-only/transfer/get-envelopes",
 				"method": "GET",
 				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": []
-				},
+				"body": {},
 				"description": ""
 			},
 			"response": []
@@ -363,10 +520,7 @@
 				"url": "{{fe-url}}/file-upload/test-only/transfer/download-envelope/{{envelopeId}}",
 				"method": "GET",
 				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": []
-				},
+				"body": {},
 				"description": ""
 			},
 			"response": []
@@ -377,10 +531,7 @@
 				"url": "{{fe-url}}/file-upload/test-only/download-file/envelopes/{{envelopeId}}/files/{{fileId}}/content",
 				"method": "GET",
 				"header": [],
-				"body": {
-					"mode": "formdata",
-					"formdata": []
-				},
+				"body": {},
 				"description": ""
 			},
 			"response": []
