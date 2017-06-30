@@ -15,16 +15,30 @@ Before you attempt to run file-upload-frontend locally ensure:
  
 * You have ClamAV running and the correct version of Mongo as per the Software Requirements above.
 
-* You need to configure the following environment variables:
+### AWS Account Setup Overview:
+
+Once you have your AWS Account setup, you need to create two buckets which is where all files will be stored. See: [Create A Bucket](http://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html). One to represent quarantine and the other for transient. Choose the appropriate region from where you are running the app to avoid data latency: [AWS Regions](http://docs.aws.amazon.com/general/latest/gr/rande.html)
+
+When naming you buckets, please follow the: [Rules of Bucket Naming](http://docs.aws.amazon.com/AmazonS3/latest/dev//BucketRestrictions.html#bucketnamingrules) Enable Versioning during the create bucket process because it is used to generate the FileRedId. For further details see configuration of buckets in: [Working with Amazon S3 Buckets](http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingBucket.html#bucket-config-options-intro)  
+
+Next follow the steps to: [Create an IAM User](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html) and ensure Programmatic Access is selected. Then give the permission: AmazonS3FullAccess. This grants the user full access to use all APIs in S3. For more details about permissions see: [AWS IAM Permissions](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_permissions.html)
+
+Once you have created your IAM user, you will have a pair of Access Keys automatically generated: AWS KEY ID and AWS SECRET ACCESS KEY. This is the only time AWS SECRET ACCESS KEY is shown. Only the AWS KEY ID is shown on the user profile. It is preferable to Download the .csv file ands store it somewhere safe. If lost, in the user profile, select "Make Inactive" on the Access Key and generate a new one. 
+
+### How to Run App
+
+By now you have your buckets and your IAM user created. Next you need to configure the following environment variables:
 
 ```
-  S3_BUCKET_TRANSIENT="your-bucket-name-for-transient"
-  S3_BUCKET_QUARANTINE="your-bucket-name-for-quarantine"
-  AWS_KEY="your-aws-key"
-  AWS_SECRET="your-aws-secret"
+  S3_BUCKET_TRANSIENT="replace-with-your-bucket-name-for-transient"
+  S3_BUCKET_QUARANTINE="replace-with-your-bucket-name-for-quarantine"
+  AWS_KEY="replace-with-your-aws-key"
+  AWS_SECRET="replace-with-your-aws-secret"
 ```
 
-Note: Setting the environment variables for S3 will cause the integration tests to fail because they use a mock library .
+To find your bucket names go to S3. To find your AWS KEY and AWS SECRET, they will be in the .csv file you downloaded as mentioned.
+
+Note: Setting the environment variables in system for S3 will cause the integration tests to fail because they use a mock library.
 
 To run the application execute
 
@@ -34,6 +48,14 @@ sbt run
 
 Alternatively, you can write up a bash script to have your terminal run with the environment variables mentioned.
 
+```
+S3_BUCKET_TRANSIENT=replace-with-your-bucket-name-for-transient \
+S3_BUCKET_QUARANTINE=replace-with-your-bucket-name-for-quarantine \
+AWS_KEY=replace-with-your-aws-key \
+AWS_SECRET="replace-with-your-aws-secret" \
+sbt run
+```
+
 The endpoints can then be accessed with the base url http://localhost:8899/
 
 ## Service manager
@@ -41,6 +63,8 @@ The endpoints can then be accessed with the base url http://localhost:8899/
 ```
 sm --start FILE_UPLOAD_ALL
 ```
+
+Note: Does not have AWS.
 
 ## Table of Contents
 
