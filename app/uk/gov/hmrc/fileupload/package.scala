@@ -21,10 +21,10 @@ import java.util.UUID
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsError, JsSuccess, _}
 import play.api.mvc.PathBindable
-import play.utils.UriEncoding
 import reactivemongo.api.gridfs.{GridFS, ReadFile}
 import reactivemongo.json.JSONSerializationPack
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
+import play.core.routing.dynamicString
 
 import scala.concurrent.Future
 
@@ -51,7 +51,6 @@ case class FileId(value: String = UUID.randomUUID().toString) extends AnyVal {
 }
 
 object FileId {
-  val charset = "UTF-8"
   implicit val writes = new Writes[FileId] {
     def writes(id: FileId): JsValue = JsString(id.value)
   }
@@ -61,9 +60,12 @@ object FileId {
       case _ => JsError("invalid fileId")
     }
   }
-  implicit val binder: PathBindable[FileId] =
-    new SimpleObjectBinder[FileId](FileId.apply, // reading is already decoded by routes as parameters
-      fId => UriEncoding.encodePathSegment(fId.value, charset) )
+  // should reflect backend version
+  implicit val urlBinder: PathBindable[FileId] =
+    new SimpleObjectBinder[FileId](
+      FileId.apply, // play already decodes the endpoint parameters
+      fId => dynamicString(fId.value)
+    )
 }
 
 case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String]) {
