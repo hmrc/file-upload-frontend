@@ -65,15 +65,17 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
             if (containsContentType(getFormContentType(formData), contentType, envelopeId)) {
               val file = formData.files.head
               val key = createS3Key(envelopeId, fileId)
-              uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
-                val fileRefId = FileRefId(uploadResult.getVersionId)
-                commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
-                  contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
-                  .map {
-                    case Xor.Right(_) => Ok
-                    case Xor.Left(e) => Status(e.statusCode)(e.reason)
-                  }
-              }
+              if(file.ref.size != null) {
+                uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
+                  val fileRefId = FileRefId(uploadResult.getVersionId)
+                  commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
+                    contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
+                    .map {
+                      case Xor.Right(_) => Ok
+                      case Xor.Left(e) => Status(e.statusCode)(e.reason)
+                    }
+                }
+              } else Future.successful(BadRequest(errorAsJson("File length is required")))
             } else {
               Future.successful(UnsupportedMediaType(errorAsJson("Request must have exactly 1 file with a valid file type")))
             }
