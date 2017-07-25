@@ -24,11 +24,12 @@ import play.api.mvc.PathBindable
 import reactivemongo.api.gridfs.{GridFS, ReadFile}
 import reactivemongo.json.JSONSerializationPack
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
+import play.core.routing.dynamicString
 
 import scala.concurrent.Future
 
 case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal {
-  override def toString = value
+  override def toString: String = value
 }
 
 object EnvelopeId {
@@ -46,7 +47,7 @@ object EnvelopeId {
 }
 
 case class FileId(value: String = UUID.randomUUID().toString) extends AnyVal {
-  override def toString = value
+  override def toString: String = value
 }
 
 object FileId {
@@ -59,8 +60,12 @@ object FileId {
       case _ => JsError("invalid fileId")
     }
   }
-  implicit val binder: PathBindable[FileId] =
-    new SimpleObjectBinder[FileId](FileId.apply, _.value)
+  // should reflect backend version
+  implicit val urlBinder: PathBindable[FileId] =
+    new SimpleObjectBinder[FileId](
+      FileId.apply, // play already decodes the endpoint parameters
+      fId => dynamicString(fId.value)
+    )
 }
 
 case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String]) {
@@ -70,7 +75,7 @@ case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, c
 }
 
 case class FileRefId(value: String = UUID.randomUUID().toString) extends AnyVal {
-  override def toString = value
+  override def toString: String = value
 }
 object FileRefId {
   implicit val writes = new Writes[FileRefId] {

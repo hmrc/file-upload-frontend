@@ -48,7 +48,7 @@ private object AppDependencies {
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
   private val playAuditingVersion = "2.6.0"
-  private val playUrlBindersVersion = "2.1.0"
+  private val playUrlBindingLibVersion = "7.1.0"
   private val awsJavaSdkVersion = "1.11.97"
 
   val compile = Seq(
@@ -63,8 +63,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "play-auditing" % playAuditingVersion,
     "uk.gov.hmrc" %% "play-health" % playHealthVersion,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
+    "uk.gov.hmrc" %% "play-ui" % playUrlBindingLibVersion,
     "org.typelevel" %% "cats" % catsVersion,
-    "uk.gov.hmrc" %% "play-url-binders" % playUrlBindersVersion,
     "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion
   )
 
