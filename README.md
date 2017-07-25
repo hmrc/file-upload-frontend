@@ -15,6 +15,30 @@ Before you attempt to run file-upload-frontend locally ensure:
  
 * You have ClamAV running and the correct version of Mongo as per the Software Requirements above.
 
+You can start/stop them with docker compose file - file-upload-compose.yml:
+
+```
+version: '3'
+services:
+  mongo:
+    image: mongo:3.2
+    ports:
+    - "27017:27017"
+  clamav:
+    image: mkodockx/docker-clamav
+    ports:
+    - "3310:3310"
+```
+and bash commands:
+```
+docker-compose -f file-upload-compose.yml up -d
+docker-compose -f file-upload-compose.yml stop
+
+```
+
+
+
+
 ### AWS Account Setup Overview:
 
 Once you have your AWS Account setup, you need to create two buckets which is where all files will be stored. See: [Create A Bucket](http://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html). One to represent quarantine and the other for transient. Choose the appropriate region from where you are running the app to avoid data latency: [AWS Regions](http://docs.aws.amazon.com/general/latest/gr/rande.html)
