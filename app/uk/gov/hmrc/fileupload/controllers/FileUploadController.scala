@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import java.net.{MalformedURLException, URL}
-
 import cats.data.Xor
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
@@ -60,29 +58,38 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
-          val numberOfAttachedFiles = formData.files.size
-          if (numberOfAttachedFiles == 1) {
-            if (containsContentType(getFormContentType(formData), contentType, envelopeId)) {
-              val file = formData.files.head
-              val key = createS3Key(envelopeId, fileId)
-              if(file.ref.size != null) {
-                uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
-                  val fileRefId = FileRefId(uploadResult.getVersionId)
-                  commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
-                    contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
-                    .map {
-                      case Xor.Right(_) => Ok
-                      case Xor.Left(e) => Status(e.statusCode)(e.reason)
-                    }
-                }
-              } else Future.successful(BadRequest(errorAsJson("File length is required")))
-            } else {
-              Future.successful(UnsupportedMediaType(errorAsJson("Request must have exactly 1 file with a valid file type")))
-            }
-          } else {
-            Future.successful(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
+          val failedRequirementsO =
+            if(formData.files.size != 1) Some(
+                BadRequest(errorAsJson(
+                  "Request must have exactly 1 file attached"
+              )))
+            else if (!containsContentType(getFormContentType(formData), contentType, envelopeId)) Some(
+                UnsupportedMediaType(errorAsJson(
+                  "Request must have exactly 1 file with a valid file type"
+              )))
+            else None
+
+          failedRequirementsO match {
+            case Some(failure) =>
+              Future.successful(failure)
+            case _ =>
+              uploadTheProperFile(envelopeId, fileId, formData)
           }
       }
+    }
+  }
+
+  private def uploadTheProperFile(envelopeId: EnvelopeId, fileId: FileId, formData: MultipartFormData[FileCachedInMemory]) = {
+    val file = formData.files.head
+    val key = createS3Key(envelopeId, fileId)
+    uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
+      val fileRefId = FileRefId(uploadResult.getVersionId)
+      commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
+        contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
+        .map {
+          case Xor.Right(_) => Ok
+          case Xor.Left(e) => Status(e.statusCode)(e.reason)
+        }
     }
   }
 }
