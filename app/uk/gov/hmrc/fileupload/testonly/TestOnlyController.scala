@@ -20,11 +20,12 @@ import play.api.libs.iteratee.Enumeratee
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.{Action, Controller}
+import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
 
 import scala.concurrent.ExecutionContext
 
-class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSClient: WSClient)
-                        (implicit executionContext: ExecutionContext) extends Controller with S3TestController {
+class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSClient: WSClient, val s3Service: S3JavaSdkService)
+  (implicit executionContext: ExecutionContext) extends Controller with S3TestController {
 
   def createEnvelope() = Action.async { request =>
     def extractEnvelopeId(response: WSResponse): String =

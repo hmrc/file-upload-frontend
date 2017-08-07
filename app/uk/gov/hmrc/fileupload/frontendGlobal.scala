@@ -22,9 +22,9 @@ import javax.inject.Provider
 
 import akka.actor.ActorRef
 import cats.data.Xor
-import com.codahale.metrics.{MetricFilter, SharedMetricRegistries}
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
-import com.kenshoo.play.metrics.MetricsController
+import com.codahale.metrics.{MetricFilter, SharedMetricRegistries}
+import com.kenshoo.play.metrics.{MetricsController, MetricsImpl}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.Logger
@@ -49,7 +49,6 @@ import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
-import uk.gov.hmrc.play.graphite.GraphiteMetricsImpl
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 
@@ -81,7 +80,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val adminRoutes = new admin.Routes(httpErrorHandler, adminController)
 
-  lazy val metrics = new GraphiteMetricsImpl(applicationLifecycle, configuration)
+  lazy val metrics = new MetricsImpl(applicationLifecycle, configuration)
   lazy val metricsController = new MetricsController(metrics)
 
   lazy val prodRoutes = new prod.Routes(httpErrorHandler, new Provider[MetricsController] {
@@ -92,7 +91,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val inMemoryBodyParser = InMemoryMultipartFileHandler.parser
 
-  lazy val s3Service = new S3JavaSdkService(configuration.underlying)
+  lazy val s3Service = new S3JavaSdkService(configuration.underlying, metrics.defaultRegistry)
 
   lazy val downloadFromTransient = s3Service.downloadFromTransient
 
@@ -112,7 +111,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val healthController = new uk.gov.hmrc.play.health.AdminController(configuration)
 
-  lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, recreateCollections, wsClient)
+  lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, recreateCollections, wsClient, s3Service)
 
   lazy val testRoutes = new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, testOnlyController, prodRoutes)
 
