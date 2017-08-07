@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload.testonly
 import akka.stream.scaladsl.Source
 import com.amazonaws.services.s3.model.CopyObjectResult
 import com.amazonaws.services.s3.transfer.model.UploadResult
+import com.codahale.metrics.{Meter, MetricRegistry}
 import com.typesafe.config.ConfigFactory
 import play.api.Logger
 import play.api.http.HttpEntity
@@ -26,15 +27,28 @@ import play.api.mvc.{Action, Controller, ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.cacheFileInMemory
 import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3KeyName}
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
+//trait MetricsTest {
+//  lazy val metrics = new MetricRegistry {
+//    private val meters = new mutable.HashMap[String, Long]()
+//    override def meter(name: String): Meter = new Meter {
+//      override def mark(): Unit = {
+//        val cnt = meters.getOrElse(name, 0L)
+//        meters.update(name, cnt + 1L)
+//      }
+//    }
+//  }
+//}
 
 trait S3TestController { self: Controller =>
 
-  val s3Service = new S3JavaSdkService(ConfigFactory.load())
+  val s3Service: S3JavaSdkService
+
   import s3Service.awsConfig._
 
   def filesInQuarantine() = listFilesInBucket(quarantineBucketName)
