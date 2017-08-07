@@ -16,11 +16,14 @@
 
 package uk.gov.hmrc.fileupload
 
+import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 import javax.inject.Provider
 
 import akka.actor.ActorRef
 import cats.data.Xor
+import com.codahale.metrics.{MetricFilter, SharedMetricRegistries}
+import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
 import com.kenshoo.play.metrics.MetricsController
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
@@ -36,7 +39,7 @@ import uk.gov.hmrc.fileupload.controllers._
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
-import uk.gov.hmrc.fileupload.s3.{S3KeyName, InMemoryMultipartFileHandler, S3JavaSdkService, S3Key}
+import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService, S3Key, S3KeyName}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
@@ -58,7 +61,9 @@ class ApplicationLoader extends play.api.ApplicationLoader {
     LoggerConfigurator(context.environment.classLoader).foreach {
       _.configure(context.environment)
     }
-    new ApplicationModule(context).application
+    val appModule = new ApplicationModule(context)
+    appModule.graphiteStart()
+    appModule.application
   }
 }
 
@@ -210,6 +215,39 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
 
     override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
+  }
+
+
+  def graphiteStart(): Unit = {
+    val graphiteConfig = configuration.getConfig(s"$env.microservice.metrics")
+
+    def graphitePublisherEnabled: Boolean = {
+      val status = graphiteConfig.flatMap(_.getBoolean("graphite.enabled")).getOrElse(false)
+      Logger.info(s"graphitePublisherEnabled: $env=$status")
+      status
+    }
+
+    if (graphitePublisherEnabled) {
+      val metricsConfig = graphiteConfig.getOrElse(throw new Exception("The application does not contain required metrics configuration"))
+
+      val graphite = new Graphite(new InetSocketAddress(
+        metricsConfig.getString("graphite.host").getOrElse("graphite"),
+        metricsConfig.getInt("graphite.port").getOrElse(2003)))
+
+      val prefix = metricsConfig.getString("graphite.prefix").getOrElse(s"tax.${configuration.getString("appName")}")
+
+      import java.util.concurrent.TimeUnit._
+
+      val reporter = GraphiteReporter.forRegistry(
+        SharedMetricRegistries.getOrCreate(graphiteConfig.flatMap(_.getString("metrics.name")).getOrElse("default")))
+        .prefixedWith(s"$prefix.${java.net.InetAddress.getLocalHost.getHostName}")
+        .convertRatesTo(SECONDS)
+        .convertDurationsTo(MILLISECONDS)
+        .filter(MetricFilter.ALL)
+        .build(graphite)
+
+      reporter.start(metricsConfig.getLong("graphite.interval").getOrElse(10L), SECONDS)
+    }
   }
 
 }
