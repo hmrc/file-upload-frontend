@@ -27,7 +27,6 @@ trait TestApplicationComponents extends OneAppPerSuite with BeforeAndAfterAll {
 
   // accessed to get the components in tests
   lazy val components: ApplicationModule = new TestApplicationModule(context)
-  lazy val metricsReg = components.metrics.defaultRegistry
 
   // creates a new application and sets the components
   implicit override lazy val app: Application = components.application
