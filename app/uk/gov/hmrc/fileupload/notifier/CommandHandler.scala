@@ -34,9 +34,16 @@ trait CommandHandler {
 class CommandHandlerImpl(httpCall: WSRequest => Future[Xor[PlayHttpError, WSResponse]],
                      baseUrl: String, wsClient: WSClient, publish: AnyRef => Unit) extends CommandHandler {
 
+  val userAgent = "User-Agent" -> "FU-frontend-CH"
+
   def sendBackendCommand[T <: BackendCommand : Writes](command: T)(implicit ec: ExecutionContext): Future[NotifierRepository.Result] = {
 
-    httpCall(wsClient.url(s"$baseUrl/file-upload/commands/${ command.commandType }").withBody(Json.toJson(command)).withMethod("POST")).map {
+    httpCall(wsClient
+      .url(s"$baseUrl/file-upload/commands/${ command.commandType }")
+      .withBody(Json.toJson(command))
+      .withMethod("POST")
+      .withHeaders(userAgent)
+    ).map {
       case Xor.Left(error) => Xor.left(NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right(command.id)
