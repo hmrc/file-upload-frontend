@@ -32,10 +32,11 @@ import play.api.ApplicationLoader.Context
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSRequest
 import play.api.libs.ws.ahc.AhcWSComponents
-import play.api.mvc.Request
+import play.api.mvc.{EssentialFilter, Request}
 import play.api.{BuiltInComponentsFromContext, LoggerConfigurator, Mode}
 import play.modules.reactivemongo.ReactiveMongoComponentImpl
 import uk.gov.hmrc.fileupload.controllers._
+import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
@@ -185,6 +186,10 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
       ScanningService.scanBinaryData(scanner, getFileFromQuarantine)(createS3Key)
     }
   }
+
+
+  override lazy val httpFilters: Seq[EssentialFilter] =
+    Seq(new UserAgentRequestFilter(metrics.defaultRegistry, UserAgent.allKnown, UserAgent.defaultIgnoreList))
 
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeResult) _
 
