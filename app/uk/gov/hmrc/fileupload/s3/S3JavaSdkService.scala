@@ -32,6 +32,7 @@ import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import com.codahale.metrics.MetricRegistry
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsValue, Json}
@@ -97,10 +98,20 @@ case class Metadata(
 
 case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
 
-class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Service {
+class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: MetricRegistry) extends S3Service {
   val awsConfig = new AwsConfig(configuration)
 
   val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
+
+  val metricGetObjectContent = metrics.meter("s3.getObjectContent")
+  val metricGetObjectContentSize = metrics.counter("s3.getObjectContentSize")
+  val metricGetObjectByKeyVersion = metrics.meter("s3.getObjectByKeyVersion")
+  val metricGetObjectByKey = metrics.meter("s3.getObjectByKey")
+  val metricGetFileFromQuarantine = metrics.meter("s3.retrieveFileFromQuarantine")
+  val metricUploadCompleted = metrics.timer("s3.upload.completed")
+  val metricUploadCompletedSize = metrics.counter("s3.upload.completed.size")
+  val metricUploadFailed = metrics.meter("s3.upload.failed")
+  val metricCopyFromQtoT = metrics.meter("s3.copyFromQtoT")
 
   val s3Builder = AmazonS3ClientBuilder
     .standard()
@@ -144,7 +155,10 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
   }
 
   private def downloadByObject(s3Object: S3Object) = {
+    val meta = s3Object.getObjectMetadata
     Logger.info(s"Downloading $s3Object from S3")
+    metricGetObjectContent.mark()
+    metricGetObjectContentSize.inc(meta.getContentLength)
     StreamWithMetadata(
       StreamConverters
         .fromInputStream(() => s3Object.getObjectContent),
@@ -157,6 +171,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
   def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): Option[S3Object] = {
     if (s3Client.doesObjectExist(bucketName, key.value)) {
       Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $S3KeyName and version: $versionId")
+      metricGetObjectByKeyVersion.mark()
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId)))
     }
     else None
@@ -165,6 +180,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
   def objectByKey(bucketName: String, key: S3KeyName): Option[S3Object] = {
     if (s3Client.doesObjectExist(bucketName, key.value)) {
       Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $S3KeyName)")
+      metricGetObjectByKey.mark()
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value)))
     }
     else None
@@ -182,26 +198,32 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
       val objectDataIS = s3Object.getObjectContent
       val metadata = s3Object.getObjectMetadata
 
+      metricGetFileFromQuarantine.mark()
+
       Some(FileData(length = metadata.getContentLength, filename = s3Object.getKey,
         contentType = Some(metadata.getContentType), data = Enumerator.fromStream(objectDataIS)))
     }
   }
 
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] = {
-    val fileInfo = s"bucket=$bucketName key=$key filSizee=$fileSize"
+    val fileInfo = s"bucket=$bucketName key=$key fileSize=$fileSize"
+    val uploadTime = metricUploadCompleted.time()
     val upload = transferManager.upload(bucketName, key, file, objectMetadata(fileSize))
     val promise = Promise[UploadResult]
-    Logger.info(s"upload start: $fileInfo")
+    Logger.info(s"upload-s3 started: $fileInfo")
     upload.addProgressListener(new ProgressListener {
       var events:List[ProgressEvent] = List.empty
       def progressChanged(progressEvent: ProgressEvent) = {
         events = progressEvent :: events
         if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-          Logger.info(s"upload-transfer completed: $fileInfo")
+          uploadTime.stop()
+          metricUploadCompletedSize.inc(fileSize)
+          Logger.info(s"upload-s3 completed: $fileInfo")
           promise.trySuccess(upload.waitForUploadResult())
         } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT) {
-          Logger.error(s"""Transfer events: ${events.reverse.map(_.toString).mkString("\n")}""")
-          Logger.error(s"upload error: transfer failed: $fileInfo")
+          metricUploadFailed.mark()
+          Logger.error(s"""upload-s3 Transfer events: ${events.reverse.map(_.toString).mkString("\n")}""")
+          Logger.error(s"upload-s3 error: transfer failed: $fileInfo")
           promise.failure(new Exception("transfer failed"))
         }
       }
@@ -215,6 +237,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config) extends S3Serv
 
   def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult] = Try {
     Logger.info(s"Copying a file key $key and version: $versionId")
+    metricCopyFromQtoT.mark()
     val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key, versionId, awsConfig.transientBucketName, key)
     copyRequest.setNewObjectMetadata(objectMetadataWithServerSideEncryption)
     s3Client.copyObject(copyRequest)

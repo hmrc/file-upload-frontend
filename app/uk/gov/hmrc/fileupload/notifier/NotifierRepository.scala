@@ -41,11 +41,17 @@ object NotifierRepository {
                                      fileId: FileId,
                                      override val statusCode: Int,
                                      override val reason: String) extends NotificationError
+  val userAgent = "User-Agent" -> "FU-frontend-notifier"
 
   def send(httpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wsClient: WSClient)
           (notification: Notification)
           (implicit executionContext: ExecutionContext): Future[Result] = {
-    httpCall(wsClient.url(s"$baseUrl/file-upload/commands/${ notification.eventType }").withBody(notification.event).withMethod("POST")).map {
+    httpCall(wsClient
+      .url(s"$baseUrl/file-upload/commands/${ notification.eventType }")
+      .withBody(notification.event)
+      .withMethod("POST")
+      .withHeaders(userAgent)
+    ).map {
       case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, 500, error.message))
       case Xor.Right(response) => response.status match {
         case Status.OK => Xor.right(notification.envelopeId)

@@ -16,12 +16,15 @@
 
 package uk.gov.hmrc.fileupload
 
+import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 import javax.inject.Provider
 
 import akka.actor.ActorRef
 import cats.data.Xor
-import com.kenshoo.play.metrics.MetricsController
+import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
+import com.codahale.metrics.{MetricFilter, SharedMetricRegistries}
+import com.kenshoo.play.metrics.{MetricsController, MetricsImpl}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.Logger
@@ -29,10 +32,11 @@ import play.api.ApplicationLoader.Context
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSRequest
 import play.api.libs.ws.ahc.AhcWSComponents
-import play.api.mvc.Request
+import play.api.mvc.{EssentialFilter, Request}
 import play.api.{BuiltInComponentsFromContext, LoggerConfigurator, Mode}
 import play.modules.reactivemongo.ReactiveMongoComponentImpl
 import uk.gov.hmrc.fileupload.controllers._
+import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
@@ -48,7 +52,6 @@ import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
-import uk.gov.hmrc.play.graphite.GraphiteMetricsImpl
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 
@@ -60,7 +63,9 @@ class ApplicationLoader extends play.api.ApplicationLoader {
     LoggerConfigurator(context.environment.classLoader).foreach {
       _.configure(context.environment)
     }
-    new ApplicationModule(context).application
+    val appModule = new ApplicationModule(context)
+    appModule.graphiteStart()
+    appModule.application
   }
 }
 
@@ -83,7 +88,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val adminRoutes = new admin.Routes(httpErrorHandler, adminController)
 
-  lazy val metrics = new GraphiteMetricsImpl(applicationLifecycle, configuration)
+  lazy val metrics = new MetricsImpl(applicationLifecycle, configuration)
   lazy val metricsController = new MetricsController(metrics)
 
   lazy val prodRoutes = new prod.Routes(httpErrorHandler, new Provider[MetricsController] {
@@ -94,7 +99,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val inMemoryBodyParser = InMemoryMultipartFileHandler.parser
 
-  lazy val s3Service = new S3JavaSdkService(configuration.underlying)
+  lazy val s3Service = new S3JavaSdkService(configuration.underlying, metrics.defaultRegistry)
 
   lazy val downloadFromTransient = s3Service.downloadFromTransient
 
@@ -110,7 +115,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val fileUploadController =
     new FileUploadController(redirectionFeature, withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)
 
-  // TMP
+  // TMP walkaround for legacy files in mongo quaratine
   lazy val mongoQuaratineGetFile: (FileRefId) => Future[GetFileResult] =
     MongoS3Compability.retrieveFileFromMongoDB(
       quarantineRepository.retrieveFile _
@@ -125,7 +130,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val healthController = new uk.gov.hmrc.play.health.AdminController(configuration)
 
-  lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, recreateCollections, wsClient)
+  lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, recreateCollections, wsClient, s3Service)
 
   lazy val testRoutes = new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, testOnlyController, prodRoutes)
 
@@ -200,6 +205,10 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     }
   }
 
+
+  override lazy val httpFilters: Seq[EssentialFilter] =
+    Seq(new UserAgentRequestFilter(metrics.defaultRegistry, UserAgent.allKnown, UserAgent.defaultIgnoreList))
+
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeResult) _
 
   object ControllerConfiguration extends ControllerConfig {
@@ -228,6 +237,39 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
 
     override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
+  }
+
+
+  def graphiteStart(): Unit = {
+    val graphiteConfig = configuration.getConfig(s"$env.microservice.metrics")
+
+    def graphitePublisherEnabled: Boolean = {
+      val status = graphiteConfig.flatMap(_.getBoolean("graphite.enabled")).getOrElse(false)
+      Logger.info(s"graphitePublisherEnabled: $env=$status")
+      status
+    }
+
+    if (graphitePublisherEnabled) {
+      val metricsConfig = graphiteConfig.getOrElse(throw new Exception("The application does not contain required metrics configuration"))
+
+      val graphite = new Graphite(new InetSocketAddress(
+        metricsConfig.getString("graphite.host").getOrElse("graphite"),
+        metricsConfig.getInt("graphite.port").getOrElse(2003)))
+
+      val prefix = metricsConfig.getString("graphite.prefix").getOrElse(s"tax.${configuration.getString("appName")}")
+
+      import java.util.concurrent.TimeUnit._
+
+      val reporter = GraphiteReporter.forRegistry(
+        SharedMetricRegistries.getOrCreate(graphiteConfig.flatMap(_.getString("metrics.name")).getOrElse("default")))
+        .prefixedWith(s"$prefix.${java.net.InetAddress.getLocalHost.getHostName}")
+        .convertRatesTo(SECONDS)
+        .convertDurationsTo(MILLISECONDS)
+        .filter(MetricFilter.ALL)
+        .build(graphite)
+
+      reporter.start(metricsConfig.getLong("graphite.interval").getOrElse(10L), SECONDS)
+    }
   }
 
 }
