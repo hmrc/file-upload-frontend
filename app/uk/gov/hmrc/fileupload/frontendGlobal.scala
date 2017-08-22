@@ -46,6 +46,8 @@ import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
+import uk.gov.hmrc.fileupload.zip.MongoS3Compability
+import uk.gov.hmrc.fileupload.zip.MongoS3Compability.GetFileResult
 import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -77,7 +79,12 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   override lazy val runModeConfiguration = configuration
 
   lazy val healthRoutes = new manualdihealth.Routes(httpErrorHandler, new uk.gov.hmrc.play.health.AdminController(configuration))
-  lazy val appRoutes = new app.Routes(httpErrorHandler, fileUploadController, fileDownloadController)
+  lazy val appRoutes = new app.Routes(
+    httpErrorHandler,
+    fileUploadController,
+    fileDownloadController,
+    fileInQuarantineController
+  )
 
   lazy val adminRoutes = new admin.Routes(httpErrorHandler, adminController)
 
@@ -107,6 +114,17 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val fileUploadController =
     new FileUploadController(redirectionFeature, withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)
+
+  // TMP walkaround for legacy files in mongo quaratine
+  lazy val mongoQuaratineGetFile: (FileRefId) => Future[GetFileResult] =
+    MongoS3Compability.retrieveFileFromMongoDB(
+      quarantineRepository.retrieveFile _
+    ) _
+
+  lazy val fileInQuarantineController =
+    new FileController(mongoQuaratineGetFile)
+
+  // TMP END
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 

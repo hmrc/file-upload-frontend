@@ -86,7 +86,10 @@ trait MicroService {
     .settings(
       resolvers += Resolver.bintrayRepo("hmrc", "releases"),
       resolvers += Resolver.jcenterRepo
-    )
+    ).dependsOn(sharedFileUploadBackend)
+
+  lazy val sharedFileUploadBackend =
+    ProjectRef(uri("https://github.com/hmrc/file-upload-shared.git#master"), "fileUploadShared")
 }
 
 private object TestPhases {
