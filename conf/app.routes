@@ -2,3 +2,4 @@
 
 POST        /file-upload/upload/envelopes/:envelopeId/files/:fileId                       uk.gov.hmrc.fileupload.controllers.FileUploadController.uploadWithRedirection(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId, `redirect-success-url`: Option[String], `redirect-error-url`: Option[String])
 GET         /file-upload/download/envelopes/:envelopeId/files/:fileId                     uk.gov.hmrc.fileupload.controllers.FileDownloadController.download(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId)
+GET         /file-upload/download/mongo/files/:fileRefId                                  uk.gov.hmrc.fileupload.controllers.FileController.downloadFile(fileRefId: uk.gov.hmrc.fileupload.FileRefId)
