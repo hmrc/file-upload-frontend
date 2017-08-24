@@ -39,7 +39,7 @@ private object AppDependencies {
   private val playJsonLoggerVersion = "3.1.0"
   private val frontendBootstrapVersion = "7.26.0"
   private val playPartialsVersion = "5.3.0"
-  private val playAuthorisedFrontendVersion = "1.2.0"
+  private val playAuth = "1.2.0"
   private val playConfigVersion = "4.3.0"
   private val hmrcTestVersion = "2.3.0"
   private val playReactivemongoVersion = "5.2.0"
@@ -56,7 +56,7 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "simple-reactivemongo" % simpleReactivemongoVersion,
     "uk.gov.hmrc" %% "frontend-bootstrap" % frontendBootstrapVersion,
     "uk.gov.hmrc" %% "play-partials" % playPartialsVersion,
-    "uk.gov.hmrc" %% "play-auth" % playAuthorisedFrontendVersion,
+    "uk.gov.hmrc" %% "play-auth" % playAuth,
     "uk.gov.hmrc" %% "play-config" % playConfigVersion,
     "uk.gov.hmrc" %% "logback-json-logger" % playJsonLoggerVersion,
     "uk.gov.hmrc" %% "play-auditing" % playAuditingVersion,
