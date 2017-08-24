@@ -110,7 +110,12 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   val redirectionFeature = new RedirectionFeature(configuration.underlying)
 
   lazy val fileDownloadController =
-    new FileDownloadController(downloadFromTransient, (e, f) => S3KeyName(createS3Key(e, f)), now)
+    new FileDownloadController(
+      downloadFromTransient,
+      (e, f) => S3KeyName(createS3Key(e, f)),
+      now,
+      s3Service.downloadFromQuarantine
+    )
 
   lazy val fileUploadController =
     new FileUploadController(redirectionFeature, withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)

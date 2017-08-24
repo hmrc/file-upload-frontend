@@ -19,10 +19,7 @@ package uk.gov.hmrc.fileupload.s3
 import java.io.InputStream
 import java.util.concurrent.Executors
 
-import akka.NotUsed
-import akka.stream.IOResult
 import akka.stream.scaladsl.{Source, StreamConverters}
-import akka.util.ByteString
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.client.builder.ExecutorFactory
@@ -35,68 +32,12 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.codahale.metrics.MetricRegistry
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.quarantine.FileData
-import uk.gov.hmrc.fileupload.s3.S3Service._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Try
-
-trait S3Service {
-  def awsConfig: AwsConfig
-
-  def download(bucketName: String, key: S3KeyName): Option[StreamWithMetadata]
-
-  def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata]
-
-  def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]]
-
-  def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult]
-
-  def uploadToQuarantine: UploadToQuarantine = upload(awsConfig.quarantineBucketName, _, _, _)
-
-  def downloadFromTransient: DownloadFromTransient = download(awsConfig.transientBucketName, _)
-
-  def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], NotUsed]
-
-  def listFilesInQuarantine: Source[Seq[S3ObjectSummary], NotUsed] =
-    listFilesInBucket(awsConfig.quarantineBucketName)
-
-  def listFilesInTransient: Source[Seq[S3ObjectSummary], NotUsed] =
-    listFilesInBucket(awsConfig.transientBucketName)
-
-  def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult]
-
-  def getFileLengthFromQuarantine(key: String, versionId: String): Long
-
-  def getBucketProperties(bucketName: String): JsValue
-
-  def getQuarantineBucketProperties = getBucketProperties(awsConfig.quarantineBucketName)
-
-  def getTransientBucketProperties = getBucketProperties(awsConfig.transientBucketName)
-}
-
-object S3Service {
-  type StreamResult = Source[ByteString, Future[IOResult]]
-
-  type UploadToQuarantine = (String, InputStream, Int) => Future[UploadResult]
-
-  type DownloadFromTransient = (S3KeyName) => Option[StreamWithMetadata]
-}
-
-case class S3KeyName(value: String) extends AnyVal {
-  override def toString: String = value
-}
-
-case class Metadata(
-                     contentType: String,
-                     contentLength: Long,
-                     versionId: String = "",
-                     ETag: String = "",
-                     s3Metadata: Option[Map[String, String]] = None)
-
-case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
 
 class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: MetricRegistry) extends S3Service {
   val awsConfig = new AwsConfig(configuration)
