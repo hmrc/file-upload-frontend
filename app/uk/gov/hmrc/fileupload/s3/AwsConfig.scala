@@ -29,4 +29,9 @@ class AwsConfig(config: com.typesafe.config.Config) {
     } else
       None
   }
+  def proxyEnabled = config.getBoolean("proxy.proxyRequiredForThisEnvironment")
+  def proxyHost: String = config.getString("proxy.host")
+  def proxyPort: Int = config.getInt("proxy.port")
+  def proxyUsername: String = config.getString("proxy.username")
+  def proxyPassword: String = config.getString("proxy.password")
 }

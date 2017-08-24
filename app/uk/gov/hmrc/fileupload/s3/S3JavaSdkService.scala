@@ -23,6 +23,7 @@ import akka.NotUsed
 import akka.stream.IOResult
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
+import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.client.builder.ExecutorFactory
@@ -113,9 +114,19 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   val metricUploadFailed = metrics.meter("s3.upload.failed")
   val metricCopyFromQtoT = metrics.meter("s3.copyFromQtoT")
 
+  awsConfig.proxyEnabled
+  val proxyConfig = new ClientConfiguration()
+    .withProxyHost(awsConfig.proxyHost)
+    .withProxyPort(awsConfig.proxyPort)
+    .withProxyUsername(awsConfig.proxyUsername)
+    .withProxyPassword(awsConfig.proxyPassword)
+
   val s3Builder = AmazonS3ClientBuilder
     .standard()
     .withCredentials(new AWSStaticCredentialsProvider(credentials))
+  
+  if (awsConfig.proxyEnabled)
+    s3Builder.withClientConfiguration(proxyConfig)
 
   val s3Client = awsConfig.endpoint.fold(
     s3Builder.withRegion(Regions.EU_WEST_2)
