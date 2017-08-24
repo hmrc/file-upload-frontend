@@ -23,7 +23,7 @@ import akka.NotUsed
 import akka.stream.IOResult
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
-import com.amazonaws.{ClientConfiguration, ClientConfigurationFactory}
+import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.client.builder.ExecutorFactory
