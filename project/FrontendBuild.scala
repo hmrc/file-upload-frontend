@@ -37,18 +37,17 @@ private object AppDependencies {
 
   private val playHealthVersion = "2.1.0"
   private val playJsonLoggerVersion = "3.1.0"
-
-  private val frontendBootstrapVersion = "7.23.0"
+  private val frontendBootstrapVersion = "7.26.0"
   private val playPartialsVersion = "5.3.0"
-  private val playAuthorisedFrontendVersion = "6.3.0"
-  private val playConfigVersion = "4.2.0"
+  private val playAuth = "1.2.0"
+  private val playConfigVersion = "4.3.0"
   private val hmrcTestVersion = "2.3.0"
   private val playReactivemongoVersion = "5.2.0"
   private val simpleReactivemongoVersion = "5.2.0"
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
-  private val playAuditingVersion = "2.6.0"
-  private val playUrlBindingLibVersion = "7.1.1"
+  private val playAuditingVersion = "2.9.0"
+  private val playUrlBindingLibVersion = "7.4.0"
   private val awsJavaSdkVersion = "1.11.97"
 
   val compile = Seq(
@@ -57,7 +56,7 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "simple-reactivemongo" % simpleReactivemongoVersion,
     "uk.gov.hmrc" %% "frontend-bootstrap" % frontendBootstrapVersion,
     "uk.gov.hmrc" %% "play-partials" % playPartialsVersion,
-    "uk.gov.hmrc" %% "play-authorised-frontend" % playAuthorisedFrontendVersion,
+    "uk.gov.hmrc" %% "play-auth" % playAuth,
     "uk.gov.hmrc" %% "play-config" % playConfigVersion,
     "uk.gov.hmrc" %% "logback-json-logger" % playJsonLoggerVersion,
     "uk.gov.hmrc" %% "play-auditing" % playAuditingVersion,

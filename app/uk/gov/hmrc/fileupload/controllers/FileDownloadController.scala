@@ -21,21 +21,30 @@ import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.s3.S3KeyName
-import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromTransient
+import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromBucket
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 import scala.concurrent.ExecutionContext
 
-class FileDownloadController(
-  downloadFromTransient: DownloadFromTransient,
-  createS3Key: (EnvelopeId, FileId) => S3KeyName,
-  now: () => Long)
+class FileDownloadController(downloadFromTransient: DownloadFromBucket,
+                             createS3Key: (EnvelopeId, FileId) => S3KeyName,
+                             now: () => Long,
+                             downloadFromQuarantine: DownloadFromBucket)
   (implicit executionContext: ExecutionContext) extends Controller {
 
-  def download(envelopeId: EnvelopeId, fileId: FileId) = Action { implicit request =>
+  def download(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
     Logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
+    downloadFileFromBucket(downloadFromTransient)(envelopeId, fileId)
+  }
+
+  def illegalDownloadFromQuarantine(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
+    Logger.error(s"downloading a file from S3 QUARANTINE with envelopeId: $envelopeId fileId: $fileId")
+    downloadFileFromBucket(downloadFromQuarantine)(envelopeId, fileId)
+  }
+
+  def downloadFileFromBucket(fromBucket: DownloadFromBucket)(envelopeId: EnvelopeId, fileId: FileId) = Action { implicit request =>
     val key = createS3Key(envelopeId, fileId)
-    downloadFromTransient(key) match {
+    fromBucket(key) match {
       case Some(result) =>
         Logger.info(s"download result: contentType: ${result.metadata.contentType} &  length: ${
           result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")

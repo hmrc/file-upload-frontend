@@ -26,12 +26,33 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
         Wiremock.scanFileCommandTriggered()
       }(PatienceConfig(timeout = Span(30, Seconds)))
       eventually {
-        val res = download(envelopeId, fileId)
+        val res = download(url, envelopeId, fileId)
         res.status shouldBe 200
         res.body shouldBe "someTextContents"
 
       }(PatienceConfig(timeout = Span(30, Seconds)))
     }
+
+    scenario("can retrieve a file from the internal download endpoint") {
+      Wiremock.responseToUpload(envelopeId, fileId)
+      Wiremock.respondToEnvelopeCheck(envelopeId)
+
+      val result = uploadDummyFile(envelopeId, fileId)
+
+      result.status should be(200)
+
+      Wiremock.quarantineFileCommandTriggered()
+      eventually {
+        Wiremock.scanFileCommandTriggered()
+      }(PatienceConfig(timeout = Span(30, Seconds)))
+      eventually {
+        val res = download(internalUrl, envelopeId, fileId)
+        res.status shouldBe 200
+        res.body shouldBe "someTextContents"
+
+      }(PatienceConfig(timeout = Span(30, Seconds)))
+    }
+
 
     scenario("""Prevent uploading if envelope is not in "OPEN" state"""") {
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_CLOSED_RESPONSE)
@@ -55,7 +76,7 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
       result.status should be(200)
 
       eventually {
-        val res = download(envelopeId, secondFileId)
+        val res = download(url, envelopeId, secondFileId)
         res.status shouldBe 200
 
       }(PatienceConfig(timeout = Span(30, Seconds)))

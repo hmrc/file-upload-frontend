@@ -19,5 +19,10 @@ package uk.gov.hmrc.fileupload.s3
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 object S3Key {
-  def forEnvSubdir(envSubdir: String) = (e: EnvelopeId, f: FileId) => s"$envSubdir/$e/$f"
+  def forEnvSubdir(envSubdir: String): (EnvelopeId, FileId) => String =
+    (e: EnvelopeId, f: FileId) => s"$envSubdir/$e/$f"
+}
+
+case class S3KeyName(value: String) extends AnyVal {
+  override def toString: String = value
 }
