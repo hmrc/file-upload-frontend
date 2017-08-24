@@ -89,7 +89,7 @@ trait MicroService {
     ).dependsOn(sharedFileUploadBackend)
 
   lazy val sharedFileUploadBackend =
-    ProjectRef(uri("https://github.com/hmrc/file-upload-shared.git#master"), "fileUploadShared")
+    ProjectRef(uri("https://github.com/hmrc/file-upload-shared.git#cats-version-07"), "fileUploadShared")
 }
 
 private object TestPhases {
