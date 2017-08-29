@@ -31,12 +31,11 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   final lazy val fileUploadBackendBaseUrl = s"http://localhost:$backendPort"
 
   override def beforeAll() = {
-    super.beforeAll()
     backend.start()
     backend.addStubMapping(
       post(urlPathMatching("/file-upload/events/*"))
         .willReturn(aResponse().withStatus(Status.OK))
-        .build()) //commands
+        .build())
 
     backend.addStubMapping(
       post(urlPathMatching("/file-upload/commands/*"))
@@ -45,7 +44,6 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   }
 
   override def afterAll() = {
-    super.afterAll()
     backend.stop()
     s3MockServer.stop
     File(workDir).delete()
