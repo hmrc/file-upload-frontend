@@ -12,13 +12,22 @@ class FileUploadConstraintsISpec extends FeatureSpecLike with FileActions with E
 
   feature("File Upload Frontend with Constraints") {
 
+    val repository = new ChunksMongoRepository(mongo)
+    repository.removeAll().futureValue
+    def numberOfChunks = repository.findAll().futureValue.size
+
+    scenario("Upload file of unsupported type that is not listed in content types specified in envelope") {
+      Given("Envelope created with specified contentTypes: application/pdf, image/jpeg and application/xml")
+      Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
+
+      When("File uploaded is of an unsupported type")
+      val result = uploadDummyUnsupportedContentTypeFile(envelopeId, fileId)
+
+      Then("The contentTypes checking was not enabled so Return 200")
+      result.status shouldBe 200
+    }
+
     scenario("Prevent uploading file that is larger than maxSizePerItem specified in envelope") {
-
-      val repository = new ChunksMongoRepository(mongo)
-      repository.removeAll().futureValue
-      def numberOfChunks = repository.findAll().futureValue.size
-      numberOfChunks shouldBe 0
-
       Given("Envelope created with specified maxSizePerItem: 10Mb")
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
 
@@ -32,22 +41,7 @@ class FileUploadConstraintsISpec extends FeatureSpecLike with FileActions with E
       numberOfChunks shouldBe 0
     }
 
-    scenario("Upload file of unsupported type that is not listed in content types specified in envelope") {
 
-      val repository = new ChunksMongoRepository(mongo)
-      repository.removeAll().futureValue
-      def numberOfChunks = repository.findAll().futureValue.size
-      numberOfChunks shouldBe 0
-
-      Given("Envelope created with specified contentTypes: application/pdf, image/jpeg and application/xml")
-      Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
-
-      When("File uploaded is of an unsupported type")
-      val result = uploadDummyUnsupportedContentTypeFile(envelopeId, fileId)
-
-      Then("Return 200")
-      result.status shouldBe 200
-    }
   }
 
 }
