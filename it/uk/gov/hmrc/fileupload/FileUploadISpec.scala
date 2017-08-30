@@ -1,19 +1,17 @@
 package uk.gov.hmrc.fileupload
 
-import org.scalatest.{FeatureSpecLike, Matchers}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support._
 
-class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActions with Eventually with Matchers{
+class FileUploadISpec extends FileActions with EnvelopeActions with Eventually {
 
-  feature("File upload front-end") {
+  "File upload front-end" should {
 
     val fileId = anyFileId
     val envelopeId = anyEnvelopeId
 
-    scenario("transfer a file to the back-end") {
+    "transfer a file to the back-end" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
@@ -24,16 +22,15 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
       Wiremock.quarantineFileCommandTriggered()
       eventually {
         Wiremock.scanFileCommandTriggered()
-      }(PatienceConfig(timeout = Span(30, Seconds)))
+      }
       eventually {
         val res = download(envelopeId, fileId)
         res.status shouldBe 200
         res.body shouldBe "someTextContents"
-
-      }(PatienceConfig(timeout = Span(30, Seconds)))
+      }
     }
 
-    scenario("can retrieve a file from the internal download endpoint") {
+    "can retrieve a file from the internal download endpoint" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
@@ -44,16 +41,15 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
       Wiremock.quarantineFileCommandTriggered()
       eventually {
         Wiremock.scanFileCommandTriggered()
-      }(PatienceConfig(timeout = Span(30, Seconds)))
+      }
       eventually {
         val res = download(envelopeId, fileId)
         res.status shouldBe 200
         res.body shouldBe "someTextContents"
-
-      }(PatienceConfig(timeout = Span(30, Seconds)))
+      }
     }
 
-    scenario("""Prevent uploading if envelope is not in "OPEN" state"""") {
+    """Prevent uploading if envelope is not in "OPEN" state"""" in {
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_CLOSED_RESPONSE)
 
       val repository = new ChunksMongoRepository(mongo)
@@ -66,7 +62,7 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
       numberOfChunks shouldBe 0
     }
 
-    scenario("""Ensure we continue to allow uploading if envelope is in "OPEN" state"""") {
+    """Ensure we continue to allow uploading if envelope is in "OPEN" state"""" in {
 
       val secondFileId = anyFileId
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
@@ -77,8 +73,7 @@ class FileUploadISpec extends FeatureSpecLike with FileActions with EnvelopeActi
       eventually {
         val res = download(envelopeId, secondFileId)
         res.status shouldBe 200
-
-      }(PatienceConfig(timeout = Span(30, Seconds)))
+      }
     }
 
   }

@@ -1,26 +1,26 @@
 package uk.gov.hmrc.fileupload
 
-import org.scalatest.{FeatureSpecLike, GivenWhenThen, Matchers}
+import org.scalatest.GivenWhenThen
 import org.scalatest.concurrent.Eventually
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions}
 
 
-class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with FileActions with EnvelopeActions with Eventually with Matchers {
+class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with EnvelopeActions with Eventually {
   val FAIL_REDIRECT_PARAM_NAME = "redirect-error-url"
   val SUCC_REDIRECT_PARAM_NAME = "redirect-success-url"
 
   val DEV_YOUR_PAY = "https://www-dev.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
   val QA_YOUR_PAY = "https://www-qa.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
-  val NO_HTTPS = DEV_YOUR_PAY.replaceAll("https", "http")
+  val NO_HTTPS: String = DEV_YOUR_PAY.replaceAll("https", "http")
   val NOT_GOV_DOMAIN = "https://www.playframework.com/documentation/2.5.x/ScalaTestingWithScalaTest"
 
-  feature("Redirect End User when provided with redirect parameters as part of upload file request") {
+  "Redirect End User when provided with redirect parameters as part of upload file request" should {
 
     val fileId = anyFileId
     val envelopeId = anyEnvelopeId
-    scenario("Redirect upon success to valid url - only success url provided") {
+    "Redirect upon success to valid url - only success url provided" in {
 
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
@@ -36,7 +36,7 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
     }
 
-    scenario("Redirect upon success to valid url - both success and error urls provided") {
+    "Redirect upon success to valid url - both success and error urls provided" in {
 
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
@@ -53,7 +53,7 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
     }
 
-    scenario("Redirect upon error to valid url - both success and error urls provided") {
+    "Redirect upon error to valid url - both success and error urls provided" in {
 
       Given("An envelope which does not exist")
       val invalidEnvelopeId = EnvelopeId("12345-123124")
@@ -69,8 +69,8 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       uploadFileResponse.header("Location").get.startsWith(redirectErrorUrl) shouldBe true
     }
 
+    "Redirect upon success to invalid url - not https" in {
 
-    scenario("Redirect upon success to invalid url - not https") {
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -90,7 +90,8 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       message shouldBe expectedMessage
     }
 
-    scenario("Redirect upon error to invalid url - not https") {
+    "Redirect upon error to invalid url - not https" in {
+
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -110,8 +111,8 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       message shouldBe expectedMessage
     }
 
+    "Redirect upon success to invalid url - not service.gov.uk" in {
 
-    scenario("Redirect upon success to invalid url - not service.gov.uk") {
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -131,7 +132,8 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       message shouldBe expectedMessage
     }
 
-    scenario("Redirect upon error to invalid url - not service.gov.uk") {
+    "Redirect upon error to invalid url - not service.gov.uk" in {
+
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -150,7 +152,6 @@ class FileUploadRedirectionISpec extends FeatureSpecLike with GivenWhenThen with
       val message = (parsedBody \ "message").as[String]
       message shouldBe expectedMessage
     }
-
 
   }
 

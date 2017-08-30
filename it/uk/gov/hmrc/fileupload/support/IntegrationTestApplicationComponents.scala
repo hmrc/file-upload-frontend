@@ -23,10 +23,12 @@ import play.api._
 import play.api.mvc.EssentialFilter
 import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.mongo.MongoSpecSupport
+import uk.gov.hmrc.play.test.UnitSpec
 
-trait IntegrationTestApplicationComponents extends OneServerPerSuite with MongoSpecSupport with FakeFileUploadBackend {
+trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSuite with MongoSpecSupport with FakeFileUploadBackend {
   this: Suite =>
-  override implicit lazy val app = components.application
+
+  override implicit lazy val app: Application = components.application
 
   override lazy val port: Int = 9000
 
@@ -34,7 +36,6 @@ trait IntegrationTestApplicationComponents extends OneServerPerSuite with MongoS
   lazy val components: ApplicationModule = new IntegrationTestApplicationModule(context)
 
   lazy val context: ApplicationLoader.Context = {
-    beforeAll()
     val classLoader = ApplicationLoader.getClass.getClassLoader
     val env = new Environment(new java.io.File("."), classLoader, Mode.Test)
     ApplicationLoader.createContext(env, initialSettings = Map(

@@ -8,48 +8,52 @@ import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import io.findify.s3mock.S3Mock
 import io.findify.s3mock.request.CreateBucketConfiguration
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.http.Status
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContextExecutor
 
 trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   this: Suite =>
 
+  implicit override val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(500, Seconds), interval = Span(500, Millis))
+  implicit val executionContext: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global
+
   lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
-  lazy val backendPort = backend.port()
+  lazy val backendPort: Int = backend.port()
 
   lazy val workDir = s"/tmp/s3"
   // create and start S3 API mock
   lazy val s3MockServer = S3Mock(port = 8001, dir = workDir)
 
+  final lazy val fileUploadBackendBaseUrl = s"http://localhost:$backendPort"
+
   s3MockServer.start
   s3MockServer.p.createBucket("file-upload-quarantine", new CreateBucketConfiguration(locationConstraint=None))
   s3MockServer.p.createBucket("file-upload-transient", new CreateBucketConfiguration(locationConstraint=None))
 
-  final lazy val fileUploadBackendBaseUrl = s"http://localhost:$backendPort"
+  backend.start()
+  backend.addStubMapping(
+    post(urlPathMatching("/file-upload/events/*"))
+      .willReturn(aResponse().withStatus(Status.OK))
+      .build())
 
-  override def beforeAll() = {
-    backend.start()
-    backend.addStubMapping(
-      post(urlPathMatching("/file-upload/events/*"))
-        .willReturn(aResponse().withStatus(Status.OK))
-        .build())
+  backend.addStubMapping(
+    post(urlPathMatching("/file-upload/commands/*"))
+      .willReturn(aResponse().withStatus(Status.OK))
+      .build())
 
-    backend.addStubMapping(
-      post(urlPathMatching("/file-upload/commands/*"))
-        .willReturn(aResponse().withStatus(Status.OK))
-        .build())
-  }
 
-  override def afterAll() = {
+  override def afterAll(): Unit = {
     backend.stop()
     s3MockServer.stop
     File(workDir).delete()
   }
 
-  val ENVELOPE_OPEN_RESPONSE =
+  val ENVELOPE_OPEN_RESPONSE: String =
     """ { "status" : "OPEN",
           "constraints" : {
             "maxItems" : 100,
@@ -63,7 +67,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
             ]}
           } """.stripMargin
 
-  val ENVELOPE_CLOSED_RESPONSE =
+  val ENVELOPE_CLOSED_RESPONSE: String =
     """ { "status" : "CLOSED",
           "constraints" : {
             "maxItems" : 100,

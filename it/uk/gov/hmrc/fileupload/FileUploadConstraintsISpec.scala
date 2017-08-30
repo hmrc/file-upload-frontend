@@ -1,18 +1,17 @@
 package uk.gov.hmrc.fileupload
 
-import org.scalatest.concurrent.Eventually
-import org.scalatest.{FeatureSpecLike, GivenWhenThen, Matchers}
+import org.scalatest.GivenWhenThen
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions}
 
-class FileUploadConstraintsISpec extends FeatureSpecLike with FileActions with EnvelopeActions with Eventually with Matchers with GivenWhenThen {
+class FileUploadConstraintsISpec extends FileActions with EnvelopeActions with GivenWhenThen {
 
-  val fileId = anyFileId
-  val envelopeId = anyEnvelopeId
+  val fileId: FileId = anyFileId
+  val envelopeId: EnvelopeId = anyEnvelopeId
 
-  feature("File Upload Frontend with Constraints") {
+  "Prevent uploading file that is larger than maxSizePerItem specified in envelope" should {
 
-    scenario("Prevent uploading file that is larger than maxSizePerItem specified in envelope") {
+    "Recieve 413 Entity Too Large" in {
 
       Given("Envelope created with specified maxSizePerItem: 10Mb")
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
@@ -23,8 +22,10 @@ class FileUploadConstraintsISpec extends FeatureSpecLike with FileActions with E
       Then("Will Recieve 413 Entity Too Large")
       result.status shouldBe 413
     }
+  }
 
-    scenario("Upload file of unsupported type that is not listed in content types specified in envelope") {
+  "Upload file of unsupported type that is not listed in content types specified in envelope" should {
+    "Return 200 as contentTypes checking was not enabled" in {
 
       Given("Envelope created with specified contentTypes: application/pdf, image/jpeg and application/xml")
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
@@ -34,8 +35,6 @@ class FileUploadConstraintsISpec extends FeatureSpecLike with FileActions with E
 
       Then("Return 200 as contentTypes checking was not enabled")
       result.status shouldBe 200
-
-      Thread.sleep(500)
     }
   }
 }

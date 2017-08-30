@@ -1,7 +1,6 @@
 package uk.gov.hmrc.fileupload.support
 
 import org.scalatest.Suite
-import org.scalatest.time.{Seconds, Span}
 import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
@@ -41,7 +40,7 @@ trait FileActions extends ActionsSupport {
         "X-Session-ID" -> "someId",
         "X-Requested-With" -> "someId")
       .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\nContent-Type: application/pdf\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
-      .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
+      .futureValue
   }
 
   def uploadDummyFileWithoutRedirects(envelopeId: EnvelopeId, fileId: FileId, redirectParams: String): WSResponse = {
@@ -52,7 +51,7 @@ trait FileActions extends ActionsSupport {
         "X-Session-ID" -> "someId",
         "X-Requested-With" -> "someId")
       .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\nContent-Type: application/pdf\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
-      .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
+      .futureValue
   }
 
 
@@ -67,7 +66,7 @@ trait FileActions extends ActionsSupport {
         "Content-Type: application/pdf\r\n" +
         ("someTextContent" * 1024 * 1024) +
         "-----011000010111000001101001--")
-      .futureValue(PatienceConfig(timeout = Span(1000, Seconds)))
+      .futureValue
   }
 
   def uploadDummyUnsupportedContentTypeFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse = {
@@ -79,6 +78,6 @@ trait FileActions extends ActionsSupport {
       .post("-----011000010111000001101001\r\n" +
         "Content-Disposition: form-data; name=\"file1\"; filename=\"test.txt\"\r\n" +
         "Content-Type: text/plain\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
-      .futureValue(PatienceConfig(timeout = Span(1000, Seconds)))
+      .futureValue
   }
 }
