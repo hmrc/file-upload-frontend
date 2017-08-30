@@ -15,9 +15,9 @@ trait FileActions extends ActionsSupport {
       .put(data)
       .futureValue
 
-  def download(urlPrefix: String, envelopeId: EnvelopeId, fileId: FileId): WSResponse =
+  def download(envelopeId: EnvelopeId, fileId: FileId): WSResponse =
     client
-      .url(s"$urlPrefix/download/envelopes/$envelopeId/files/$fileId")
+      .url(s"$internalUrl/download/envelopes/$envelopeId/files/$fileId")
       .get()
       .futureValue
 
