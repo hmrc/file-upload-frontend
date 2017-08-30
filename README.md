@@ -522,6 +522,18 @@ Request (POST): localhost:8899/file-upload/transfer/envelopes/0b215e97-11d4-4006
 
 Response: 200
 
+##### DOWNLOAD FILE CONTENTS (DO NOT USE)
+
+Retrieve the contents of a file in the transient bucket. `file-upload` is the only permitted user of this endpoint.
+
+```
+GET     /internal-file-upload/download/envelopes/{envelopeId}/files/{file-Id}
+```
+
+| Responses    | Status    | Description |
+| --------|---------|-------|
+| Ok  | 200   | File contents was retrieved from transient bucket.  |
+
 ## License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")
