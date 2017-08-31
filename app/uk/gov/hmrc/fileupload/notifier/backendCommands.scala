@@ -27,7 +27,7 @@ sealed trait BackendCommand {
 }
 
 case class QuarantineFile(id: EnvelopeId, fileId: FileId, fileRefId: FileRefId,
-                          created: Long, name: String, contentType: String, fileLength: Long, metadata: JsObject) extends BackendCommand {
+                          created: Long, name: String, contentType: String, length: Long, metadata: JsObject) extends BackendCommand {
   val commandType = "quarantine-file"
 }
 
