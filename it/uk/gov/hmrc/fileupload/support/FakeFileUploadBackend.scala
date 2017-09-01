@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContextExecutor
 trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
   this: Suite =>
 
-  implicit override val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(5, Seconds), interval = Span(1, Seconds))
+  implicit override val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(10, Seconds), interval = Span(200, Millis))
   implicit val executionContext: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global
 
   lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())

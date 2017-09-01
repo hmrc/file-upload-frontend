@@ -7,20 +7,29 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 trait FileActions extends ActionsSupport {
   this: Suite =>
 
-  val file: String = "-----011000010111000001101001\r\n" +
-                     "Content-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\n" +
-                     "Content-Type: application/pdf\r\n\r\n" +
-                     "someTextContents\r\n-----011000010111000001101001--"
+  private val httpSeparator = "\r\n"
+  private val actualBoundary = "-----011000010111000001101001"
+  private val endBoundary = s"$httpSeparator$actualBoundary--"
+  private val acceptedFileHeader =
+    """Content-Disposition: form-data; name="file1"; filename="test.pdf"; Content-Type: "application/pdf""""
+  private val shouldNotAcceptedFileHeader =
+    """Content-Disposition: form-data; name="file1"; filename="test.txt"; Content-Type: "text/plain""""
+  private val textContent = "someTextContents"
 
-  val tooLargeFile: String = "-----011000010111000001101001\r\n" +
-                             "Content-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\n" +
-                             "Content-Type: application/pdf\r\n\r\n" +
-                             s"${"someTextContent" * 1024 * 1024}\r\n-----011000010111000001101001--"
+  val file: String = s"$actualBoundary$httpSeparator" +
+                     s"$acceptedFileHeader" +
+                     s"$httpSeparator$httpSeparator" +
+                     s"$textContent$endBoundary"
 
-  val wrongTypeFile: String = "-----011000010111000001101001\r\n" +
-                              "Content-Disposition: form-data; name=\"file1\"; filename=\"test.txt\"\r\n" +
-                              "Content-Type: text/plain\r\n\r\n" +
-                              "someTextContents\r\n-----011000010111000001101001--"
+  val tooLargeFile: String = s"$actualBoundary$httpSeparator" +
+                             s"$acceptedFileHeader" +
+                             s"$httpSeparator$httpSeparator" +
+                             s"${textContent * 1024 * 1024}$endBoundary"
+
+  val wrongTypeFile: String = s"$actualBoundary$httpSeparator" +
+                              s"$shouldNotAcceptedFileHeader" +
+                              s"$httpSeparator$httpSeparator" +
+                              s"$textContent$endBoundary"
 
   def upload(data: Array[Byte], envelopeId: EnvelopeId, fileId: FileId): WSResponse =
     client
