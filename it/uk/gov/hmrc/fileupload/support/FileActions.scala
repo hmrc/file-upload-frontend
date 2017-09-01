@@ -1,12 +1,35 @@
 package uk.gov.hmrc.fileupload.support
 
 import org.scalatest.Suite
-import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 trait FileActions extends ActionsSupport {
   this: Suite =>
+
+  private val httpSeparator = "\r\n"
+  private val actualBoundary = "-----011000010111000001101001"
+  private val endBoundary = s"$httpSeparator$actualBoundary--"
+  private val acceptedFileHeader =
+    """Content-Disposition: form-data; name="file1"; filename="test.pdf"; Content-Type: "application/pdf""""
+  private val shouldNotAcceptedFileHeader =
+    """Content-Disposition: form-data; name="file1"; filename="test.txt"; Content-Type: "text/plain""""
+  private val textContent = "someTextContents"
+
+  val file: String = s"$actualBoundary$httpSeparator" +
+                     s"$acceptedFileHeader" +
+                     s"$httpSeparator$httpSeparator" +
+                     s"$textContent$endBoundary"
+
+  val tooLargeFile: String = s"$actualBoundary$httpSeparator" +
+                             s"$acceptedFileHeader" +
+                             s"$httpSeparator$httpSeparator" +
+                             s"${textContent * 1024 * 1024}$endBoundary"
+
+  val wrongTypeFile: String = s"$actualBoundary$httpSeparator" +
+                              s"$shouldNotAcceptedFileHeader" +
+                              s"$httpSeparator$httpSeparator" +
+                              s"$textContent$endBoundary"
 
   def upload(data: Array[Byte], envelopeId: EnvelopeId, fileId: FileId): WSResponse =
     client
@@ -37,48 +60,41 @@ trait FileActions extends ActionsSupport {
   def uploadDummyFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse = {
     client.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
       .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-        "X-Request-ID" -> "someId",
-        "X-Session-ID" -> "someId",
-        "X-Requested-With" -> "someId")
-      .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\nContent-Type: application/pdf\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
-      .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
+                   "X-Request-ID" -> "someId",
+                   "X-Session-ID" -> "someId",
+                   "X-Requested-With" -> "someId")
+      .post(file)
+      .futureValue
   }
 
   def uploadDummyFileWithoutRedirects(envelopeId: EnvelopeId, fileId: FileId, redirectParams: String): WSResponse = {
     client.url(s"$url/upload/envelopes/$envelopeId/files/$fileId?$redirectParams")
       .withFollowRedirects(false)
       .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-        "X-Request-ID" -> "someId",
-        "X-Session-ID" -> "someId",
-        "X-Requested-With" -> "someId")
-      .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\nContent-Type: application/pdf\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
-      .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
+                   "X-Request-ID" -> "someId",
+                   "X-Session-ID" -> "someId",
+                   "X-Requested-With" -> "someId")
+      .post(file)
+      .futureValue
   }
-
-
-
 
   def uploadDummyLargeFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse = {
     client.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
       .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-        "X-Request-ID" -> "someId",
-        "X-Session-ID" -> "someId",
-        "X-Requested-With" -> "someId")
-      .post(s"-----011000010111000001101001\r\n" +
-        "Content-Disposition: form-data; name=\"file1\"; filename=\"test.pdf\"\r\n" +
-        "Content-Type: application/pdf\r\n\r\n" +
-        ("someTextContent" * 1024 * 1024) +
-        "-----011000010111000001101001--")
-      .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
+                   "X-Request-ID" -> "someId",
+                   "X-Session-ID" -> "someId",
+                   "X-Requested-With" -> "someId")
+      .post(tooLargeFile)
+      .futureValue
   }
 
   def uploadDummyUnsupportedContentTypeFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse = {
     client.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
       .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-        "X-Request-ID" -> "someId",
-        "X-Session-ID" -> "someId",
-        "X-Requested-With" -> "someId")
-      .post("-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"test.txt\"\r\nContent-Type: text/plain\r\n\r\nsomeTextContents\r\n-----011000010111000001101001--")
-      .futureValue(PatienceConfig(timeout = Span(100, Seconds)))
+                   "X-Request-ID" -> "someId",
+                   "X-Session-ID" -> "someId",
+                   "X-Requested-With" -> "someId")
+      .post(wrongTypeFile)
+      .futureValue
   }
 }

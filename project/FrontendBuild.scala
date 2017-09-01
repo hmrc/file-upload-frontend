@@ -95,15 +95,15 @@ private object AppDependencies {
 
       override lazy val test = Seq(
         "uk.gov.hmrc" %% "hmrctest" % hmrcTestVersion % scope,
-        "org.scalatest" %% "scalatest" % "2.2.6" % scope,
-        "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
+        "org.scalatest" %% "scalatest" % "3.0.1" % scope,
+        "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % scope,
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope,
-        "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope,
+        "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % scope,
         "io.findify" %% "s3mock" % "0.1.9" % scope
       )
     }.test

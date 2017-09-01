@@ -21,8 +21,9 @@ import org.scalatestplus.play.OneAppPerSuite
 import play.api.ApplicationLoader.Context
 import play.api._
 import play.api.mvc.EssentialFilter
+import uk.gov.hmrc.play.test.UnitSpec
 
-trait TestApplicationComponents extends OneAppPerSuite with BeforeAndAfterAll {
+trait TestApplicationComponents extends UnitSpec with OneAppPerSuite with BeforeAndAfterAll {
   this: Suite =>
 
   // accessed to get the components in tests

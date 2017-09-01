@@ -19,17 +19,12 @@ package uk.gov.hmrc.fileupload
 import java.net.HttpURLConnection._
 
 import cats.data.Xor
-import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Second, Span}
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.IntegrationTestApplicationComponents
 import uk.gov.hmrc.fileupload.transfer.Repository
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
-import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
-class RepositorySpec extends UnitSpec with ScalaFutures with IntegrationTestApplicationComponents {
+class RepositorySpec extends IntegrationTestApplicationComponents {
 
 
   "When calling the envelope check" should {
@@ -84,5 +79,4 @@ class RepositorySpec extends UnitSpec with ScalaFutures with IntegrationTestAppl
   //    }
   //  }
 
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(1, Second))
 }
