@@ -24,7 +24,7 @@ import uk.gov.hmrc.fileupload.support.IntegrationTestApplicationComponents
 import uk.gov.hmrc.fileupload.transfer.Repository
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
 
-class RepositorySpec extends IntegrationTestApplicationComponents {
+class RepositoryISpec extends IntegrationTestApplicationComponents {
 
 
   "When calling the envelope check" should {
