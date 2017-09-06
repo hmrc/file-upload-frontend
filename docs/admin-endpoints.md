@@ -17,9 +17,14 @@ Request (GET): localhost:8899/admin/files/info/:fileRefId
 
 Response (in Body):
 ```json
-[
-  // TODO add sample response
-]
+{
+    "_id": "0b215e97-11d4-4006-91db-c067e74fc653",
+    "filename": "the-name-of-the-file.pdf",
+    "chunkSize": 10,
+    "uploadDate": "1477490659610",
+    "length": 32534435,
+    "contentType": "application/pdf"
+}
 ```
 
 #### MANUALLY SCAN FILE (DO NOT USE)

@@ -3,7 +3,9 @@ These are endpoints used for testing purposes only and are not available in prod
 
 ### ENVELOPE TEST-ONLY
 
-#### CREATE ENVELOPE (DO NOT USE)
+#### CREATE ENVELOPE (DO NOT USE) 
+-- TODO move to backend documentation
+
 Creates an envelope and auto generates an Id. The body in the http request must be json. Successful response is provided in the Location Header which will have the link of the newly created envelope.
 ```
 POST   	file-upload/test-only/create-envelope
@@ -73,7 +75,7 @@ Request (GET): localhost:8899/file-upload/test-only/download-file/envelopes/0b21
 Response: Binary file which contains the selected file.
 
 #### GET EVENTS
-Get information about all current events. //TODO add better description
+Get information about all current events.
 
 ```
 GET     /file-upload/test-only/events/{streamId}
