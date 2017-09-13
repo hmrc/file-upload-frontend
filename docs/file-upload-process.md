@@ -1,7 +1,7 @@
 ## FILE UPLOAD PROCESS
 Below describes how the “file-upload” process works. The process described below is recommended if the client aims to upload multiple file (clients that aim to only upload a single file and are not interested in routing can follow a different [process]()): -
 
-### LIFE-CYCLE OF AN ENVELOPE - [see state diagram](./resources/images/envelope-life-cycle.png)
+### LIFE-CYCLE OF AN ENVELOPE - [see state diagram](../resources/images/envelope-life-cycle.png)
 
 #### 1. Create an envelope
 The first step is to create an envelope. The following endpoint is called and the envelope is created (an envelopeId is generated and returned in the responseHeader) : -
@@ -60,7 +60,7 @@ Clients that aim to upload a single file and have no need for "routing", can fol
 3. [download file](https://github.com/hmrc/file-upload#download-file)
 
 
-### LIFE-CYCLE OF A FILE - [see state diagram](./resources/images/file-life-cycle.png)
+### LIFE-CYCLE OF A FILE - [see state diagram](../resources/images/file-life-cycle.png)
 - Once uploaded, files go into the QUARANTINE bucket (at this point, the file is in a QUARANTINED state), files remain in this bucket until they have been virus scanned. After virus scanning, if no issues are found, the file moves to a CLEANED state (ready to be moved to the TRANSIENT bucket).
 
 - Once the file is CLEANED, it is moved to the TRANSIENT bucket and the status of the file changes to AVAILABLE.
