@@ -1,5 +1,5 @@
 ## FILE UPLOAD PROCESS
-Below describes how the “file-upload” process works. The process described below is recommended if the client aims to upload multiple file (clients that aim to only upload a single file and are not interested in routing can follow a different [process]()): -
+Below describes how the “file-upload” process works. The process described below is recommended if the client aims to upload multiple file (clients that aim to only upload a single file and are not interested in routing can follow a different [process](#single-file-process)): -
 
 ### LIFE-CYCLE OF AN ENVELOPE - [see state diagram](../resources/images/envelope-life-cycle.png)
 
