@@ -1,13 +1,16 @@
 ## FILE UPLOAD PROCESS
 Below describes how the “file-upload” process works. The process described below is recommended if the client aims to upload multiple file (clients that aim to only upload a single file and are not interested in routing can follow a different [process](#single-file-process)): -
 
+Some of the endpoints mentioned below live on file-upload-frontend (referred to be low as FE) and the rest live on file-upload (the back end, referred to below as BE). 
+
 ### LIFE-CYCLE OF AN ENVELOPE - [see state diagram](../resources/images/envelope-life-cycle.png)
 
 #### 1. Create an envelope
 The first step is to create an envelope. The following endpoint is called and the envelope is created (an envelopeId is generated and returned in the responseHeader) : -
 
-- POST       /file-upload/envelopes
-
+```
+POST       {BE}/file-upload/envelopes
+```
 [click here for more details](https://github.com/hmrc/file-upload#create-an-envelope)
 
 
@@ -15,9 +18,9 @@ An envelope can contain one or more files. Once created, an envelope will be in 
 
 #### 2. Upload file(s)
 After the envelope has been created, the client can now send files using the below endpoint: -
-
-- POST        /file-upload/upload/envelopes/{envelope-id}/files/{file-id}
-
+```
+POST        {FE}/file-upload/upload/envelopes/{envelope-id}/files/{file-id}
+```
 envelope-id - the ID that was returned in step 1
 file-id - a user generated value. This can be any value the use wishes (file-id’s must be unique within an envelope). One request per file.
 
@@ -30,9 +33,9 @@ Files are uploaded to the QUARANTINE bucket and then virus-scanned: -
 
 #### 3. Send routing request
  Once all files have been uploaded, the client can send a “routing request”: - 
-
-- POST       /file-routing/requests
-
+```
+POST       {BE}/file-routing/requests
+```
 Once this has been sent, the following will happen: -
  - the envelope moves into a SEALED state 
  - and the client can no longer upload files to the given envelope
@@ -43,8 +46,9 @@ Once this has been sent, the following will happen: -
 
 #### 4. Delete envelope
 The envelope will remain in a CLOSED state until the envelope is DELETED. The envelope is deleted with the following endpoint
-
-DELETE     /file-transfer/envelopes/{envelope-id}
+```
+DELETE     {BE}/file-transfer/envelopes/{envelope-id}
+```
 envelope-id - the identifier for the envelope to be deleted (this is a soft delete)
 
 [click here for more details](https://github.com/hmrc/file-upload#soft-delete-an-envelope)
@@ -58,6 +62,7 @@ Clients that aim to upload a single file and have no need for "routing", can fol
 1. [create an envelope](https://github.com/hmrc/file-upload#create-an-envelope)
 2. [upload file](https://github.com/hmrc/file-upload-frontend#upload-file)
 3. [download file](https://github.com/hmrc/file-upload#download-file)
+4. [delete file](https://github.com/hmrc/file-upload#hard-delete-a-file)
 
 
 ### LIFE-CYCLE OF A FILE - [see state diagram](../resources/images/file-life-cycle.png)
@@ -98,7 +103,7 @@ If a callbackUrl was provided, the client will be notified about the infected fi
 The client can take the following steps: - 
 - Request for the status of the envelope; this will retrieve the current state of the envelope and will list the status of all the files contained within the envelope ([show envelope endpoint](https://github.com/hmrc/file-upload#show-envelope))
 - Delete the INFECTED file ([delete file endpoint](https://github.com/hmrc/file-upload#hard-delete-a-file))
-- Download AVAILABLE files ([download file endpoint](https://github.com/hmrc/file-upload#download-file)
+- Download the AVAILABLE files ([download file endpoint](https://github.com/hmrc/file-upload#download-file)
 - Re-upload files
 
 
