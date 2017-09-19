@@ -22,7 +22,7 @@ import java.net.{MalformedURLException, URL}
 import akka.util.ByteString
 import com.typesafe.config.Config
 import play.api.Logger
-import play.api.http.HttpEntity
+import play.api.http.{HttpEntity, HttpErrorHandler}
 import play.api.http.Status.{BAD_REQUEST, MOVED_PERMANENTLY}
 import play.api.libs.iteratee.Done
 import play.api.libs.json.Json
@@ -35,13 +35,13 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 
-class RedirectionFeature(allowedHosts: Seq[String]) {
+class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandler) {
   import RedirectionFeature._
 
-  def this(config: Config) =
+  def this(config: Config, errorHandler: HttpErrorHandler) =
     this(config.getString("controllers.redirection.allowedHosts")
       .split(",").toSeq
-      .map(_.trim))
+      .map(_.trim), errorHandler)
 
   private val isLocalHostAllowed = allowedHosts.contains(LOCAL_HOST)
 
@@ -59,21 +59,27 @@ class RedirectionFeature(allowedHosts: Seq[String]) {
     validation match {
       case Failure(ex) => logUrlProblemAndReturn(BAD_REQUEST, ex)
       case Success(redirectParams) =>
-        task(rh).map{ wrappedResult =>
-          val newUrlO = {
-            import wrappedResult.header.status
-
-            if( status > 199 && status < 300)
-              redirectParams.succ
-            else // only our logical errors lands here
-              redirectParams.fail
-                .map(addErrorDataToUrl(status, extractErrorMsg(wrappedResult)))
-          }
-
-          newUrlO.map(redirectToUrl)
-            .getOrElse(wrappedResult)
-        }
+        task(rh).recoverWith {
+          case e: Throwable => errorHandler.onServerError(rh, e)
+        }.map(
+          redirectTheResult(redirectParams, _)
+        )
     }
+  }
+
+  private def redirectTheResult(redirectParams: RedirectUrlsO, result: Result) = {
+    val newUrlO = {
+      import result.header.status
+
+      if (status > 199 && status < 300)
+        redirectParams.succ
+      else // only our logical errors lands here
+        redirectParams.fail
+          .map(addErrorDataToUrl(status, extractErrorMsg(result)))
+    }
+
+    newUrlO.map(redirectToUrl)
+      .getOrElse(result)
   }
 
   def validateAndSanitize(url: String): Try[ValidatedUrl] = {
