@@ -129,7 +129,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
       status(resultF) shouldEqual MOVED_PERMANENTLY
 
 
-      println(getResultLocation(resultF).length)
+      (getResultLocation(resultF).length <= 2000) shouldBe true
       getResultLocation(resultF).contains(OK_URL_ALLOWED + s"?errorCode=500&reason=") shouldBe true
       getResultLocation(resultF).contains(errorMsg) shouldBe true
     }
