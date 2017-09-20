@@ -17,13 +17,17 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import org.scalatest.concurrent.ScalaFutures
-import play.api.http.DefaultHttpErrorHandler
+import play.api.Logger
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.{DefaultHttpErrorHandler, HttpErrorHandler}
 import play.api.libs.json.Json
 import play.api.mvc.Results._
-import play.api.mvc.{Action, EssentialAction, Result}
+import play.api.mvc.{Action, EssentialAction, RequestHeader, Result}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload._
+import uk.gov.hmrc.fileupload.utils.ErrorResponse
+import uk.gov.hmrc.play.http.{HttpException, Upstream4xxResponse, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration.Duration
@@ -35,7 +39,23 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
   private val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
 
   val redirectionFeature = new RedirectionFeature(allowedHosts, null)
-  val redirectionWithExceptions = new RedirectionFeature(allowedHosts, DefaultHttpErrorHandler)
+  val redirectionWithExceptions = {
+    new RedirectionFeature(allowedHosts, new HttpErrorHandler() {
+      implicit val erFormats = Json.format[ErrorResponse]
+
+      override def onClientError(request: RequestHeader, statusCode: Int, message: String) = ???
+
+      override def onServerError(request: RequestHeader, ex: Throwable) = {
+        Logger.error(ex.getMessage, ex)
+        Future.successful {
+          val (code, message) = ex match {
+            case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
+          }
+          new Status(code)(Json.toJson(ErrorResponse(code, message)))
+        }
+      }
+    })
+  }
 
   val okAction: EssentialAction = Action { request =>
     val value = (request.body.asJson.get \ "field").as[String]
@@ -108,6 +128,8 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
 
       status(resultF) shouldEqual MOVED_PERMANENTLY
 
+
+      println(getResultLocation(resultF).length)
       getResultLocation(resultF).contains(OK_URL_ALLOWED + s"?errorCode=500&reason=") shouldBe true
       getResultLocation(resultF).contains(errorMsg) shouldBe true
     }
