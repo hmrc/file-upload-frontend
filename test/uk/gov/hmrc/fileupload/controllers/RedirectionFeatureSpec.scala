@@ -33,7 +33,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
   private val allowedHosts = Seq[String]("gov.uk","localhost")
   private val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
 
-  val redirectionFeature = new RedirectionFeature(allowedHosts)
+  val redirectionFeature = new RedirectionFeature(allowedHosts, null)
 
   val okAction: EssentialAction = Action { request =>
     val value = (request.body.asJson.get \ "field").as[String]

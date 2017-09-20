@@ -29,6 +29,7 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import play.Logger
 import play.api.ApplicationLoader.Context
+import play.api.http.HttpErrorHandler
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSRequest
 import play.api.libs.ws.ahc.AhcWSComponents
@@ -104,7 +105,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
 
-  val redirectionFeature = new RedirectionFeature(configuration.underlying)
+  val redirectionFeature = new RedirectionFeature(configuration.underlying, httpErrorHandler)
 
   lazy val fileDownloadController =
     new FileDownloadController(
