@@ -23,9 +23,11 @@ import play.api._
 import play.api.mvc.EssentialFilter
 import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.mongo.MongoSpecSupport
+import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.test.UnitSpec
 
-trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSuite with MongoSpecSupport with FakeFileUploadBackend {
+trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSuite with MongoSpecSupport
+                                                            with FakeFileUploadBackend with ServicesConfig {
   this: Suite =>
 
   override implicit lazy val app: Application = components.application
@@ -43,7 +45,11 @@ trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSui
       "Test.clam.antivirus.runStub" -> "true",
       "Test.microservice.services.file-upload-backend.port" -> backendPort.toString,
       "mongodb.uri" -> s"mongodb://localhost:27017/$databaseName",
-      "aws.service_endpoint" -> "http://127.0.0.1:8001"
+      "service_endpoint" -> "http://127.0.0.1:8001",
+      "s3.bucket.upload.quarantine" -> "quarantine",
+      "s3.bucket.upload.transient" -> "transient",
+      "access.key.id" -> "id",
+      "secret.access.key" -> "key"
     ))
   }
 
