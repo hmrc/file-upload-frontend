@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import org.scalatest.concurrent.ScalaFutures
+import play.api.http.DefaultHttpErrorHandler
 import play.api.libs.json.Json
 import play.api.mvc.Results._
 import play.api.mvc.{Action, EssentialAction, Result}
@@ -34,6 +35,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
   private val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
 
   val redirectionFeature = new RedirectionFeature(allowedHosts, null)
+  val redirectionWithExceptions = new RedirectionFeature(allowedHosts, DefaultHttpErrorHandler)
 
   val okAction: EssentialAction = Action { request =>
     val value = (request.body.asJson.get \ "field").as[String]
@@ -41,8 +43,9 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
   }
 
   import redirectionFeature.redirect
-  import scala.concurrent.ExecutionContext.Implicits.global
   import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
+
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   "Redirection feature" should {
 
@@ -93,6 +96,20 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
       status(resultF) shouldEqual MOVED_PERMANENTLY
 
       getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode=404&reason=" + errorMsg)
+    }
+
+    "redirect on failure with exception thrown" in {
+      val errorMsg = "Anything can be thrown"
+      val badAction: EssentialAction = Action { request =>
+        throw new RuntimeException("Anything can be thrown")
+      }
+      val redirectA = redirectionWithExceptions.redirect(None, Some(OK_URL_ALLOWED))(badAction)
+      val resultF = call(redirectA, request)
+
+      status(resultF) shouldEqual MOVED_PERMANENTLY
+
+      getResultLocation(resultF).contains(OK_URL_ALLOWED + s"?errorCode=500&reason=") shouldBe true
+      getResultLocation(resultF).contains(errorMsg) shouldBe true
     }
 
     "redirect on failure with complex msg error" in {
