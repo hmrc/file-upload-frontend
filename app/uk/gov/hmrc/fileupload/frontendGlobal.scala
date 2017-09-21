@@ -188,8 +188,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val scanner: () => AvScanIteratee = new VirusScanner(configuration, environment).scanIteratee
   lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
-    val runStubClam = configuration.getConfig(s"${environment.mode}.clam.antivirus").flatMap(_.getBoolean("runStub")).getOrElse(false)
-    if (runStubClam & (environment.mode == Mode.Test)) {
+    val enableClam = configuration.getConfig(s"${environment.mode}.clam.antivirus").flatMap(_.getBoolean("enableScanning")).getOrElse(true)
+    if (!enableClam) {
       (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
     } else {
       ScanningService.scanBinaryData(scanner, getFileFromQuarantine)(createS3Key)
