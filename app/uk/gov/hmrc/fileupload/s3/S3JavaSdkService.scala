@@ -61,6 +61,9 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     .withProxyPort(awsConfig.proxyPort)
     .withProxyUsername(awsConfig.proxyUsername)
     .withProxyPassword(awsConfig.proxyPassword)
+    .withConnectionTimeout(5 * 1000) // FIXME pull to config
+    .withRequestTimeout(19 * 1000)
+    .withSocketTimeout(29 * 1000)
 
   val s3Builder = AmazonS3ClientBuilder
     .standard()
@@ -165,7 +168,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     Logger.info(s"upload-s3 started: $fileInfo")
     upload.addProgressListener(new ProgressListener {
       var events:List[ProgressEvent] = List.empty
-      def progressChanged(progressEvent: ProgressEvent) = {
+      def progressChanged(progressEvent: ProgressEvent): Unit = {
         events = progressEvent :: events
         if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
           uploadTime.stop()
