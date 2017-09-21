@@ -97,6 +97,7 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
 
 object RedirectionFeature {
   val LOCAL_HOST = "localhost"
+  val MAX_URL_LENGHT = 2000
 
   case class ValidatedUrl(url: String)
   case class RedirectUrlsO(succ: Option[ValidatedUrl], fail: Option[ValidatedUrl])
@@ -120,8 +121,11 @@ object RedirectionFeature {
   def redirectToUrl(url: ValidatedUrl): Result =
     Results.Redirect(url.url, MOVED_PERMANENTLY)
 
-  def addErrorDataToUrl(status: Int, msg: String): ValidatedUrl => ValidatedUrl =
-    baseUrl => ValidatedUrl(baseUrl.url + s"?errorCode=$status&reason=$msg")
+  def addErrorDataToUrl(status: Int, msg: String): ValidatedUrl => ValidatedUrl = baseUrl => {
+    val first = baseUrl.url + s"?errorCode=$status&reason="
+    val restLength = MAX_URL_LENGHT - first.length
+    ValidatedUrl(first + msg.take(restLength))
+  }
 
   def extractErrorMsg(result: Result): String = {
     result.body.asInstanceOf[HttpEntity.Strict].data.decodeString("utf-8") // how to do it cleanly?
