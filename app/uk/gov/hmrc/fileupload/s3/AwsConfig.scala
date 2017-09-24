@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.s3
 
+
 class AwsConfig(config: com.typesafe.config.Config) {
   def quarantineBucketName: String = config.getString("aws.s3.bucket.upload.quarantine")
   def transientBucketName: String = config.getString("aws.s3.bucket.upload.transient")
@@ -34,4 +35,8 @@ class AwsConfig(config: com.typesafe.config.Config) {
   def proxyPort: Int = config.getInt("proxy.port")
   def proxyUsername: String = config.getString("proxy.username")
   def proxyPassword: String = config.getString("proxy.password")
+
+  def connectionTimeout: Int = config.getDuration("aws.s3.timeout.connection").toMillis.toInt
+  def requestTimeout: Int = config.getDuration("aws.s3.timeout.request").toMillis.toInt
+  def socketTimeout: Int = config.getDuration("aws.s3.timeout.socket").toMillis.toInt
 }

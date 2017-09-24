@@ -61,9 +61,9 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     .withProxyPort(awsConfig.proxyPort)
     .withProxyUsername(awsConfig.proxyUsername)
     .withProxyPassword(awsConfig.proxyPassword)
-    .withConnectionTimeout(5 * 1000) // FIXME pull to config
-    .withRequestTimeout(19 * 1000)
-    .withSocketTimeout(29 * 1000)
+    .withConnectionTimeout(awsConfig.connectionTimeout)
+    .withRequestTimeout(awsConfig.requestTimeout)
+    .withSocketTimeout(awsConfig.socketTimeout)
 
   val s3Builder = AmazonS3ClientBuilder
     .standard()
