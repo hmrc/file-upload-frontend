@@ -43,7 +43,7 @@ object EnvelopeChecker {
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
-  val defaultContentTypes: List[ContentType] = List("application/pdf", "image/jpeg", "application/xml", "text/xml")
+  val emptyContentTypesList: List[ContentType] = List()
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
@@ -86,22 +86,13 @@ object EnvelopeChecker {
   }
 
   def getContentTypeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): List[ContentType] = {
-    definedConstraints.map(_.contentTypes).getOrElse(defaultContentTypes)
+    definedConstraints.map(_.contentTypes).getOrElse(emptyContentTypesList)
   }
 
   def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
     getFormContentType.files
       .flatMap(_.contentType)
       .headOption.getOrElse("")
-  }
-
-  def containsContentType(formContentType: ContentType, envelopeContentType: List[ContentType], envelopeId: EnvelopeId): Boolean = {
-    if (envelopeContentType.contains(formContentType)) {
-      true
-    } else {
-      Logger.warn(s"File uploaded is an invalid content type: $formContentType and does not meet the list $envelopeContentType provided from envelope: $envelopeId")
-      true
-    }
   }
 
   def logAndReturn(statusCode: Int, problem: String)

@@ -184,7 +184,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
       val emptyConstraintJson = Json.parse("""{"status" : "OPEN" }""")
       val constraintsEmpty = extractEnvelopeDetails(emptyConstraintJson).constraints
       getMaxFileSizeFromEnvelope(constraintsEmpty) shouldBe defaultFileSize
-      getContentTypeFromEnvelope(constraintsEmpty) shouldBe defaultContentTypes
+      getContentTypeFromEnvelope(constraintsEmpty) shouldBe emptyContentTypesList
     }
   }
 

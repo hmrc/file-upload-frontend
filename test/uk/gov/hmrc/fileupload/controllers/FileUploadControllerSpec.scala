@@ -65,7 +65,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
       val file = anyFile()
       val request = validUploadRequest(List(file))
 
-      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(request)
+      val result = controller.upload(defaultFileSize)(emptyContentTypesList)(EnvelopeId(), FileId())(request)
 
       status(result) shouldBe Status.OK
     }
@@ -73,7 +73,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     "return 400 Bad Request if file was not found in the request" in {
       val requestWithoutAFile = uploadRequest(MultipartFormData(Map(), Seq(), Seq.empty), sizeExceeded = false)
 
-      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(requestWithoutAFile)
+      val result = controller.upload(defaultFileSize)(emptyContentTypesList)(EnvelopeId(), FileId())(requestWithoutAFile)
 
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
@@ -81,7 +81,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     "return 400 Bad Request if >1 files were found in the request" in {
       val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
 
-      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(requestWith2Files)
+      val result = controller.upload(defaultFileSize)(emptyContentTypesList)(EnvelopeId(), FileId())(requestWith2Files)
 
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
@@ -89,7 +89,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     "return 413 Entity To Large if file size exceeds 10MB" in {
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
 
-      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(tooLargeRequest)
+      val result = controller.upload(defaultFileSize)(emptyContentTypesList)(EnvelopeId(), FileId())(tooLargeRequest)
 
       status(result) shouldBe Status.REQUEST_ENTITY_TOO_LARGE
     }
@@ -98,7 +98,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
       val file = anyUnSupportedFile()
       val unsupportedFileType = validUploadRequest(List(file))
 
-      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(unsupportedFileType)
+      val result = controller.upload(defaultFileSize)(emptyContentTypesList)(EnvelopeId(), FileId())(unsupportedFileType)
 
       status(result) shouldBe Status.OK
     }
@@ -107,7 +107,7 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
       val file = anyXml()
       val supportedXMLFileType = validUploadRequest(List(file))
 
-      val result = controller.upload(defaultFileSize)(defaultContentTypes)(EnvelopeId(), FileId())(supportedXMLFileType)
+      val result = controller.upload(defaultFileSize)(emptyContentTypesList)(EnvelopeId(), FileId())(supportedXMLFileType)
 
       status(result) shouldBe Status.OK
     }

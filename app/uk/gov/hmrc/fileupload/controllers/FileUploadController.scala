@@ -63,10 +63,6 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
                 BadRequest(errorAsJson(
                   "Request must have exactly 1 file attached"
               )))
-            else if (!containsContentType(getFormContentType(formData), contentType, envelopeId)) Some(
-                UnsupportedMediaType(errorAsJson(
-                  "Request must have exactly 1 file with a valid file type"
-              )))
             else None
 
           failedRequirementsO match {
