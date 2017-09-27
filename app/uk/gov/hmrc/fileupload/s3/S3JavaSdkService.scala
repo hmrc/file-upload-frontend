@@ -27,7 +27,8 @@ import com.amazonaws.client.builder.ExecutorFactory
 import com.amazonaws.event.{ProgressEvent, ProgressEventType, ProgressListener}
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.model._
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder
+import com.amazonaws.services.s3.transfer.Transfer.TransferState
+import com.amazonaws.services.s3.transfer.{TransferManagerBuilder, Upload}
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.codahale.metrics.MetricRegistry
@@ -38,7 +39,7 @@ import uk.gov.hmrc.fileupload.quarantine.FileData
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: MetricRegistry) extends S3Service {
   val awsConfig = new AwsConfig(configuration)
@@ -61,9 +62,9 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     .withProxyPort(awsConfig.proxyPort)
     .withProxyUsername(awsConfig.proxyUsername)
     .withProxyPassword(awsConfig.proxyPassword)
-    .withConnectionTimeout(5 * 1000) // FIXME pull to config
-    .withRequestTimeout(19 * 1000)
-    .withSocketTimeout(29 * 1000)
+    .withConnectionTimeout(awsConfig.connectionTimeout)
+    .withRequestTimeout(awsConfig.requestTimeout)
+    .withSocketTimeout(awsConfig.socketTimeout)
 
   val s3Builder = AmazonS3ClientBuilder
     .standard()
@@ -163,27 +164,33 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] = {
     val fileInfo = s"bucket=$bucketName key=$key fileSize=$fileSize"
     val uploadTime = metricUploadCompleted.time()
-    val upload = transferManager.upload(bucketName, key, file, objectMetadata(fileSize))
-    val promise = Promise[UploadResult]
-    Logger.info(s"upload-s3 started: $fileInfo")
-    upload.addProgressListener(new ProgressListener {
-      var events:List[ProgressEvent] = List.empty
-      def progressChanged(progressEvent: ProgressEvent): Unit = {
-        events = progressEvent :: events
-        if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-          uploadTime.stop()
-          metricUploadCompletedSize.inc(fileSize)
-          Logger.info(s"upload-s3 completed: $fileInfo")
-          promise.trySuccess(upload.waitForUploadResult())
-        } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT) {
-          metricUploadFailed.mark()
-          Logger.error(s"""upload-s3 Transfer events: ${events.reverse.map(_.toString).mkString("\n")}""")
-          Logger.error(s"upload-s3 error: transfer failed: $fileInfo")
-          promise.failure(new Exception("transfer failed"))
-        }
-      }
-    })
-    promise.future
+    Try( transferManager.upload(bucketName, key, file, objectMetadata(fileSize)) ) match {
+      case Success(upload) =>
+        val promise = Promise[UploadResult]
+        Logger.info(s"upload-s3 started: $fileInfo")
+        upload.addProgressListener(new ProgressListener {
+          var events:List[ProgressEvent] = List.empty
+          def progressChanged(progressEvent: ProgressEvent): Unit = Try{
+            events = progressEvent :: events
+            if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+              uploadTime.stop()
+              metricUploadCompletedSize.inc(fileSize)
+              val resultTry = Try(upload.waitForUploadResult())
+              Logger.info(s"upload-s3 completed: $fileInfo with success=${resultTry.isSuccess}")
+              promise.tryComplete(resultTry)
+            } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT ||
+              upload.getState == TransferState.Failed || upload.getState == TransferState.Canceled
+            ) {
+              metricUploadFailed.mark()
+              Logger.error(s"""upload-s3 Transfer events: ${events.reverse.map(_.toString).mkString("\n")}""")
+              Logger.error(s"upload-s3 error: transfer failed: $fileInfo")
+              promise.failure(new Exception("transfer failed"))
+            }
+          }
+        })
+        promise.future
+      case Failure(ex) => Future.failed(ex)
+    }
   }
 
   def listFilesInBucket(bucketName: String) = {
