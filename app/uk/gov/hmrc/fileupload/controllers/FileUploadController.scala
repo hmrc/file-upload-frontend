@@ -49,10 +49,10 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId): EssentialAction =
     withValidEnvelope(envelopeId) {
-      setMaxFileSize => setContentType => upload(setMaxFileSize)(setContentType)(envelopeId, fileId)
+      setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
     }
 
-  def upload(maxAllowedFileSize: Long)(contentType: List[ContentType])
+  def upload(maxAllowedFileSize: Long)
             (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
     Action.async(parse.maxLength(maxAllowedFileSize, uploadParser())) { implicit request =>
       request.body match {

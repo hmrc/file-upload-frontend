@@ -38,16 +38,15 @@ object EnvelopeChecker {
   type FileSize = Long
   type ContentType = String
   type WithValidEnvelope =
-  EnvelopeId => (FileSize => List[ContentType] => EssentialAction) => EssentialAction
+  EnvelopeId => (FileSize => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
-  val emptyContentTypesList: List[ContentType] = List()
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
-                       (action: FileSize => List[ContentType] => EssentialAction)
+                       (action: FileSize => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
@@ -58,7 +57,7 @@ object EnvelopeChecker {
             status match {
               case "OPEN" =>
                 val constraints = extractEnvelopeDetails(envelope).constraints
-                action(getMaxFileSizeFromEnvelope(constraints))(getContentTypeFromEnvelope(constraints))(rh)
+                action(getMaxFileSizeFromEnvelope(constraints))(rh)
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
@@ -83,10 +82,6 @@ object EnvelopeChecker {
         }
       case _ => defaultFileSize
     }).getOrElse(defaultFileSize)
-  }
-
-  def getContentTypeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): List[ContentType] = {
-    definedConstraints.map(_.contentTypes).getOrElse(emptyContentTypesList)
   }
 
   def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
