@@ -38,15 +38,16 @@ object EnvelopeChecker {
   type FileSize = Long
   type ContentType = String
   type WithValidEnvelope =
-  EnvelopeId => (FileSize => EssentialAction) => EssentialAction
+  EnvelopeId => (FileSize => List[ContentType] => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
+  val defaultContentTypes: List[ContentType] = List("application/pdf", "image/jpeg", "application/xml", "text/xml")
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
-                       (action: FileSize => EssentialAction)
+                       (action: FileSize => List[ContentType] => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
@@ -57,7 +58,7 @@ object EnvelopeChecker {
             status match {
               case "OPEN" =>
                 val constraints = extractEnvelopeDetails(envelope).constraints
-                action(getMaxFileSizeFromEnvelope(constraints))(rh)
+                action(getMaxFileSizeFromEnvelope(constraints))(getContentTypeFromEnvelope(constraints))(rh)
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
@@ -84,10 +85,23 @@ object EnvelopeChecker {
     }).getOrElse(defaultFileSize)
   }
 
+  def getContentTypeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): List[ContentType] = {
+    definedConstraints.map(_.contentTypes).getOrElse(defaultContentTypes)
+  }
+
   def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
     getFormContentType.files
       .flatMap(_.contentType)
       .headOption.getOrElse("")
+  }
+
+  def containsContentType(formContentType: ContentType, envelopeContentType: List[ContentType], envelopeId: EnvelopeId): Boolean = {
+    if (envelopeContentType.contains(formContentType)) {
+      true
+    } else {
+      Logger.warn(s"File uploaded is an invalid content type: $formContentType and does not meet the list $envelopeContentType provided from envelope: $envelopeId")
+      true
+    }
   }
 
   def logAndReturn(statusCode: Int, problem: String)

@@ -58,7 +58,13 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
           "constraints" : {
             "maxItems" : 100,
             "maxSize" : "25MB",
-            "maxSizePerItem" : "10MB"}
+            "maxSizePerItem" : "10MB",
+            "contentTypes": [
+              "application/pdf",
+              "image/jpeg",
+              "application/xml",
+              "text/xml"
+            ]}
           } """.stripMargin
 
   val ENVELOPE_CLOSED_RESPONSE: String =
@@ -66,7 +72,13 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
           "constraints" : {
             "maxItems" : 100,
             "maxSize" : "25MB",
-            "maxSizePerItem" : "10MB"}
+            "maxSizePerItem" : "10MB",
+            "contentTypes": [
+              "application/pdf",
+              "image/jpeg",
+              "application/xml",
+              "text/xml"
+              ]}
           } """.stripMargin
 
   object Wiremock {

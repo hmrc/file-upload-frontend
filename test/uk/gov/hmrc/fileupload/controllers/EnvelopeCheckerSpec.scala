@@ -68,7 +68,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
 
-      val wrappedAction = withValidEnvelope(_ => Future(Xor.right(envelopeOpen)))(testEnvelopeId)(defaultMaxFileSize => expectedAction)
+      val wrappedAction = withValidEnvelope(_ => Future(Xor.right(envelopeOpen)))(testEnvelopeId)(defaultMaxFileSize => defaultContentType => expectedAction)
       val result = wrappedAction(testRequest).run // this for some reason causes exceptions when running with testOnly
 
       status(result) shouldBe 200
@@ -82,7 +82,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
 
       val wrappedAction = withValidEnvelope(_ =>
-        Future(Xor.right(envelopeOpen)))(testEnvelopeId)(defaultMaxFileSize => expectedAction)
+        Future(Xor.right(envelopeOpen)))(testEnvelopeId)(defaultMaxFileSize => defaultContentType => expectedAction)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 200
@@ -96,7 +96,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
       val envelopeClosed = Json.parse("""{"status" : "CLOSED" }""")
 
       val wrappedAction = withValidEnvelope(_ =>
-        Future(Xor.right(envelopeClosed)))(testEnvelopeId)(defaultMaxFileSize => actionThatShouldNotExecute)
+        Future(Xor.right(envelopeClosed)))(testEnvelopeId)(defaultMaxFileSize => defaultContentType => actionThatShouldNotExecute)
 
       val result = wrappedAction(testRequest).run
 
@@ -109,7 +109,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
     "prevent both action's body and the body parser from running and return 404 NotFound" in {
       val envNotFound = (envId: EnvelopeId) => Future(Xor.left(EnvelopeDetailNotFoundError(envId)))
 
-      val wrappedAction = withValidEnvelope(envNotFound)(testEnvelopeId)(defaultMaxFileSize => actionThatShouldNotExecute)
+      val wrappedAction = withValidEnvelope(envNotFound)(testEnvelopeId)(defaultMaxFileSize => defaultContentType => actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 404
@@ -122,7 +122,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
       val errorMsg = "error happened :("
       val errorCheckingStatus = (envId: EnvelopeId) => Future(Xor.left(EnvelopeDetailServiceError(envId, errorMsg)))
 
-      val wrappedAction = withValidEnvelope(errorCheckingStatus)(testEnvelopeId)(defaultMaxFileSize => actionThatShouldNotExecute)
+      val wrappedAction = withValidEnvelope(errorCheckingStatus)(testEnvelopeId)(defaultMaxFileSize => defaultContentType => actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 500
@@ -180,10 +180,19 @@ class EnvelopeCheckerSpec extends UnitSpec {
   }
 
   "When returned envelope data has no constraints field " should {
-    "set the as upload size limit" in {
+    "set the as upload size limit and content type to default" in {
       val emptyConstraintJson = Json.parse("""{"status" : "OPEN" }""")
       val constraintsEmpty = extractEnvelopeDetails(emptyConstraintJson).constraints
       getMaxFileSizeFromEnvelope(constraintsEmpty) shouldBe defaultFileSize
+      getContentTypeFromEnvelope(constraintsEmpty) shouldBe defaultContentTypes
+    }
+  }
+
+  "When envelope data has specified contentType field in constraints" should {
+    "return as List of Content Types" in {
+      val expectedList = List("application/pdf","image/jpeg")
+      val constraintsContentType = extractEnvelopeDetails(envelopeContentTypesJson(s""""application/pdf","image/jpeg"""")).constraints
+      getContentTypeFromEnvelope(constraintsContentType) shouldBe expectedList
     }
   }
 

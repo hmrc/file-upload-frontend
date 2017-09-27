@@ -49,12 +49,11 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId): EssentialAction =
     withValidEnvelope(envelopeId) {
-      setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
+      setMaxFileSize => setContentType => upload(setMaxFileSize)(setContentType)(envelopeId, fileId)
     }
 
-  def upload(maxAllowedFileSize: Long)
-            (envelopeId: EnvelopeId, fileId: FileId):
-  Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
+  def upload(maxAllowedFileSize: Long)(contentType: List[ContentType])
+            (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
     Action.async(parse.maxLength(maxAllowedFileSize, uploadParser())) { implicit request =>
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
@@ -63,6 +62,10 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
             if(formData.files.size != 1) Some(
                 BadRequest(errorAsJson(
                   "Request must have exactly 1 file attached"
+              )))
+            else if (!containsContentType(getFormContentType(formData), contentType, envelopeId)) Some(
+                UnsupportedMediaType(errorAsJson(
+                  "Request must have exactly 1 file with a valid file type"
               )))
             else None
 
