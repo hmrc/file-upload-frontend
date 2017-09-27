@@ -153,6 +153,27 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       message shouldBe expectedMessage
     }
 
+    "Redirect upon s3 error to valid url - both success and error urls provided" in {
+
+      Given("Envelope created with default parameters")
+
+      Wiremock.responseToUpload(envelopeId, fileId)
+      Wiremock.respondToEnvelopeCheck(envelopeId)
+
+      Then("s3 is down")
+      s3MockServer.p.deleteBucket("file-upload-quarantine")
+
+      When("a file is uploaded provided a redirect on error to a https://www-dev.tax.service.gov.uk url")
+      val redirectSuccessUrl = "https://www-dev.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
+      val redirectErrorUrl = "https://www-qa.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
+      val queryParam = s"redirect-success-url=$redirectSuccessUrl&redirect-error-url=$redirectErrorUrl"
+      val uploadFileResponse = uploadDummyFileWithoutRedirects(envelopeId, fileId, queryParam)
+
+      Then("upon success the user should be redirected to the url specified in the query parameter")
+      uploadFileResponse.status should be(301)
+      uploadFileResponse.header("Location").get.startsWith(redirectErrorUrl) shouldBe true
+    }
+
   }
 
 }
