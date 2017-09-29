@@ -27,6 +27,7 @@ import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
 import uk.gov.hmrc.fileupload.testonly.CreateEnvelopeRequest.{ByteStream, ContentTypes}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
@@ -81,10 +82,10 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSCli
   }
 
   def transferDownloadEnvelope(envelopeId: String) = Action.async { implicit request =>
-    wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").getStream().map {
-      case (headers, enumerator) => Ok.chunked(enumerator).withHeaders(
-        CONTENT_TYPE -> headers.headers(CONTENT_TYPE).headOption.getOrElse("unknown"),
-        CONTENT_DISPOSITION -> headers.headers(CONTENT_DISPOSITION).headOption.getOrElse("unknown"))
+    wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").get().flatMap {
+      resultFromBackEnd ⇒ if (resultFromBackEnd.status == 200) {
+        Future.successful(Ok(resultFromBackEnd.body))
+      } else Future.successful(Ok(resultFromBackEnd.json))
     }
   }
 
