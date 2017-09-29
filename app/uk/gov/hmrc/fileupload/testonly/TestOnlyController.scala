@@ -60,10 +60,10 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSCli
   }
 
   def downloadFile(envelopeId: String, fileId: String) = Action.async { implicit request =>
-    wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").getStream().map {
-      case (headers, enumerator) => Ok.feed(enumerator).withHeaders(
-        "Content-Length" -> headers.headers("Content-Length").head,
-        "Content-Disposition" -> headers.headers("Content-Disposition").head)
+    wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").get().flatMap {
+      resultFromBackEnd ⇒ if (resultFromBackEnd.status == 200) {
+        Future.successful(Ok(resultFromBackEnd.body))
+      } else Future.successful(Ok(resultFromBackEnd.json))
     }
   }
 
