@@ -35,7 +35,7 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(2, Seconds)), interval = scaled(Span(2, Seconds)))
+  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(2, Seconds)))
 
   "ScannerActor" should {
     "scan files" in new ScanFixture {
