@@ -50,7 +50,8 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures with Tes
     s"return $ScanResultFileClean result if input did not contain a virus" in {
       val chunkEnumerator = enumerator()
 
-      val result = await(chunkEnumerator.run(new VirusScanner(components.configuration, components.environment).scanIteratee(sendingChunksSuccessful, noVirusFound)).flatMap(identity))
+      val result = await(chunkEnumerator.run(new VirusScanner(
+        components.configuration, components.environment).scanIteratee(sendingChunksSuccessful, noVirusFound)).flatMap(identity))
 
       result shouldBe Xor.Right(ScanResultFileClean)
     }

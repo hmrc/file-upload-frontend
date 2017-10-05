@@ -62,10 +62,9 @@ class UserAgentRequestFilter @Inject()(metricRegistry: MetricRegistry,
       case Some(ua) if userAgentWhitelist.contains(ua) =>
         timeWith(ua)
 
-      case Some(unknownUserAgent) => {
+      case Some(unknownUserAgent) =>
         Logger.info(s"Agent $unknownUserAgent is not in UserAgentRequestFilter whitelist for ${rh.path}")
         timeWith(UserAgent.unknownUserAgent)
-      }
 
       case None => timeWith(UserAgent.noUserAgent)
     }

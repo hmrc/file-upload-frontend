@@ -32,9 +32,9 @@ import scala.util.control.NonFatal
 class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getChunks: (FileRefId) => Future[Int])(commandHandler: CommandHandler)
                      (implicit executionContext: ExecutionContext) extends Controller {
 
-  def fileInfo(fileRefId: FileRefId) = Action.async { request =>
+  def fileInfo(fileRefId: FileRefId) = Action.async { _ =>
     getFileInfo(fileRefId).flatMap {
-      case Some(f) => {
+      case Some(f) =>
         val expectedNoChunks = math.ceil(f.length.toDouble / f.chunkSize)
         getChunks(fileRefId).map { actualNoChunks =>
           if (actualNoChunks == expectedNoChunks) {
@@ -47,17 +47,16 @@ class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getC
             Logger.warn(s"Retrieval of chunks for the file id $fileRefId failed ${ex.getMessage}")
             InternalServerError(ex.getMessage)
         }
-      }
       case None => Future.successful(NotFound)
     }
   }
 
-  def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
+  def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { _ =>
     commandHandler.notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
     Future.successful(Ok)
   }
 
-  def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
+  def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { _ =>
     commandHandler.notify(TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))
     Future.successful(Ok)
   }

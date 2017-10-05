@@ -71,7 +71,7 @@ trait S3TestController { self: Controller =>
     }
   }
 
-  def copyFromQtoT(key: String, versionId: String) = Action { req =>
+  def copyFromQtoT(key: String, versionId: String) = Action { _ =>
     def formatResponse(r: CopyObjectResult) =
       s"Successfully copied file: $key, etag: ${r.getETag}, versionId: ${r.getVersionId}"
 
@@ -84,7 +84,7 @@ trait S3TestController { self: Controller =>
   def s3downloadFileQ(fileName: String, version: Option[String]) = s3downloadFile(quarantineBucketName, fileName, version)
   def s3downloadFileT(fileName: String, version: Option[String]) = s3downloadFile(transientBucketName, fileName, version)
 
-  def s3downloadFile(bucket: String, fileName: String, version: Option[String]) = Action { req =>
+  def s3downloadFile(bucket: String, fileName: String, version: Option[String]) = Action { _ =>
     Logger.info(s"downloading $fileName from bucket: $bucket, versionO: $version")
     val result = (version match {
       case Some(v) => s3Service.download(bucket, S3KeyName(fileName), v)

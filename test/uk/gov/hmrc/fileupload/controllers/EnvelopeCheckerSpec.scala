@@ -64,11 +64,11 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   "When an envelope is OPEN it" should {
     "be possible to execute an Action" in {
-      val expectedAction = Action { req => Ok }
+      val expectedAction = Action { _ => Ok }
 
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
 
-      val wrappedAction = withValidEnvelope(_ => Future(Xor.right(envelopeOpen)))(testEnvelopeId)(defaultMaxFileSize => expectedAction)
+      val wrappedAction = withValidEnvelope(_ => Future(Xor.right(envelopeOpen)))(testEnvelopeId)(_ => expectedAction)
       val result = wrappedAction(testRequest).run // this for some reason causes exceptions when running with testOnly
 
       status(result) shouldBe 200
@@ -77,12 +77,12 @@ class EnvelopeCheckerSpec extends UnitSpec {
 
   "When an envelope is OPEN and has no constraints" should {
     "be possible to execute an Action" in {
-      val expectedAction = Action { req => Ok }
+      val expectedAction = Action { _ => Ok }
 
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
 
       val wrappedAction = withValidEnvelope(_ =>
-        Future(Xor.right(envelopeOpen)))(testEnvelopeId)(defaultMaxFileSize => expectedAction)
+        Future(Xor.right(envelopeOpen)))(testEnvelopeId)(_ => expectedAction)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 200
@@ -96,7 +96,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
       val envelopeClosed = Json.parse("""{"status" : "CLOSED" }""")
 
       val wrappedAction = withValidEnvelope(_ =>
-        Future(Xor.right(envelopeClosed)))(testEnvelopeId)(defaultMaxFileSize => actionThatShouldNotExecute)
+        Future(Xor.right(envelopeClosed)))(testEnvelopeId)(_ => actionThatShouldNotExecute)
 
       val result = wrappedAction(testRequest).run
 
@@ -109,7 +109,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
     "prevent both action's body and the body parser from running and return 404 NotFound" in {
       val envNotFound = (envId: EnvelopeId) => Future(Xor.left(EnvelopeDetailNotFoundError(envId)))
 
-      val wrappedAction = withValidEnvelope(envNotFound)(testEnvelopeId)(defaultMaxFileSize => actionThatShouldNotExecute)
+      val wrappedAction = withValidEnvelope(envNotFound)(testEnvelopeId)(_ => actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 404
@@ -122,7 +122,7 @@ class EnvelopeCheckerSpec extends UnitSpec {
       val errorMsg = "error happened :("
       val errorCheckingStatus = (envId: EnvelopeId) => Future(Xor.left(EnvelopeDetailServiceError(envId, errorMsg)))
 
-      val wrappedAction = withValidEnvelope(errorCheckingStatus)(testEnvelopeId)(defaultMaxFileSize => actionThatShouldNotExecute)
+      val wrappedAction = withValidEnvelope(errorCheckingStatus)(testEnvelopeId)(_ => actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 500
@@ -187,11 +187,11 @@ class EnvelopeCheckerSpec extends UnitSpec {
     }
   }
 
-  def actionThatShouldNotExecute = Action(bodyParserThatShouldNotExecute) { req =>
+  def actionThatShouldNotExecute = Action(bodyParserThatShouldNotExecute) { _ =>
     fail("action executed which we wanted to prevent")
   }
 
-  def bodyParserThatShouldNotExecute: BodyParser[AnyContent] = BodyParser { r =>
+  def bodyParserThatShouldNotExecute: BodyParser[AnyContent] = BodyParser { _ =>
     StreamsConverter.iterateeToAccumulator(Iteratee.consume[Array[Byte]]())
       .map { _ =>
         fail("body parser executed which we wanted to prevent")
