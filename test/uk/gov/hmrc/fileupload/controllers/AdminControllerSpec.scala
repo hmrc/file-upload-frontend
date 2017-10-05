@@ -32,8 +32,9 @@ class AdminControllerSpec extends UnitSpec with ScalaFutures with TestApplicatio
   implicit val ec = ExecutionContext.global
 
   val controller = {
-    val getFileInfo = (refId: FileRefId) => Future.successful(Some(FileInfo("refId", "testFile", 2500, DateTime.parse("2016-11-29T12:27:19Z"), 10000, "application/content")))
-    val getChunks = (x: FileRefId) => Future.successful(4)
+    val getFileInfo = (_: FileRefId) => Future.successful(Some(
+      FileInfo("refId", "testFile", 2500, DateTime.parse("2016-11-29T12:27:19Z"), 10000, "application/content")))
+    val getChunks = (_: FileRefId) => Future.successful(4)
 
     new AdminController(getFileInfo, getChunks)(null)
   }
@@ -50,8 +51,8 @@ class AdminControllerSpec extends UnitSpec with ScalaFutures with TestApplicatio
   }
 
   val controller_1 = {
-    val getFileInfo = (refId: FileRefId) => Future.successful(None)
-    val getChunks = (x: FileRefId) => Future.successful(4)
+    val getFileInfo = (_: FileRefId) => Future.successful(None)
+    val getChunks = (_: FileRefId) => Future.successful(4)
 
     new AdminController(getFileInfo, getChunks)(null)
   }
@@ -65,8 +66,9 @@ class AdminControllerSpec extends UnitSpec with ScalaFutures with TestApplicatio
   }
 
   val controller_2 = {
-    val getFileInfo = (refId: FileRefId) => Future.successful(Some(FileInfo("refId", "testFile", 2500, DateTime.parse("2016-11-29T12:27:19Z"), 10000, "application/content")))
-    val getChunks = (x: FileRefId) => Future.successful(5)
+    val getFileInfo = (_: FileRefId) => Future.successful(Some(
+      FileInfo("refId", "testFile", 2500, DateTime.parse("2016-11-29T12:27:19Z"), 10000, "application/content")))
+    val getChunks = (_: FileRefId) => Future.successful(5)
 
     new AdminController(getFileInfo, getChunks)(null)
   }

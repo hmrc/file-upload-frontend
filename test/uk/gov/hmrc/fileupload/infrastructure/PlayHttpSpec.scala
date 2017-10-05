@@ -64,7 +64,7 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
     loggedErrors += t
   })) _
 
-  override def beforeAll() = {
+  override def beforeAll(): Unit = {
     super.beforeAll()
     fakeDownstreamSystem.start()
   }
@@ -76,7 +76,7 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
     resetAuditRequests()
   }
 
-  override def afterAll() = {
+  override def afterAll(): Unit = {
     super.afterAll()
     fakeDownstreamSystem.stop()
   }
@@ -101,10 +101,10 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
 
       response.status shouldBe statusCode
       eventually {
-        getAudits.size() shouldBe 1
+        getAudits().size() shouldBe 1
       }
 
-      val auditedItem = getAudits.get(0)
+      val auditedItem = getAudits().get(0)
       val json = Json.parse(auditedItem.getBodyAsString)
 
       (json \ "auditSource").validate[String] shouldBe JsSuccess[String](testAppName)

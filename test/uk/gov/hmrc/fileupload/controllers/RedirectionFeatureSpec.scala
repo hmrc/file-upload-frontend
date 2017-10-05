@@ -107,9 +107,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
 
     "redirect on failure with simple msg error" in {
       val errorMsg = "simple error"
-      val badAction: EssentialAction = Action { request =>
-        NotFound(errorMsg)
-      }
+      val badAction: EssentialAction = Action ( _ => NotFound(errorMsg) )
       val redirectA = redirect(None, Some(OK_URL_ALLOWED))(badAction)
       val resultF = call(redirectA, request)
 
@@ -120,9 +118,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
 
     "redirect on failure with exception thrown" in {
       val errorMsg = "Anything can be thrown"
-      val badAction: EssentialAction = Action { request =>
-        throw new RuntimeException("Anything can be thrown")
-      }
+      val badAction: EssentialAction = Action ( _ => throw new RuntimeException("Anything can be thrown"))
       val redirectA = redirectionWithExceptions.redirect(None, Some(OK_URL_ALLOWED))(badAction)
       val resultF = call(redirectA, request)
 
@@ -136,9 +132,7 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
 
     "redirect on failure with complex msg error" in {
       val errorMsg = """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
-      val badAction: EssentialAction = Action { request =>
-        NotFound(errorMsg)
-      }
+      val badAction: EssentialAction = Action (_ => NotFound(errorMsg))
       val redirectA = redirect(None, Some(OK_URL_ALLOWED))(badAction)
       val resultF = call(redirectA, request)
 

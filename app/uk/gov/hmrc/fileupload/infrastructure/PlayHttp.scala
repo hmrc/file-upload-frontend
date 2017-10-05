@@ -124,7 +124,6 @@ class HttpStreamingBody(url: String,
 
 
   def fold[B](folder: (Step[Array[Byte], HttpStreamingBody.Result]) => Future[B])(implicit ec: ExecutionContext): Future[B] = {
-    val successful = true
     if (mayBeResult.isDefined) {
       folder(Step.Done(mayBeResult.get, Input.Empty))
     } else {

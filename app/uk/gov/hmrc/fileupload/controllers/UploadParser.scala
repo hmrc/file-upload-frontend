@@ -34,7 +34,7 @@ object UploadParser {
            (implicit ex: ExecutionContext): BodyParser[MultipartFormData[Future[JSONReadFile]]] = {
 
     play.api.mvc.BodyParsers.parse.multipartFormData(handleFilePart {
-      case Multipart.FileInfo(partName, filename, contentType) =>
+      case Multipart.FileInfo(_, filename, contentType) =>
         StreamsConverter.iterateeToAccumulator(writeFile(filename, contentType))
     })
   }
