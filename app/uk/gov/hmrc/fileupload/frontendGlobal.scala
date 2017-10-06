@@ -47,15 +47,13 @@ import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
-import uk.gov.hmrc.play.audit.filters.AuditFilter
-import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
-import uk.gov.hmrc.play.http.HeaderCarrier
-import uk.gov.hmrc.play.http.logging.filters.LoggingFilter
 
 import scala.concurrent.{ExecutionContext, Future}
-
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.frontend.config.LoadAuditingConfig
+import uk.gov.hmrc.play.frontend.filters.{LoggingFilter, FrontendAuditFilter}
 
 class ApplicationLoader extends play.api.ApplicationLoader {
   def load(context: Context) = {
@@ -159,9 +157,9 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val getFileChunksInfo = quarantineRepository.chunksCount _
 
   // auditing
-  lazy val auditedHttpExecute = PlayHttp.execute(AuditFilter.auditConnector, appName, Some(t => Logger.warn(t.getMessage, t))) _
+  lazy val auditedHttpExecute = PlayHttp.execute(MicroserviceAuditFilter.auditConnector, appName, Some(t => Logger.warn(t.getMessage, t))) _
   lazy val auditF: (Boolean, Int, String) => (Request[_]) => Future[AuditResult] =
-    PlayHttp.audit(AuditFilter.auditConnector, appName, Some(t => Logger.warn(t.getMessage, t)))
+    PlayHttp.audit(MicroserviceAuditFilter.auditConnector, appName, Some(t => Logger.warn(t.getMessage, t)))
   val auditedHttpBodyStreamer = (baseUrl: String, envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, request: Request[_]) =>
     new HttpStreamingBody(
       url = s"$baseUrl/file-upload/envelopes/${envelopeId.value}/files/${fileId.value}/${fileRefId.value}",
@@ -211,13 +209,9 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   object MicroserviceAuditConnector extends AuditConnector with RunMode {
     override lazy val auditingConfig = LoadAuditingConfig(s"auditing")
-
-    override def buildRequest(url: String)(implicit hc: HeaderCarrier): WSRequest = {
-      wsApi.url(url).withHeaders(hc.headers: _*)
-    }
   }
 
-  object AuditFilter extends AuditFilter with AppName {
+  object MicroserviceAuditFilter extends FrontendAuditFilter with AppName {
     override def mat = materializer
 
     override lazy val auditConnector = MicroserviceAuditConnector
@@ -225,6 +219,10 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     override def controllerNeedsAuditing(controllerName: String) = ControllerConfiguration.paramsForController(controllerName).needsAuditing
 
     override lazy val appName = configuration.getString("appName").getOrElse("APP NAME NOT SET")
+
+    override def maskedFormFields: Seq[String] = Seq.empty
+
+    override def applicationPort: Option[Int] = None
   }
 
 
