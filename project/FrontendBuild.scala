@@ -35,34 +35,22 @@ private object AppDependencies {
   import play.sbt.PlayImport._
   import play.core.PlayVersion
 
-  private val playHealthVersion = "2.1.0"
-  private val playJsonLoggerVersion = "3.1.0"
-  private val frontendBootstrapVersion = "7.26.0"
-  private val playPartialsVersion = "5.3.0"
-  private val playAuth = "1.2.0"
-  private val playConfigVersion = "4.3.0"
+  private val frontendBootstrapVersion = "8.8.0"
   private val hmrcTestVersion = "2.3.0"
   private val playReactivemongoVersion = "5.2.0"
   private val simpleReactivemongoVersion = "5.2.0"
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
-  private val playAuditingVersion = "2.9.0"
-  private val playUrlBindingLibVersion = "7.4.0"
   private val awsJavaSdkVersion = "1.11.97"
+  private val authClientVersion = "2.1.0"
 
   val compile = Seq(
     ws,
     "uk.gov.hmrc" %% "play-reactivemongo" % playReactivemongoVersion,
     "uk.gov.hmrc" %% "simple-reactivemongo" % simpleReactivemongoVersion,
     "uk.gov.hmrc" %% "frontend-bootstrap" % frontendBootstrapVersion,
-    "uk.gov.hmrc" %% "play-partials" % playPartialsVersion,
-    "uk.gov.hmrc" %% "play-auth" % playAuth,
-    "uk.gov.hmrc" %% "play-config" % playConfigVersion,
-    "uk.gov.hmrc" %% "logback-json-logger" % playJsonLoggerVersion,
-    "uk.gov.hmrc" %% "play-auditing" % playAuditingVersion,
-    "uk.gov.hmrc" %% "play-health" % playHealthVersion,
+    "uk.gov.hmrc" %% "auth-client" % authClientVersion,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
-    "uk.gov.hmrc" %% "play-ui" % playUrlBindingLibVersion,
     "org.typelevel" %% "cats" % catsVersion,
     "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion
   )

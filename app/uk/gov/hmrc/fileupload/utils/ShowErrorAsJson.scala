@@ -24,9 +24,9 @@ import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.routing.Router
 import play.core.SourceMapper
-import uk.gov.hmrc.play.http.{HttpException, Upstream4xxResponse, Upstream5xxResponse}
 
 import scala.concurrent.Future
+import uk.gov.hmrc.http.{ HttpException, Upstream4xxResponse, Upstream5xxResponse }
 
 /**
   * Copy from microservice-bootstrap_2.11-4.4.0-sources.jar.uk.gov.hmrc.play.microservice.bootstrap.JsonErrorHandling.scala
