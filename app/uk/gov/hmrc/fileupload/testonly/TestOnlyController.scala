@@ -62,7 +62,7 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSCli
   def downloadFile(envelopeId: String, fileId: String) = Action.async { implicit request =>
     wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").get().flatMap {
       resultFromBackEnd ⇒ if (resultFromBackEnd.status == 200) {
-        Future.successful(Ok(resultFromBackEnd.body).withHeaders(
+        Future.successful(Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
           "Content-Length" -> resultFromBackEnd.header("Content-Length").getOrElse("unknown"),
           "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
         ))
@@ -87,7 +87,7 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSCli
   def transferDownloadEnvelope(envelopeId: String) = Action.async { implicit request =>
     wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").get().flatMap {
       resultFromBackEnd ⇒ if (resultFromBackEnd.status == 200) {
-        Future.successful(Ok(resultFromBackEnd.body).withHeaders(
+        Future.successful(Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
           "Content-Type" -> resultFromBackEnd.header("Content-Type").getOrElse("unknown"),
           "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
         ))
