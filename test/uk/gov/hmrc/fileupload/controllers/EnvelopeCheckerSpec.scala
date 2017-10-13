@@ -62,6 +62,16 @@ class EnvelopeCheckerSpec extends UnitSpec {
             "contentTypes": [$contentTypes]
             } }""".stripMargin)
 
+  def envelopeAllowZeroLengthFiles(allowZeroLengthFiles: Option[Boolean]) = Json.parse(
+    s"""{"status" : "OPEN",
+            "constraints": {
+            ${allowZeroLengthFiles.map(value => s""""allowZeroLengthFiles": $value,""").getOrElse("")}
+            "maxItems":100,
+            "maxSize": "25MB",
+            "maxSizePerItem" : "10MB",
+       |    "contentTypes": ["application/pdf","image/jpeg","application/xml","text/xml"]
+            } }""".stripMargin)
+
   "When an envelope is OPEN it" should {
     "be possible to execute an Action" in {
       val expectedAction = Action { _ => Ok }
@@ -184,6 +194,27 @@ class EnvelopeCheckerSpec extends UnitSpec {
       val emptyConstraintJson = Json.parse("""{"status" : "OPEN" }""")
       val constraintsEmpty = extractEnvelopeDetails(emptyConstraintJson).constraints
       getMaxFileSizeFromEnvelope(constraintsEmpty) shouldBe defaultFileSize
+    }
+  }
+
+  "When returned envelope data does not have allowZeroLengthFiles" should {
+    "allowZeroLengthFiles should be undefined in constraints" in {
+      val constraints = extractEnvelopeDetails(envelopeAllowZeroLengthFiles(None)).constraints
+      constraints.flatMap(_.allowZeroLengthFiles) should not be 'defined
+    }
+  }
+
+  "When returned envelope data has allowZeroLengthFiles set to true" should {
+    "allowZeroLengthFiles should be defined as true in constraints" in {
+      val constraints = extractEnvelopeDetails(envelopeAllowZeroLengthFiles(Some(true))).constraints
+      constraints.flatMap(_.allowZeroLengthFiles) shouldBe Some(true)
+    }
+  }
+
+  "When returned envelope data has allowZeroLengthFiles set to false" should {
+    "allowZeroLengthFiles should be defined as false in constraints" in {
+      val constraints = extractEnvelopeDetails(envelopeAllowZeroLengthFiles(Some(false))).constraints
+      constraints.flatMap(_.allowZeroLengthFiles) shouldBe Some(false)
     }
   }
 

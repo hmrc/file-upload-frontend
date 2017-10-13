@@ -60,7 +60,8 @@ object EnvelopeReport{
 
 case class EnvelopeConstraints(maxItems: Int,
                                maxSize: String,
-                               maxSizePerItem: String)
+                               maxSizePerItem: String,
+                               allowZeroLengthFiles: Option[Boolean])
 
 object EnvelopeConstraints {
   implicit val constraintsFormat: Format[EnvelopeConstraints] = Json.format[EnvelopeConstraints]

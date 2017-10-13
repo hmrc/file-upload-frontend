@@ -38,7 +38,7 @@ object EnvelopeChecker {
   type FileSize = Long
   type ContentType = String
   type WithValidEnvelope =
-  EnvelopeId => (FileSize => EssentialAction) => EssentialAction
+  EnvelopeId => (Option[EnvelopeConstraints] => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
@@ -46,7 +46,7 @@ object EnvelopeChecker {
 
   def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
-                       (action: FileSize => EssentialAction)
+                       (action: Option[EnvelopeConstraints] => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
@@ -57,7 +57,7 @@ object EnvelopeChecker {
             status match {
               case "OPEN" =>
                 val constraints = extractEnvelopeDetails(envelope).constraints
-                action(getMaxFileSizeFromEnvelope(constraints))(rh)
+                action(constraints)(rh)
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }

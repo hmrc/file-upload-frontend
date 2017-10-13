@@ -52,6 +52,11 @@ object RestFixtures {
     FakeRequest(method = "POST", uri = "/upload", headers = FakeHeaders(), body = withSizeChecking(multipartBody, sizeExceeded))
   }
 
+  def emptyFileUploadRequest(filename: String) =
+    uploadRequest(MultipartFormData(Map(),
+      Seq(MultipartFormData.FilePart(filename, filename, Some("application/json"), FileCachedInMemory(ByteString.empty))),
+      Seq.empty), sizeExceeded = false)
+
   def filePart(key: String, filename: String, contentType: Option[String]): FilePart[FileCachedInMemory] = {
     MultipartFormData.FilePart(key, filename, contentType, FileCachedInMemory(ByteString("foo")))
   }
