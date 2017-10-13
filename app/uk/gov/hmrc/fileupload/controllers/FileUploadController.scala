@@ -23,6 +23,7 @@ import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
+import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
@@ -52,17 +53,24 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
       setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
     }
 
-  def upload(maxAllowedFileSize: Long)
+  def upload(constraints: Option[EnvelopeConstraints])
             (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
-    Action.async(parse.maxLength(maxAllowedFileSize, uploadParser())) { implicit request =>
+    val maxSize = getMaxFileSizeFromEnvelope(constraints)
+    Action.async(parse.maxLength(maxSize, uploadParser())) { implicit request =>
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
+          val allowZeroLengthFiles = constraints.flatMap(_.allowZeroLengthFiles)
+          val fileIsEmpty = formData.files.headOption.map(_.ref.size)
+
           val failedRequirementsO =
             if(formData.files.size != 1) Some(
                 BadRequest(errorAsJson(
                   "Request must have exactly 1 file attached"
               )))
+            else if (allowZeroLengthFiles.contains(false) && fileIsEmpty.contains(0)) Some(
+              BadRequest(errorAsJson("Envelope does not allow zero length files, and submitted file has length 0"))
+            )
             else None
 
           failedRequirementsO match {
