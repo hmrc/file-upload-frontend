@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
+import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
@@ -77,6 +78,7 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
             case Some(failure) =>
               Future.successful(failure)
             case _ =>
+              Logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, fileIsEmpty value is $fileIsEmpty")
               uploadTheProperFile(envelopeId, fileId, formData)
           }
       }
