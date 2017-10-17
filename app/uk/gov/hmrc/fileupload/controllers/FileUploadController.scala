@@ -78,7 +78,7 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
             case Some(failure) =>
               Future.successful(failure)
             case _ =>
-              Logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, fileIsEmpty value is $fileIsEmpty")
+              Logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, fileIsEmpty value is $fileIsEmpty.")
               uploadTheProperFile(envelopeId, fileId, formData)
           }
       }
