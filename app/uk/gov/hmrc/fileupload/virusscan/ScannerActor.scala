@@ -23,6 +23,7 @@ import cats.data.Xor
 import play.api.Logger
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
+import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
 
@@ -31,6 +32,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
                    scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
+                   deleteObjectFromQuarantineBucket: (String) => Unit,
+                   createS3Key: (EnvelopeId, FileId) => String,
                    commandHandler: CommandHandler)
                   (implicit executionContext: ExecutionContext) extends Actor {
 
@@ -68,6 +71,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
           scanNext()
         case Xor.Left(ScanResultVirusDetected) =>
           notify(hasVirus = true)
+          deleteInfectedFile()
           scanNext()
         case Xor.Left(a: ScanError) =>
           Logger.error(s"Scan of file ${executed.requestedFor} failed with ScanError: $a")
@@ -110,13 +114,24 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
       }
       commandHandler.notify(command)
     }
+
+  def deleteInfectedFile(): Unit = {
+    scanningEvent match {
+      case Some(event) =>
+        val key = createS3Key(event.envelopeId, event.fileId)
+        deleteObjectFromQuarantineBucket(key)
+      case None => ()
+    }
+  }
 }
 
 object ScannerActor {
 
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
             scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
+            deleteObjectFromQuarantineBucket: DeleteFileFromQuarantineBucket,
+            createS3Key: (EnvelopeId, FileId) => String,
             commandHandler: CommandHandler)
            (implicit executionContext: ExecutionContext) =
-    Props(new ScannerActor(subscribe, scanBinaryData, commandHandler))
+    Props(new ScannerActor(subscribe, scanBinaryData, deleteObjectFromQuarantineBucket, createS3Key, commandHandler))
 }

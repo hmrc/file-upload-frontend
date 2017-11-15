@@ -41,6 +41,7 @@ import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
+import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService, S3Key, S3KeyName}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
@@ -103,6 +104,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val uploadToQuarantine = s3Service.uploadToQuarantine
 
+  lazy val deleteObjectFromQuarantineBucket: DeleteFileFromQuarantineBucket = s3Service.deleteObjectFromQuarantine
+
   lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
 
   val redirectionFeature = new RedirectionFeature(configuration.underlying, httpErrorHandler)
@@ -141,8 +144,9 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     (envelopeId: EnvelopeId, fileId: FileId, version: FileRefId) =>
       s3Service.getFileLengthFromQuarantine(createS3Key(envelopeId, fileId), version.value)
   }
+
   // scanner
-  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler), "scannerActor")
+  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, deleteObjectFromQuarantineBucket, createS3Key, commandHandler), "scannerActor")
   actorSystem.actorOf(TransferActor.props(subscribe, createS3Key, commandHandler, getFileLength, s3Service.copyFromQtoT), "transferActor")
 
   // db
