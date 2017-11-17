@@ -61,7 +61,7 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
 
     "scan files, log when viruses are detected, and delete infected files" in new ScanFixture {
       val delete = mock[DeleteFileFromQuarantineBucket]
-      (delete.apply(_: String)).expects(*).returns(()).repeat(6 to 6)
+      (delete.apply(_: String)).expects(*).returns(()).repeat(6)
 
       val actor = createActor(scanBinaryDataInfected, delete)
 
