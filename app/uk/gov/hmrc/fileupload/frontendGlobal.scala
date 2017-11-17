@@ -46,8 +46,8 @@ import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
-import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean, ScanResultVirusDetected}
+import uk.gov.hmrc.fileupload.virusscan.{DeletionActor, ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -146,8 +146,9 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   }
 
   // scanner
-  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, deleteObjectFromQuarantineBucket, createS3Key, commandHandler), "scannerActor")
+  actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler), "scannerActor")
   actorSystem.actorOf(TransferActor.props(subscribe, createS3Key, commandHandler, getFileLength, s3Service.copyFromQtoT), "transferActor")
+  actorSystem.actorOf(DeletionActor.props(subscribe, deleteObjectFromQuarantineBucket, createS3Key), "deletionActor")
 
   // db
   lazy val db = new ReactiveMongoComponentImpl(application, applicationLifecycle).mongoConnector.db

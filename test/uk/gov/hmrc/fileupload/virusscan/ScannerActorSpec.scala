@@ -25,15 +25,14 @@ import org.scalatest.time.{Seconds, Span}
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
-import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
 import uk.gov.hmrc.play.test.UnitSpec
-import org.scalamock.scalatest.MockFactory
+//import org.scalamock.scalatest.MockFactory
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSender with UnitSpec with Matchers with Eventually with StopSystemAfterAll with MockFactory {
+class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSender with UnitSpec with Matchers with Eventually with StopSystemAfterAll {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -41,7 +40,7 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
 
   "ScannerActor" should {
     "scan files and handle clean files correctly" in new ScanFixture {
-      val actor = createActor(scanBinaryDataClean, mock[DeleteFileFromQuarantineBucket])
+      val actor = createActor(scanBinaryDataClean)
 
       val eventsToSend = fillEvents(5)
       sendToActor(actor, eventsToSend)
@@ -59,11 +58,8 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
       }
     }
 
-    "scan files, log when viruses are detected, and delete infected files" in new ScanFixture {
-      val delete = mock[DeleteFileFromQuarantineBucket]
-      (delete.apply(_: String)).expects(*).returns(()).repeat(6)
-
-      val actor = createActor(scanBinaryDataInfected, delete)
+    "scan files, log when viruses are detected, and not transfer" in new ScanFixture {
+      val actor = createActor(scanBinaryDataInfected)
 
       val eventsToSend = fillEvents(5)
       sendToActor(actor, eventsToSend)
@@ -124,10 +120,8 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
         List(MarkFileAsInfected(e.id, e.fileId, e.fileRefId), e.fileRefId)
       })
 
-    def createKey = (_: EnvelopeId, _: FileId) => "12345"
-
-    def createActor(scanResult: (EnvelopeId, FileId, FileRefId) => Future[ScanResult], deleteFunc: DeleteFileFromQuarantineBucket) =
-      system.actorOf(ScannerActor.props(subscribe, scanResult, deleteFunc, createKey, commandHandler))
+    def createActor(scanResult: (EnvelopeId, FileId, FileRefId) => Future[ScanResult]) =
+      system.actorOf(ScannerActor.props(subscribe, scanResult, commandHandler))
 
     def sendToActor(actor: ActorRef, eventsToSend: List[QuarantineFile]) =
       eventsToSend.foreach {
