@@ -218,7 +218,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
         Logger.info(s"Objected successfully deleted with key $key from bucket $bucketName")
         ()
       case Failure(error) =>
-        Logger.error(s"Attempted to delete object with key $key from bucket $bucketName but error thrown: ${error.getMessage}")
+        Logger.error(s"Attempted to delete object with key $key from bucket $bucketName but error thrown: ${error.getMessage}", error)
         throw error
     }
   }
