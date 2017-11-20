@@ -26,7 +26,7 @@ import com.amazonaws.services.s3.model.{CopyObjectResult, S3ObjectSummary}
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import play.api.libs.json.JsValue
 import uk.gov.hmrc.fileupload.quarantine.FileData
-import uk.gov.hmrc.fileupload.s3.S3Service.{DownloadFromBucket, StreamResult, UploadToQuarantine}
+import uk.gov.hmrc.fileupload.s3.S3Service.{DeleteFileFromQuarantineBucket, DownloadFromBucket, StreamResult, UploadToQuarantine}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -65,6 +65,10 @@ trait S3Service {
   def getQuarantineBucketProperties = getBucketProperties(awsConfig.quarantineBucketName)
 
   def getTransientBucketProperties = getBucketProperties(awsConfig.transientBucketName)
+
+  def deleteObjectFromBucket(bucketName: String, key: String): Unit
+
+  def deleteObjectFromQuarantine: DeleteFileFromQuarantineBucket = deleteObjectFromBucket(awsConfig.quarantineBucketName, _)
 }
 
 object S3Service {
@@ -73,6 +77,8 @@ object S3Service {
   type UploadToQuarantine = (String, InputStream, Int) => Future[UploadResult]
 
   type DownloadFromBucket = (S3KeyName) => Option[StreamWithMetadata]
+
+  type DeleteFileFromQuarantineBucket = (String) => Unit
 }
 
 case class Metadata(

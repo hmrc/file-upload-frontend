@@ -41,12 +41,13 @@ import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
+import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService, S3Key, S3KeyName}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
-import uk.gov.hmrc.fileupload.virusscan.{ScannerActor, ScanningService, VirusScanner}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean, ScanResultVirusDetected}
+import uk.gov.hmrc.fileupload.virusscan.{DeletionActor, ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.AuditFilter
 import uk.gov.hmrc.play.audit.http.config.LoadAuditingConfig
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -103,6 +104,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val uploadToQuarantine = s3Service.uploadToQuarantine
 
+  lazy val deleteObjectFromQuarantineBucket: DeleteFileFromQuarantineBucket = s3Service.deleteObjectFromQuarantine
+
   lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
 
   val redirectionFeature = new RedirectionFeature(configuration.underlying, httpErrorHandler)
@@ -141,9 +144,11 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     (envelopeId: EnvelopeId, fileId: FileId, version: FileRefId) =>
       s3Service.getFileLengthFromQuarantine(createS3Key(envelopeId, fileId), version.value)
   }
+
   // scanner
   actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler), "scannerActor")
   actorSystem.actorOf(TransferActor.props(subscribe, createS3Key, commandHandler, getFileLength, s3Service.copyFromQtoT), "transferActor")
+  actorSystem.actorOf(DeletionActor.props(subscribe, deleteObjectFromQuarantineBucket, createS3Key), "deletionActor")
 
   // db
   lazy val db = new ReactiveMongoComponentImpl(application, applicationLifecycle).mongoConnector.db

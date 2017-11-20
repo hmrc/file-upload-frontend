@@ -24,8 +24,8 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
-import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, QuarantineFile}
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.ScanResultFileClean
+import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -38,20 +38,41 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
   implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(2, Seconds)))
 
   "ScannerActor" should {
-    "scan files" in new ScanFixture {
+    "scan files and handle clean files correctly" in new ScanFixture {
+      val actor = createActor(scanBinaryDataClean)
+
       val eventsToSend = fillEvents(5)
-      send(eventsToSend)
+      sendToActor(actor, eventsToSend)
 
       eventually {
-        collector shouldBe expectedCollector(eventsToSend)
+        collector shouldBe expectedCleanCollector(eventsToSend)
       }
 
       collector = List.empty[Any]
       val newEventToSend = fillEvents(1)
-      send(newEventToSend)
+      sendToActor(actor, newEventToSend)
 
       eventually {
-        collector shouldBe expectedCollector(newEventToSend)
+        collector shouldBe expectedCleanCollector(newEventToSend)
+      }
+    }
+
+    "scan files, log when viruses are detected, and not transfer" in new ScanFixture {
+      val actor = createActor(scanBinaryDataInfected)
+
+      val eventsToSend = fillEvents(5)
+      sendToActor(actor, eventsToSend)
+
+      eventually {
+        collector shouldBe expectedInfectedCollector(eventsToSend)
+      }
+
+      collector = List.empty[Any]
+      val newEventToSend = fillEvents(1)
+      sendToActor(actor, newEventToSend)
+
+      eventually {
+        collector shouldBe expectedInfectedCollector(newEventToSend)
       }
     }
   }
@@ -65,10 +86,16 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
 
     var collector = List.empty[Any]
 
-    def scanBinaryData(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
+    def scanBinaryDataClean(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
       collector = collector.::(fileRefId)
       Future.successful(Xor.right(ScanResultFileClean))
+    }
+
+    def scanBinaryDataInfected(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
+      Thread.sleep(100)
+      collector = collector.::(fileRefId)
+      Future.successful(Xor.left(ScanResultVirusDetected))
     }
 
     val commandHandler = new CommandHandler {
@@ -82,14 +109,20 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
       QuarantineFile(EnvelopeId(), FileId(), FileRefId(), 0, "name", "pdf", 10, Json.obj())
     }
 
-    def expectedCollector(events: List[QuarantineFile]): List[Any] =
+    def expectedCleanCollector(events: List[QuarantineFile]): List[Any] =
       events.reverse.flatMap(e => {
         List(MarkFileAsClean(e.id, e.fileId, e.fileRefId), e.fileRefId)
       })
 
-    val actor = system.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler))
+    def expectedInfectedCollector(events: List[QuarantineFile]): List[Any] =
+      events.reverse.flatMap(e => {
+        List(MarkFileAsInfected(e.id, e.fileId, e.fileRefId), e.fileRefId)
+      })
 
-    def send(eventsToSend: List[QuarantineFile]) =
+    def createActor(scanResult: (EnvelopeId, FileId, FileRefId) => Future[ScanResult]) =
+      system.actorOf(ScannerActor.props(subscribe, scanResult, commandHandler))
+
+    def sendToActor(actor: ActorRef, eventsToSend: List[QuarantineFile]) =
       eventsToSend.foreach {
         actor ! _
     }

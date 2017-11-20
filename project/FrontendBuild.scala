@@ -41,7 +41,7 @@ private object AppDependencies {
   private val playPartialsVersion = "5.3.0"
   private val playAuth = "1.2.0"
   private val playConfigVersion = "4.3.0"
-  private val hmrcTestVersion = "2.3.0"
+  private val hmrcTestVersion = "3.0.0"
   private val playReactivemongoVersion = "5.2.0"
   private val simpleReactivemongoVersion = "5.2.0"
   private val clamAvClientVersion = "2.4.0"
@@ -77,9 +77,9 @@ private object AppDependencies {
       override lazy val test = Seq(
         "uk.gov.hmrc" %% "hmrctest" % hmrcTestVersion % scope,
         "org.scalatest" %% "scalatest" % "2.2.6" % scope,
-        "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % scope,
+        "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % scope,
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
-        "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope,
+        "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
         "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
