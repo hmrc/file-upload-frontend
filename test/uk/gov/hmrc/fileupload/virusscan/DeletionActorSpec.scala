@@ -21,7 +21,7 @@ import akka.testkit.{ImplicitSender, TestKit}
 import org.scalatest.Matchers
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
-import uk.gov.hmrc.fileupload.notifier.MarkFileAsInfected
+import uk.gov.hmrc.fileupload.notifier.{MarkFileAsClean, MarkFileAsInfected}
 import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
 import uk.gov.hmrc.play.test.UnitSpec
@@ -42,7 +42,7 @@ class DeletionActorSpec extends TestKit(ActorSystem("deletion")) with ImplicitSe
       }
 
       var collector: List[String] = List.empty
-      val eventsToSend = List.fill(5) {
+      val infectedEventsToSend = List.fill(5) {
         MarkFileAsInfected(EnvelopeId(), FileId(), FileRefId())
       }
 
@@ -58,10 +58,20 @@ class DeletionActorSpec extends TestKit(ActorSystem("deletion")) with ImplicitSe
 
       val actor = system.actorOf(DeletionActor.props((_: ActorRef, _: Class[_]) => true, deletion, s3Key))
 
-      sendToActor(actor, eventsToSend)
+      sendToActor(actor, infectedEventsToSend)
 
       eventually {
-        collector shouldBe eventsToSend.map(_.fileId.value)
+        collector shouldBe infectedEventsToSend.map(_.fileId.value)
+      }
+
+      val cleanEventToSendOne = MarkFileAsClean(EnvelopeId(), FileId(), FileRefId())
+      val cleanEventToSendTwo = MarkFileAsClean(EnvelopeId(), FileId(), FileRefId())
+
+      actor ! cleanEventToSendOne
+      actor ! cleanEventToSendTwo
+
+      eventually {
+        collector shouldBe infectedEventsToSend.map(_.fileId.value)
       }
     }
   }
