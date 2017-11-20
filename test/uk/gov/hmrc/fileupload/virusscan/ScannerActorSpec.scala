@@ -28,7 +28,6 @@ import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFil
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
 import uk.gov.hmrc.play.test.UnitSpec
-//import org.scalamock.scalatest.MockFactory
 
 import scala.concurrent.{ExecutionContext, Future}
 
