@@ -47,7 +47,13 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSCli
     val payload = Json.toJson(request.body)
 
     wSClient.url(s"$baseUrl/file-upload/envelopes").post(payload).map { response =>
-      Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
+      if (response.status >= 200 && response.status <= 299) {
+        Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
+      } else {
+        InternalServerError(
+          Json.obj("upstream_status" -> response.status, "error_message" -> response.body)
+        )
+      }
     }
   }
 
