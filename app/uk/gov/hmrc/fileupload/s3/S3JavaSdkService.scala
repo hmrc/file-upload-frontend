@@ -176,12 +176,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
               uploadTime.stop()
               metricUploadCompletedSize.inc(fileSize)
               val resultTry = Try({
-                val result = upload.waitForUploadResult()
-                if (result.getVersionId == null) {
-                  throw new Exception("The service is configured to use non-versioned S3 bucket. Bucket name $bucketName")
-                } else {
-                  result
-                }
+                upload.waitForUploadResult()
               })
               Logger.info(s"upload-s3 completed: $fileInfo with success=${resultTry.isSuccess}")
               promise.tryComplete(resultTry)
