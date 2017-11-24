@@ -175,16 +175,24 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
             if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
               uploadTime.stop()
               metricUploadCompletedSize.inc(fileSize)
-              val resultTry = Try(upload.waitForUploadResult())
+              val resultTry = Try({
+                val result = upload.waitForUploadResult()
+                if (result.getVersionId == null) {
+                  throw new Exception("The service is configured to use non-versioned S3 bucket. Bucket name $bucketName")
+                } else {
+                  result
+                }
+              })
               Logger.info(s"upload-s3 completed: $fileInfo with success=${resultTry.isSuccess}")
               promise.tryComplete(resultTry)
             } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT ||
               upload.getState == TransferState.Failed || upload.getState == TransferState.Canceled
             ) {
               metricUploadFailed.mark()
+              val exception = upload.waitForException()
               Logger.error(s"""upload-s3 Transfer events: ${events.reverse.map(_.toString).mkString("\n")}""")
-              Logger.error(s"upload-s3 error: transfer failed: $fileInfo")
-              promise.failure(new Exception("transfer failed"))
+              Logger.error(s"upload-s3 error: transfer failed: $fileInfo", exception)
+              promise.failure(new Exception("transfer failed", exception))
             }
           }
         })
