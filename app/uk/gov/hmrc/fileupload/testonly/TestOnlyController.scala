@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSClient: WSClient, val s3Service: S3JavaSdkService)
+class TestOnlyController(baseUrl: String, wSClient: WSClient, val s3Service: S3JavaSdkService)
    extends Controller with S3TestController {
 
 
@@ -122,7 +122,6 @@ class TestOnlyController(baseUrl: String, recreateCollections: () => Unit, wSCli
   }
 
   def recreateAllCollections() = Action.async {
-    recreateCollections()
     wSClient.url(s"$baseUrl/file-upload/test-only/recreate-collections").post(Json.obj()).map {
       response => new Status(response.status)(response.body)
     }
