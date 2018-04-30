@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import cats.data.Xor
 import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
+import play.api.Configuration
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
@@ -28,7 +29,7 @@ import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
-import uk.gov.hmrc.fileupload.utils.errorAsJson
+import uk.gov.hmrc.fileupload.utils.{LoggerHelper, errorAsJson}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,8 +40,13 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
                             commandHandler: CommandHandler,
                             uploadToQuarantine: UploadToQuarantine,
                             createS3Key: (EnvelopeId, FileId) => String,
-                            now: () => Long)
+                            now: () => Long,
+                            config: Configuration,
+                            loggerHelper: LoggerHelper
+                          )
                           (implicit executionContext: ExecutionContext) extends Controller {
+
+  private val logFileExtensions: Boolean = config.getBoolean("flags.log-file-extensions").getOrElse(false)
 
   def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
                             `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction = {
@@ -78,7 +84,13 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
             case Some(failure) =>
               Future.successful(failure)
             case _ =>
-              Logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, fileIsEmpty value is $fileIsEmpty.")
+              Logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
+                s"fileIsEmpty value is $fileIsEmpty.")
+              if (logFileExtensions) {
+                val loggerValues = loggerHelper.getLoggerValues(formData.files.head, request)
+                Logger.info(s"Uploading file with file extension: [${loggerValues.fileExtension}] " +
+                  s"and user agent: [${loggerValues.userAgent}]")
+              }
               uploadTheProperFile(envelopeId, fileId, formData)
           }
       }

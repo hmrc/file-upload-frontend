@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import akka.util.ByteString
 import cats.data.Xor
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.scalatest.concurrent.ScalaFutures
+import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
@@ -36,6 +37,7 @@ import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
+import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -53,6 +55,11 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     val fakeCurrentTime = () => 10L
     val uploadToQuarantine: UploadToQuarantine = (_,_,_) => new UploadResult()
     val s3Key: (EnvelopeId, FileId) => String = (_,_) => "key"
+    val configuration = Configuration.from(Map.empty)
+    val loggerHelper = new LoggerHelper {
+      override def getLoggerValues(formData: FilePart[FileCachedInMemory], request: Request[_]): LoggerValues =
+        LoggerValues("txt", "some-user-agent")
+    }
 
     new FileUploadController(
       null,
@@ -61,7 +68,9 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
       commandHandler,
       uploadToQuarantine,
       s3Key,
-      fakeCurrentTime
+      fakeCurrentTime,
+      configuration,
+      loggerHelper
     )
   }
 

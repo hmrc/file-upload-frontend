@@ -45,7 +45,7 @@ import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService, S3Key, S3KeyName}
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
-import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
+import uk.gov.hmrc.fileupload.utils.{LoggerHelperFileExtensionAndUserAgent, ShowErrorAsJson}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.virusscan.{DeletionActor, ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.filters.AuditFilter
@@ -118,8 +118,10 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
       s3Service.downloadFromQuarantine
     )
 
+  lazy val loggerHelper = new LoggerHelperFileExtensionAndUserAgent
+
   lazy val fileUploadController =
-    new FileUploadController(redirectionFeature, withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now)
+    new FileUploadController(redirectionFeature, withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now, configuration, loggerHelper)
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 
