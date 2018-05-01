@@ -82,7 +82,7 @@ private object AppDependencies {
         "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
-        "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
+        "uk.gov.hmrc" %% "reactivemongo-test" % "2.0.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope
       )
