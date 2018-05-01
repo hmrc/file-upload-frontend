@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
+import org.slf4j.MDC
 import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
@@ -29,7 +30,7 @@ import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
-import uk.gov.hmrc.fileupload.utils.{LoggerHelper, errorAsJson}
+import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -86,12 +87,13 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
             case _ =>
               Logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
                 s"fileIsEmpty value is $fileIsEmpty.")
+              val uploadResult = uploadTheProperFile(envelopeId, fileId, formData)
               if (logFileExtensions) {
                 val loggerValues = loggerHelper.getLoggerValues(formData.files.head, request)
-                Logger.info(s"Uploading file with file extension: [${loggerValues.fileExtension}] " +
-                  s"and user agent: [${loggerValues.userAgent}]")
+                logFileExtensionData(uploadResult)(loggerValues)
+              } else {
+                uploadResult
               }
-              uploadTheProperFile(envelopeId, fileId, formData)
           }
       }
     }
@@ -108,6 +110,19 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
           case Xor.Right(_) => Ok
           case Xor.Left(e) => Status(e.statusCode)(e.reason)
         }
+    }
+  }
+
+  private def logFileExtensionData(upload: Future[Result])
+                                  (values: LoggerValues) = {
+    try {
+      MDC.put("upload-file-extension", values.fileExtension)
+      MDC.put("upload-user-agent", values.userAgent)
+      Logger.info(s"Uploading file with file extension: [${values.fileExtension}] and user agent: [${values.userAgent}]")
+      upload
+    } finally {
+      MDC.remove("upload-file-extension")
+      MDC.remove("upload-user-agent")
     }
   }
 }
