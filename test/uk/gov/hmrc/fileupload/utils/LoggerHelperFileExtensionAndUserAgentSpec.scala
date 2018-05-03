@@ -41,6 +41,22 @@ class LoggerHelperFileExtensionAndUserAgentSpec extends UnitSpec {
       result shouldBe LoggerValues("pdf", "soft-drinks-industry-levy")
     }
 
+    "correctly parse an upper case file extension and user agents into strings when both are set" in {
+      val inMemoryFile: FileCachedInMemory = FileCachedInMemory(ByteString("Hello World"))
+      val formData = new MultipartFormData.FilePart[FileCachedInMemory](
+        key = "12345",
+        filename = "my-file.docx.PDF",
+        contentType = None,
+        ref = inMemoryFile
+      )
+
+      val request = FakeRequest().withHeaders(("User-Agent", "soft-drinks-industry-levy"))
+
+      val loggerHelper = new LoggerHelperFileExtensionAndUserAgent
+      val result = loggerHelper.getLoggerValues(formData, request)
+      result shouldBe LoggerValues("pdf", "soft-drinks-industry-levy")
+    }
+
     "correctly parse a file without a file extension and user agents into strings" in {
       val inMemoryFile: FileCachedInMemory = FileCachedInMemory(ByteString("Hello World"))
       val formData = new MultipartFormData.FilePart[FileCachedInMemory](
