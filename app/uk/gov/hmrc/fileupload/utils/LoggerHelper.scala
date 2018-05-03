@@ -38,7 +38,7 @@ class LoggerHelperFileExtensionAndUserAgent extends LoggerHelper {
     val parts = Option(file.filename).map(_.split("\\.").toList).getOrElse(Nil)
     parts.length match {
       case 0 | 1 => "no-file-type"
-      case _ => parts.last
+      case _ => parts.last.toLowerCase
     }
   }
 
