@@ -1,10 +1,7 @@
 #%RAML 1.0
 title: file-upload-frontend
 protocols: [ HTTP, HTTPS ]
-baseUri: https://{environmentHost}/file-upload
-baseUriParameters:
-  environmentHost:
-    enum: ["www-dev.tax.service.gov.uk","www-qa.tax.service.gov.uk"]
+baseUri: /file-upload
 description: Upload files to the Tax Platform
 
 /upload/envelopeId/{envelopeId}/fileId/{fileId}:

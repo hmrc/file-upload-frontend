@@ -6,13 +6,17 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions}
 
+object BaseUrl {
+  val dev = "https://test-dev.gov.uk"
+  val qa = "https://test-qa.gov.uk"
+}
 
 class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with EnvelopeActions with Eventually {
   val FAIL_REDIRECT_PARAM_NAME = "redirect-error-url"
   val SUCC_REDIRECT_PARAM_NAME = "redirect-success-url"
 
-  val DEV_YOUR_PAY = "https://www-dev.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
-  val QA_YOUR_PAY = "https://www-qa.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
+  val DEV_YOUR_PAY = s"${BaseUrl.dev}/estimate-paye-take-home-pay/your-pay"
+  val QA_YOUR_PAY = s"${BaseUrl.qa}/estimate-paye-take-home-pay/your-pay"
   val NO_HTTPS: String = DEV_YOUR_PAY.replaceAll("https", "http")
   val NOT_GOV_DOMAIN = "https://www.playframework.com/documentation/2.5.x/ScalaTestingWithScalaTest"
 
@@ -26,7 +30,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
-      When("a file is uploaded provided a redirect on success to a https://www-dev.tax.service.gov.uk url")
+      When(s"a file is uploaded provided a redirect on success to a ${BaseUrl.dev} url")
 
       val redirectSuccessUrl = DEV_YOUR_PAY
       val queryParam = s"$SUCC_REDIRECT_PARAM_NAME=$redirectSuccessUrl"
@@ -42,7 +46,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
-      When("a file is uploaded provided a redirect on success to a https://www-dev.tax.service.gov.uk url")
+      When(s"a file is uploaded provided a redirect on success to a ${BaseUrl.dev} url")
       val redirectSuccessUrl = DEV_YOUR_PAY
       val redirectErrorUrl = QA_YOUR_PAY
 
@@ -58,9 +62,9 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       Given("An envelope which does not exist")
       val invalidEnvelopeId = EnvelopeId("12345-123124")
 
-      When("a file is uploaded provided a redirect on error to a https://www-dev.tax.service.gov.uk url")
-      val redirectSuccessUrl = "https://www-dev.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
-      val redirectErrorUrl = "https://www-qa.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
+      When(s"a file is uploaded provided a redirect on error to a ${BaseUrl.dev} url")
+      val redirectSuccessUrl = s"${BaseUrl.dev}/estimate-paye-take-home-pay/your-pay"
+      val redirectErrorUrl = s"${BaseUrl.qa}/estimate-paye-take-home-pay/your-pay"
       val queryParam = s"redirect-success-url=$redirectSuccessUrl&redirect-error-url=$redirectErrorUrl"
       val uploadFileResponse = uploadDummyFileWithoutRedirects(invalidEnvelopeId, fileId, queryParam)
 
@@ -75,7 +79,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
-      When("a file is uploaded provided a redirect on success to a https://www-dev.tax.service.gov.uk url")
+      When(s"a file is uploaded provided a redirect on success to a ${BaseUrl.dev} url")
       val redirectSuccessUrl = NO_HTTPS
       val queryParam = s"$SUCC_REDIRECT_PARAM_NAME=$redirectSuccessUrl"
 
@@ -96,7 +100,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
-      When("a file is uploaded provided a redirect on success to a https://www-dev.tax.service.gov.uk url")
+      When(s"a file is uploaded provided a redirect on success to a ${BaseUrl.dev} url")
       val redirectErrorUrl = NO_HTTPS
       val queryParam = s"$FAIL_REDIRECT_PARAM_NAME=$redirectErrorUrl"
 
@@ -132,7 +136,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       message shouldBe expectedMessage
     }
 
-    "Redirect upon error to invalid url - not service.gov.uk" in {
+    "Redirect upon error to invalid url - not gov.uk" in {
 
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
@@ -163,9 +167,9 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       Then("s3 is down")
       s3MockServer.p.deleteBucket("file-upload-quarantine")
 
-      When("a file is uploaded provided a redirect on error to a https://www-dev.tax.service.gov.uk url")
-      val redirectSuccessUrl = "https://www-dev.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
-      val redirectErrorUrl = "https://www-qa.tax.service.gov.uk/estimate-paye-take-home-pay/your-pay"
+      When(s"a file is uploaded provided a redirect on error to a ${BaseUrl.dev} url")
+      val redirectSuccessUrl = s"${BaseUrl.dev}/estimate-paye-take-home-pay/your-pay"
+      val redirectErrorUrl = s"${BaseUrl.qa}/estimate-paye-take-home-pay/your-pay"
       val queryParam = s"redirect-success-url=$redirectSuccessUrl&redirect-error-url=$redirectErrorUrl"
       val uploadFileResponse = uploadDummyFileWithoutRedirects(envelopeId, fileId, queryParam)
 
