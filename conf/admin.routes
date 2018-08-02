@@ -1,4 +1,5 @@
 
 GET         /files/info/:fileRefId                                          uk.gov.hmrc.fileupload.controllers.AdminController.fileInfo(fileRefId: uk.gov.hmrc.fileupload.FileRefId)
+POST        /purgeOld                                                       uk.gov.hmrc.fileupload.controllers.AdminController.purgeOldFiles()
 POST        /scan/envelopes/:envelopeId/files/:fileId/:fileRefId            uk.gov.hmrc.fileupload.controllers.AdminController.scan(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId, fileRefId: uk.gov.hmrc.fileupload.FileRefId)
 POST        /transfer/envelopes/:envelopeId/files/:fileId/:fileRefId        uk.gov.hmrc.fileupload.controllers.AdminController.transfer(envelopeId: uk.gov.hmrc.fileupload.EnvelopeId, fileId: uk.gov.hmrc.fileupload.FileId, fileRefId: uk.gov.hmrc.fileupload.FileRefId)

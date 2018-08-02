@@ -18,8 +18,8 @@ package uk.gov.hmrc.fileupload
 
 import java.net.InetSocketAddress
 import java.util.concurrent.Executors
-import javax.inject.Provider
 
+import javax.inject.Provider
 import akka.actor.ActorRef
 import cats.data.Xor
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
@@ -42,7 +42,7 @@ import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.CommandHandlerImpl
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
-import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3JavaSdkService, S3Key, S3KeyName}
+import uk.gov.hmrc.fileupload.s3._
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.{LoggerHelperFileExtensionAndUserAgent, ShowErrorAsJson}
@@ -131,7 +131,9 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val testRoutes = new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, testOnlyController, prodRoutes)
 
-  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(commandHandler)
+  lazy val oldFileHandler = new OldFileHandler(s3Service)
+
+  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(commandHandler, oldFileHandler)
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
