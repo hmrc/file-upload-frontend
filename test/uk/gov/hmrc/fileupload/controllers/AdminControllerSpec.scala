@@ -36,7 +36,7 @@ class AdminControllerSpec extends UnitSpec with ScalaFutures with TestApplicatio
       FileInfo("refId", "testFile", 2500, DateTime.parse("2016-11-29T12:27:19Z"), 10000, "application/content")))
     val getChunks = (_: FileRefId) => Future.successful(4)
 
-    new AdminController(getFileInfo, getChunks)(null)
+    new AdminController(getFileInfo, getChunks)(null, null)
   }
 
   "GET /admin/files/info/ " should {
@@ -54,7 +54,7 @@ class AdminControllerSpec extends UnitSpec with ScalaFutures with TestApplicatio
     val getFileInfo = (_: FileRefId) => Future.successful(None)
     val getChunks = (_: FileRefId) => Future.successful(4)
 
-    new AdminController(getFileInfo, getChunks)(null)
+    new AdminController(getFileInfo, getChunks)(null, null)
   }
 
   "GET /admin/files/info/ " should {
@@ -70,7 +70,7 @@ class AdminControllerSpec extends UnitSpec with ScalaFutures with TestApplicatio
       FileInfo("refId", "testFile", 2500, DateTime.parse("2016-11-29T12:27:19Z"), 10000, "application/content")))
     val getChunks = (_: FileRefId) => Future.successful(5)
 
-    new AdminController(getFileInfo, getChunks)(null)
+    new AdminController(getFileInfo, getChunks)(null, null)
   }
 
   "GET /admin/files/info/ " should {

@@ -68,6 +68,8 @@ trait S3Service {
 
   def deleteObjectFromBucket(bucketName: String, key: String): Unit
 
+  def deleteObjectFromTransient: String => Unit = deleteObjectFromBucket(awsConfig.transientBucketName, _)
+
   def deleteObjectFromQuarantine: DeleteFileFromQuarantineBucket = deleteObjectFromBucket(awsConfig.quarantineBucketName, _)
 }
 

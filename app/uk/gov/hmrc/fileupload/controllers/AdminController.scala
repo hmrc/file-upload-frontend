@@ -21,6 +21,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.quarantine.FileInfo
+import uk.gov.hmrc.fileupload.s3.OldFileHandler
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
@@ -29,7 +30,9 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getChunks: (FileRefId) => Future[Int])(commandHandler: CommandHandler)
+class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getChunks: (FileRefId) => Future[Int])(commandHandler: CommandHandler,
+                                                                                                                   oldFileHandler : OldFileHandler
+)
                      (implicit executionContext: ExecutionContext) extends Controller {
 
   def fileInfo(fileRefId: FileRefId) = Action.async { _ =>
@@ -49,6 +52,10 @@ class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getC
         }
       case None => Future.successful(NotFound)
     }
+  }
+
+  def purgeOldFiles() = Action.async { _ =>
+    oldFileHandler.purge().map(_ => Ok)
   }
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { _ =>
