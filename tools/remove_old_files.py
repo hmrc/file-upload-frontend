@@ -11,7 +11,7 @@ def parse_arguments():
     parser.add_argument('--really-delete', dest='really_delete', action='store_const',
                        const=True, default=False,
                        help='sum the integers (default: find the max)')
-    parser.add_argument('--min-age-to-delete', dest='min_age', default=31, type=int, 
+    parser.add_argument('--min-age-to-delete', dest='min_age', default=31, type=int,
                        help="Minimum age of the file to delete")
 
     return parser.parse_args()
@@ -21,6 +21,11 @@ def list_buckets():
                 print(bucket.name)
 
 def delete_older_than(bucket, threshold, really_delete = False):
+
+    versions = boto3.client('s3').list_object_versions(Bucket = bucket.name, Prefix="9a5a9515-da83-46dd-ba0f-e4153aa01570")["DeleteMarkers"]
+    for version in versions:
+        print(version)
+
     present = datetime.now(timezone.utc).astimezone()
     if (really_delete):
         print("Deleting objects from bucket ", bucket, " which are older than", threshold)
