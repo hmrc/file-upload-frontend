@@ -32,6 +32,8 @@ import com.amazonaws.services.s3.transfer.{TransferManagerBuilder, Upload}
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.codahale.metrics.MetricRegistry
+import com.google.common.base.MoreObjects.ToStringHelper
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
@@ -219,17 +221,22 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
     val summaries = s3Client.listVersions(bucketName, key).getVersionSummaries
 
-    Logger.info(s"Deleting object: Object $key has ${summaries.size()} versions")
+    val objectDescription = ReflectionToStringBuilder.toString(s3Client.getObjectMetadata(bucketName, key))
+
+    Logger.info(s"Deleting object. Object $key from bucket $bucketName has ${summaries.size()} versions. Description: $objectDescription")
 
     for (summary: S3VersionSummary <- summaries.asScala) {
       val outcome = Try(s3Client.deleteVersion(bucketName, summary.getKey, summary.getVersionId))
       Logger.info(s"Outcome of deleting $key / ${summary.getVersionId}: $outcome")
     }
-    
+
   }
 }
 
 class S3FilesIterator(s3Client: AmazonS3, bucketName: String) extends Iterator[Seq[S3ObjectSummary]] {
+
+  Logger.info(s"Listing objects from bucket $bucketName")
+
   var listing = s3Client.listObjects(bucketName)
   val summaries = listing.getObjectSummaries
   var _hasNext = !summaries.isEmpty
