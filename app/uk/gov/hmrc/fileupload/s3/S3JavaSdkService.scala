@@ -216,14 +216,16 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   }
 
   def deleteObjectFromBucket(bucketName: String, key: String): Unit = {
-    Try(s3Client.deleteObject(bucketName, key)) match {
-      case Success(_) =>
-        Logger.info(s"Objected successfully deleted with key $key from bucket $bucketName")
-        ()
-      case Failure(error) =>
-        Logger.error(s"Attempted to delete object with key $key from bucket $bucketName but error thrown: ${error.getMessage}", error)
-        throw error
+
+    val summaries = s3Client.listVersions(bucketName, key).getVersionSummaries
+
+    Logger.info(s"Deleting object: Object $key has ${summaries.size()} versions")
+
+    for (summary: S3VersionSummary <- summaries.asScala) {
+      val outcome = Try(s3Client.deleteVersion(bucketName, summary.getKey, summary.getVersionId))
+      Logger.info(s"Outcome of deleting $key / ${summary.getVersionId}: $outcome")
     }
+    
   }
 }
 
