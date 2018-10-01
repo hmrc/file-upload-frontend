@@ -33,8 +33,7 @@ class OldFileHandler(s3Service: S3Service)(implicit ec :ExecutionContext) {
     countFiles()
     purgeFiles()
 
-    Future.successful()
-
+    Future.successful((): Unit)
   }
 
   private def countFiles() {
