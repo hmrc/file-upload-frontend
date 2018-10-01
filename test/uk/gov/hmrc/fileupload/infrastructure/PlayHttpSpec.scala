@@ -24,17 +24,15 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
+import org.scalatest.{BeforeAndAfterEach, Suite}
 import play.api.http.Status
 import play.api.libs.json.{JsSuccess, Json}
-import play.api.libs.ws.WSRequest
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.FakeAuditer
-import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer, LoadAuditingConfig}
+import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.RunMode
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.collection.mutable.ListBuffer
@@ -49,14 +47,10 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
   private lazy val downstreamUrl = s"http://localhost:${fakeDownstreamSystem.port()}$downstreamPath"
 
   private val testAppName = "test-app"
-  private lazy val consumer = Consumer(BaseUri("localhost", fakeAuditer.port(), "http"))
 
   object TestAuditConnector extends AuditConnector with RunMode {
-    override lazy val auditingConfig = AuditingConfig(Some(consumer), enabled = true, traceRequests = true)
-
-    override def buildRequest(url: String)(implicit hc: HeaderCarrier): WSRequest = {
-      components.wsClient.url(url).withHeaders(hc.headers: _*)
-    }
+    override lazy val consumer = Consumer(BaseUri("localhost", fakeAuditer.port(), "http"))
+    override lazy val auditingConfig = AuditingConfig(Some(consumer), enabled = true, auditSource = "test-app")
   }
 
   private var loggedErrors = ListBuffer.empty[Throwable]
