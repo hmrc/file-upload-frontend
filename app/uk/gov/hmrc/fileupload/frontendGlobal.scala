@@ -19,23 +19,20 @@ package uk.gov.hmrc.fileupload
 import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 
-import javax.inject.Provider
 import akka.actor.ActorRef
 import cats.data.Xor
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
 import com.codahale.metrics.{MetricFilter, SharedMetricRegistries}
 import com.kenshoo.play.metrics.{MetricsController, MetricsImpl}
 import com.typesafe.config.Config
+import javax.inject.Provider
 import net.ceedubs.ficus.Ficus._
 import play.Logger
 import play.api.ApplicationLoader.Context
-import play.api.http.HttpErrorHandler
+import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.ws.WSRequest
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.{EssentialFilter, Request}
-import play.api._
-import play.modules.reactivemongo.ReactiveMongoComponentImpl
 import uk.gov.hmrc.fileupload.controllers._
 import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
@@ -46,13 +43,12 @@ import uk.gov.hmrc.fileupload.s3._
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.{LoggerHelperFileExtensionAndUserAgent, ShowErrorAsJson}
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean, ScanResultVirusDetected}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScanIteratee, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.fileupload.virusscan.{DeletionActor, ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.frontend.config.LoadAuditingConfig
-import uk.gov.hmrc.play.frontend.filters.FrontendAuditFilter
-import uk.gov.hmrc.play.frontend.filters.LoggingFilter
+import uk.gov.hmrc.play.frontend.filters.{FrontendAuditFilter, LoggingFilter}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -130,9 +126,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val testRoutes = new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, testOnlyController, prodRoutes)
 
-  lazy val oldFileHandler = new OldFileHandler(s3Service)
-
-  lazy val adminController = new AdminController(getFileInfo = getFileInfo, getChunks = getFileChunksInfo)(commandHandler, oldFileHandler)
+  lazy val adminController = new AdminController(commandHandler)
 
   var subscribe: (ActorRef, Class[_]) => Boolean = _
   var publish: (AnyRef) => Unit = _
@@ -153,18 +147,11 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   actorSystem.actorOf(TransferActor.props(subscribe, createS3Key, commandHandler, getFileLength, s3Service.copyFromQtoT), "transferActor")
   actorSystem.actorOf(DeletionActor.props(subscribe, deleteObjectFromQuarantineBucket, createS3Key), "deletionActor")
 
-  // db
-  lazy val db = new ReactiveMongoComponentImpl(application, applicationLifecycle).mongoConnector.db
 
-  // quarantine
-  lazy val quarantineRepository = quarantine.Repository(db)
   //lazy val retrieveFileFromQuarantineBucket = s3Service.retrieveFileFromQuarantine _
   //TODO discuss alternative thread pools
   lazy val ec = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(25))
   lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(s3Service.retrieveFileFromQuarantine)(_: String, _: String)(ec)
-  lazy val recreateCollections = () => quarantineRepository.recreate()
-  lazy val getFileInfo = quarantineRepository.retrieveFileMetaData _
-  lazy val getFileChunksInfo = quarantineRepository.chunksCount _
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(FrontendAuditFilter.auditConnector, appName, Some(t => Logger.warn(t.getMessage, t))) _
@@ -191,8 +178,6 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   lazy val streamTransferCall = transfer.TransferService.stream(
     fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine)(createS3Key) _
 
-  // upload
-  lazy val uploadParser = () => UploadParser.parse(quarantineRepository.writeFile) _
 
   lazy val scanner: () => AvScanIteratee = new VirusScanner(configuration, environment).scanIteratee
   lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {

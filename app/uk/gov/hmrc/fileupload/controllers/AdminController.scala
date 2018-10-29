@@ -16,47 +16,15 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import play.api.Logger
-import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
-import uk.gov.hmrc.fileupload.quarantine.FileInfo
-import uk.gov.hmrc.fileupload.s3.OldFileHandler
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
-import uk.gov.hmrc.fileupload.utils.errorAsJson
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
 
-class AdminController(getFileInfo: (FileRefId) => Future[Option[FileInfo]], getChunks: (FileRefId) => Future[Int])(commandHandler: CommandHandler,
-                                                                                                                   oldFileHandler : OldFileHandler
-)
-                     (implicit executionContext: ExecutionContext) extends Controller {
-
-  def fileInfo(fileRefId: FileRefId) = Action.async { _ =>
-    getFileInfo(fileRefId).flatMap {
-      case Some(f) =>
-        val expectedNoChunks = math.ceil(f.length.toDouble / f.chunkSize)
-        getChunks(fileRefId).map { actualNoChunks =>
-          if (actualNoChunks == expectedNoChunks) {
-            Ok(Json.toJson(f))
-          } else {
-            Ok(errorAsJson(s"Some file chunks are missing! Number of chunks expected $expectedNoChunks , actual $actualNoChunks"))
-          }
-        }.recover {
-          case NonFatal(ex) =>
-            Logger.warn(s"Retrieval of chunks for the file id $fileRefId failed ${ex.getMessage}")
-            InternalServerError(ex.getMessage)
-        }
-      case None => Future.successful(NotFound)
-    }
-  }
-
-  def purgeOldFiles() = Action.async { _ =>
-    oldFileHandler.purge().map(_ => Ok)
-  }
+class AdminController(commandHandler: CommandHandler)(implicit executionContext: ExecutionContext) extends Controller {
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { _ =>
     commandHandler.notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))

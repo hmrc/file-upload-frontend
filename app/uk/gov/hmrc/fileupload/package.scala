@@ -21,10 +21,8 @@ import java.util.UUID
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsError, JsSuccess, _}
 import play.api.mvc.PathBindable
-import reactivemongo.api.gridfs.{GridFS, ReadFile}
-import reactivemongo.json.JSONSerializationPack
-import uk.gov.hmrc.play.binders.SimpleObjectBinder
 import play.core.routing.dynamicString
+import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 import scala.concurrent.Future
 
@@ -99,6 +97,4 @@ trait Event {
 
 package object fileupload {
   type ByteStream = Array[Byte]
-  type JSONGridFS = GridFS[JSONSerializationPack.type]
-  type JSONReadFile = ReadFile[JSONSerializationPack.type, JsValue]
 }
