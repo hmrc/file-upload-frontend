@@ -52,14 +52,8 @@ class FileUploadISpec extends FileActions with EnvelopeActions with Eventually {
     """Prevent uploading if envelope is not in "OPEN" state"""" in {
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_CLOSED_RESPONSE)
 
-      val repository = new ChunksMongoRepository(mongo)
-      repository.removeAll().futureValue
-      def numberOfChunks = repository.findAll().futureValue.size
-      numberOfChunks shouldBe 0
-
       val result = uploadDummyFile(envelopeId, fileId)
       result.status should be(423)
-      numberOfChunks shouldBe 0
     }
 
     """Ensure we continue to allow uploading if envelope is in "OPEN" state"""" in {

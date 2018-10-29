@@ -28,21 +28,16 @@ private object AppDependencies {
   import play.sbt.PlayImport._
   import play.core.PlayVersion
 
-  private val frontendBootstrapVersion = "10.4.0"
-  private val playPartialsVersion = "5.3.0"
-  private val authClient = "2.5.0"
+  private val frontendBootstrapVersion = "10.7.0"
+  private val playPartialsVersion = "6.1.0"
+  private val authClient = "2.17.0-play-25"
   private val playConfigVersion = "4.3.0"
-  private val hmrcTestVersion = "3.0.0"
-  private val playReactivemongoVersion = "5.2.0"
-  private val simpleReactivemongoVersion = "5.2.0"
+  private val hmrcTestVersion = "3.2.0"
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
   private val awsJavaSdkVersion = "1.11.97"
 
   val compile = Seq(
-    ws,
-    "uk.gov.hmrc" %% "play-reactivemongo" % playReactivemongoVersion,
-    "uk.gov.hmrc" %% "simple-reactivemongo" % simpleReactivemongoVersion,
     "uk.gov.hmrc" %% "frontend-bootstrap" % frontendBootstrapVersion,
     "uk.gov.hmrc" %% "play-partials" % playPartialsVersion,
     "uk.gov.hmrc" %% "auth-client" % authClient,
@@ -66,7 +61,6 @@ private object AppDependencies {
         "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.0" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.11.3" % scope,
-        "uk.gov.hmrc" %% "reactivemongo-test" % "2.0.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope
       )
@@ -84,7 +78,6 @@ private object AppDependencies {
         "com.github.tomakehurst" % "wiremock" % "1.58" % scope,
         "org.pegdown" % "pegdown" % "1.6.0" % scope,
         "org.jsoup" % "jsoup" % "1.8.3" % scope,
-        "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0" % scope,
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope,
         "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % scope,

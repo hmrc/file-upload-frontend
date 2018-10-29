@@ -17,26 +17,12 @@
 package uk.gov.hmrc.fileupload
 
 import akka.util.ByteString
-import play.api.libs.json.{JsString, JsValue}
 import play.api.mvc.MultipartFormData.FilePart
 import play.api.mvc.{MaxSizeExceeded, MultipartFormData, Request}
 import play.api.test.{FakeHeaders, FakeRequest}
-import reactivemongo.json.JSONSerializationPack
-import reactivemongo.json.JSONSerializationPack._
-import uk.gov.hmrc.fileupload.fileupload.JSONReadFile
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 
 object RestFixtures {
-
-  case class TestJsonReadFile(id: JsValue = JsString("testid"), filename: Option[String] = None) extends JSONReadFile {
-    val pack = JSONSerializationPack
-    val contentType: Option[String] = None
-    val chunkSize: Int = 0
-    val length: Long = 0
-    val uploadDate: Option[Long] = None
-    val md5: Option[String] = None
-    val metadata: Document = null
-  }
 
   type Multipart = MultipartFormData[FileCachedInMemory]
 
