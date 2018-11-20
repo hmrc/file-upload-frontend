@@ -29,7 +29,7 @@ private object AppDependencies {
   import play.core.PlayVersion
 
   private val frontendBootstrapVersion = "10.7.0"
-  private val playPartialsVersion = "6.1.0"
+  private val playPartialsVersion = "6.2.0"
   private val authClient = "2.17.0-play-25"
   private val playConfigVersion = "4.3.0"
   private val hmrcTestVersion = "3.2.0"
