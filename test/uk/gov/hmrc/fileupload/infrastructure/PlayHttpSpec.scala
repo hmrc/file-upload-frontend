@@ -25,6 +25,8 @@ import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{BeforeAndAfterEach, Suite}
+import play.api.{Configuration, Play}
+import play.api.Mode.Mode
 import play.api.http.Status
 import play.api.libs.json.{JsSuccess, Json}
 import uk.gov.hmrc.fileupload.TestApplicationComponents
@@ -34,7 +36,6 @@ import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.RunMode
 import uk.gov.hmrc.play.test.UnitSpec
-
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -51,6 +52,10 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
   object TestAuditConnector extends AuditConnector with RunMode {
     override lazy val consumer = Consumer(BaseUri("localhost", fakeAuditer.port(), "http"))
     override lazy val auditingConfig = AuditingConfig(Some(consumer), enabled = true, auditSource = "test-app")
+
+    override protected def mode: Mode = Play.current.mode
+
+    override protected def runModeConfiguration: Configuration = Play.current.configuration
   }
 
   private var loggedErrors = ListBuffer.empty[Throwable]

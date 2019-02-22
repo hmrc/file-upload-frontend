@@ -17,10 +17,7 @@
 package uk.gov.hmrc.fileupload.quarantine
 
 import cats.data.Xor
-import play.api.libs.json.JsString
-import uk.gov.hmrc.fileupload.fileupload._
 import uk.gov.hmrc.fileupload._
-
 import scala.concurrent.{ExecutionContext, Future}
 
 object QuarantineService {

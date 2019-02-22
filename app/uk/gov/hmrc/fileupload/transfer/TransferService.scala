@@ -19,12 +19,11 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
-import play.api.libs.json.{JsObject, JsValue}
+import play.api.libs.json.JsValue
 import play.api.mvc.Request
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
-
 import scala.concurrent.{ExecutionContext, Future}
 
 object TransferService {

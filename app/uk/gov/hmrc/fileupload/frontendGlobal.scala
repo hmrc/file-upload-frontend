@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload
 
 import java.net.InetSocketAddress
 import java.util.concurrent.Executors
-
 import akka.actor.ActorRef
 import cats.data.Xor
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
@@ -29,6 +28,7 @@ import javax.inject.Provider
 import net.ceedubs.ficus.Ficus._
 import play.Logger
 import play.api.ApplicationLoader.Context
+import play.api.Mode.Mode
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.ahc.AhcWSComponents
@@ -49,7 +49,6 @@ import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.frontend.config.LoadAuditingConfig
 import uk.gov.hmrc.play.frontend.filters.{FrontendAuditFilter, LoggingFilter}
-
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -73,7 +72,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
   override lazy val mode = context.environment.mode
   override lazy val runModeConfiguration = configuration
 
-  lazy val healthRoutes = new manualdihealth.Routes(httpErrorHandler, new uk.gov.hmrc.play.health.AdminController(configuration))
+  lazy val healthRoutes = new manualdihealth.Routes(httpErrorHandler, new uk.gov.hmrc.play.health.HealthController(configuration, environment))
   lazy val appRoutes = new app.Routes(
     httpErrorHandler,
     fileUploadController,
@@ -120,7 +119,7 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
 
-  lazy val healthController = new uk.gov.hmrc.play.health.AdminController(configuration)
+  lazy val healthController = new uk.gov.hmrc.play.health.HealthController(configuration, environment)
 
   lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, wsClient, s3Service)
 
@@ -204,6 +203,10 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   object MicroserviceAuditConnector extends AuditConnector with RunMode {
     override lazy val auditingConfig = LoadAuditingConfig(s"auditing")
+
+    override protected def mode: Mode = Play.current.mode
+
+    override protected def runModeConfiguration: Configuration = Play.current.configuration
   }
 
   object FrontendAuditFilter extends FrontendAuditFilter with AppName {
@@ -218,6 +221,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     override def maskedFormFields: Seq[String] = Seq()
 
     override def applicationPort: Option[Int] = None
+
+    override protected def appNameConfiguration: Configuration = Play.current.configuration
   }
 
 
@@ -253,4 +258,5 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     }
   }
 
+  override protected def appNameConfiguration: Configuration = Play.current.configuration
 }
