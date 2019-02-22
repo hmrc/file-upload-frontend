@@ -25,14 +25,13 @@ object FrontendBuild extends Build with MicroService {
 
 private object AppDependencies {
 
-  import play.sbt.PlayImport._
   import play.core.PlayVersion
 
-  private val frontendBootstrapVersion = "10.7.0"
-  private val playPartialsVersion = "6.2.0"
+  private val frontendBootstrapVersion = "12.4.0"
+  private val playPartialsVersion = "6.5.0"
   private val authClient = "2.17.0-play-25"
-  private val playConfigVersion = "4.3.0"
-  private val hmrcTestVersion = "3.2.0"
+  private val playConfigVersion = "7.3.0"
+  private val hmrcTestVersion = "3.3.0"
   private val clamAvClientVersion = "2.4.0"
   private val catsVersion = "0.6.0"
   private val awsJavaSdkVersion = "1.11.97"
@@ -81,7 +80,7 @@ private object AppDependencies {
         "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
         "com.typesafe.akka" %% "akka-testkit" % "2.3.2" % scope,
         "org.scalatestplus.play" %% "scalatestplus-play" % "2.0.1" % scope,
-        "io.findify" %% "s3mock" % "0.1.9" % scope
+        "io.findify" %% "s3mock" % "0.2.5" % scope
       )
     }.test
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,11 @@ package uk.gov.hmrc.fileupload.transfer
 import cats.data.Xor
 import play.api.http.Status
 import play.api.libs.iteratee.Iteratee
-import play.api.libs.json.{JsObject, JsValue}
+import play.api.libs.json.JsValue
 import play.api.mvc.Request
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
-
 import scala.concurrent.{ExecutionContext, Future}
 
 object TransferService {
