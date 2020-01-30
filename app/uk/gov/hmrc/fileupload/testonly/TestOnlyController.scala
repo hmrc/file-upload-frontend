@@ -25,6 +25,7 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
 import uk.gov.hmrc.fileupload.testonly.CreateEnvelopeRequest.{ByteStream, ContentTypes}
+import java.net.URLEncoder
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -83,8 +84,12 @@ class TestOnlyController(baseUrl: String, wSClient: WSClient, val s3Service: S3J
   }
 
   def transferGetEnvelopes(destination: Option[String]) = Action.async { implicit request =>
-    val queryParams = destination.map(q => s"?destination=$q").getOrElse("")
-    wSClient.url(s"$baseUrl/file-transfer/envelopes$queryParams").get().map { response =>
+    val transferUrl = s"$baseUrl/file-transfer/envelopes"
+    val wsUrl = destination match {
+      case Some(d)  => wSClient.url(transferUrl).withQueryString(("destination", URLEncoder.encode(d, "UTF-8")))
+      case None     => wSClient.url(transferUrl)
+    }
+    wsUrl.get().map { response =>
       val body = Json.parse(response.body)
       if(response.status!=200) InternalServerError(body + s" backendStatus:${response.status}")
       else Ok(body)
