@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 HM Revenue & Customs
+ * Copyright 2020 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,8 +82,9 @@ class TestOnlyController(baseUrl: String, wSClient: WSClient, val s3Service: S3J
     }
   }
 
-  def transferGetEnvelopes() = Action.async { implicit request =>
-    wSClient.url(s"$baseUrl/file-transfer/envelopes").get().map { response =>
+  def transferGetEnvelopes(destination: Option[String]) = Action.async { implicit request =>
+    val queryParams = destination.map(q => s"?destination=$q").getOrElse("")
+    wSClient.url(s"$baseUrl/file-transfer/envelopes$queryParams").get().map { response =>
       val body = Json.parse(response.body)
       if(response.status!=200) InternalServerError(body + s" backendStatus:${response.status}")
       else Ok(body)
@@ -138,7 +139,6 @@ class TestOnlyController(baseUrl: String, wSClient: WSClient, val s3Service: S3J
       }
     }
   }
-
 
   def iterateeToAccumulator[T](iteratee: Iteratee[ByteStream, T]): Accumulator[ByteString, T] = {
     val sink = Streams.iterateeToAccumulator(iteratee).toSink

@@ -20,7 +20,7 @@ POST        /file-upload/test-only/recreate-collections                         
 
 POST        /file-upload/test-only/routing/requests                                             uk.gov.hmrc.fileupload.testonly.TestOnlyController.routingRequests
 
-GET         /file-upload/test-only/transfer/get-envelopes                                       uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferGetEnvelopes
+GET         /file-upload/test-only/transfer/get-envelopes                                       uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferGetEnvelopes(destination: Option[String])
 GET         /file-upload/test-only/transfer/download-envelope/:envelopeId                       uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDownloadEnvelope(envelopeId: String)
 DELETE      /file-upload/test-only/transfer/delete-envelope/:envelopeId                         uk.gov.hmrc.fileupload.testonly.TestOnlyController.transferDeleteEnvelope(envelopeId: String)
 
