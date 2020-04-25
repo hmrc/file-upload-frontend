@@ -26,7 +26,6 @@ import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableService
 
 class RepositoryISpec extends IntegrationTestApplicationComponents {
 
-
   "When calling the envelope check" should {
 
     val envelopeAvailable = Repository.envelopeAvailable(_.execute().map(response => Xor.Right(response)), fileUploadBackendBaseUrl, components.wsClient) _

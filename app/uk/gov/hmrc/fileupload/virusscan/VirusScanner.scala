@@ -27,11 +27,12 @@ import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class VirusScanner(config : Configuration, environment: Environment) {
+class VirusScanner(clamAvClient: ClamAvConfig => ClamAntiVirus, config : Configuration, environment: Environment) {
   private def clamAvConfig = ClamAvConfig(config.getConfig(s"${environment.mode}.clam.antivirus"))
+  private val commandReadTimedOutMessage = "COMMAND READ TIMED OUT"
 
   def scanIteratee()(implicit ec: ExecutionContext): AvScanIteratee = {
-    val clamAntiVirus = ClamAntiVirus(clamAvConfig)
+    val clamAntiVirus = clamAvClient(clamAvConfig)
     scanIteratee(clamAntiVirus.send, clamAntiVirus.checkForVirus)
   }
 
@@ -44,6 +45,7 @@ class VirusScanner(config : Configuration, environment: Environment) {
         checkForVirus().map {
           case Success(true) => Xor.right(ScanResultFileClean)
           case Success(false) => Xor.left(ScanResultUnexpectedResult) // should never happen as client only returns Success(true)...
+          case Failure(virusDetected : VirusDetectedException) if virusDetected.virusInformation.contains(commandReadTimedOutMessage) => Xor.left(ScanReadCommandTimeOut)
           case Failure(_ : VirusDetectedException) => Xor.left(ScanResultVirusDetected)
           case Failure(NonFatalWithLogging(ex)) => Xor.left(ScanResultError(ex))
         }.recover {
