@@ -21,6 +21,8 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.ApplicationLoader.Context
 import play.api._
 import play.api.mvc.EssentialFilter
+import uk.gov.hmrc.clamav.ClamAntiVirus
+import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -32,8 +34,13 @@ trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSui
 
   override lazy val port: Int = 9000
 
+  lazy val clamAntiVirusTestClient: ClamAvConfig => ClamAntiVirus = ClamAntiVirus(_)
+  lazy val disableAvScanning: Boolean = true
+  lazy val numberOfTimeoutAttempts: Int = 1
+
   // accessed to get the components in tests
-  lazy val components: ApplicationModule = new IntegrationTestApplicationModule(context)
+  lazy val components: ApplicationModule =
+    new IntegrationTestApplicationModule(context, clamAntiVirusTestClient)
 
   lazy val context: ApplicationLoader.Context = {
     val classLoader = ApplicationLoader.getClass.getClassLoader
@@ -41,6 +48,8 @@ trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSui
     ApplicationLoader.createContext(env, initialSettings = Map(
       "auditing.enabled" -> "false",
       "Test.clam.antivirus.runStub" -> "true",
+      "Test.clam.antivirus.disableScanning" -> disableAvScanning.toString,
+      "Test.clam.antivirus.numberOfTimeoutAttempts" -> numberOfTimeoutAttempts.toString,
       "Test.microservice.services.file-upload-backend.port" -> backendPort.toString,
       "aws.service_endpoint" -> "http://127.0.0.1:8001",
       "aws.s3.bucket.upload.quarantine" -> "file-upload-quarantine",
@@ -52,6 +61,7 @@ trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSui
 
 }
 
-class IntegrationTestApplicationModule(context: Context) extends ApplicationModule(context = context) {
+class IntegrationTestApplicationModule(context: Context, clamAntiVirusTestClient: ClamAvConfig => ClamAntiVirus) extends ApplicationModule(context = context) {
   override lazy val httpFilters: Seq[EssentialFilter] = Seq()
+  override lazy val clamAvClient: ClamAvConfig => ClamAntiVirus = clamAntiVirusTestClient
 }

@@ -34,7 +34,7 @@ import scala.util.{Failure, Success}
 
 class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures with TestApplicationComponents {
 
-  def enumerator() = {
+  private def enumerator(): Enumerator[Array[Byte]] = {
     val inputString = "a random string long enough to by divided into chunks"
     Enumerator[Array[Byte]](inputString.grouped(10).map(_.getBytes).toList: _*)
   }
@@ -42,8 +42,9 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures with Tes
   val sendingChunksSuccessful = (_ : Array[Byte]) => Future.successful(())
   val noVirusFound = () => Future.successful(Success(true))
   val virusDetected = () => Future.successful(Failure(new VirusDetectedException("test virus")))
+  val commandTimeout = () => Future.successful(Failure(new VirusDetectedException("COMMAND READ TIMED OUT")))
 
-  val virusScanner = new VirusScanner(components.configuration, components.environment)
+  val virusScanner = new VirusScanner(ClamAntiVirus(_), components.configuration, components.environment)
 
   "VirusScanner" should {
 
@@ -51,7 +52,7 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures with Tes
       val chunkEnumerator = enumerator()
 
       val result = await(chunkEnumerator.run(new VirusScanner(
-        components.configuration, components.environment).scanIteratee(sendingChunksSuccessful, noVirusFound)).flatMap(identity))
+        ClamAntiVirus(_), components.configuration, components.environment).scanIteratee(sendingChunksSuccessful, noVirusFound)).flatMap(identity))
 
       result shouldBe Xor.Right(ScanResultFileClean)
     }
@@ -62,6 +63,15 @@ class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures with Tes
       val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, virusDetected)).flatMap(identity))
 
       result shouldBe Xor.Left(ScanResultVirusDetected)
+    }
+
+    //clamav client unfortunately returns this as a virus detected exception
+    s"return $ScanReadCommandTimeOut result if exception indicates command read timeout" in {
+      val chunkEnumerator = enumerator()
+
+      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, commandTimeout)).flatMap(identity))
+
+      result shouldBe Xor.Left(ScanReadCommandTimeOut)
     }
 
     s"return $ScanResultError result if checkForVirus returned unexpected Success(false) which should never happen" in {

@@ -18,6 +18,7 @@ package uk.gov.hmrc.fileupload
 
 import java.net.InetSocketAddress
 import java.util.concurrent.Executors
+
 import akka.actor.ActorRef
 import cats.data.Xor
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
@@ -33,6 +34,8 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.{EssentialFilter, Request}
+import uk.gov.hmrc.clamav.ClamAntiVirus
+import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.fileupload.controllers._
 import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
@@ -49,6 +52,7 @@ import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.frontend.config.LoadAuditingConfig
 import uk.gov.hmrc.play.frontend.filters.{FrontendAuditFilter, LoggingFilter}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -178,12 +182,14 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
     fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine)(createS3Key) _
 
 
-  lazy val scanner: () => AvScanIteratee = new VirusScanner(configuration, environment).scanIteratee
+  lazy val numberOfTimeoutAttempts: Int = configuration.getInt(s"${environment.mode}.clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
+  lazy val clamAvClient: ClamAvConfig => ClamAntiVirus = ClamAntiVirus(_)
+  lazy val scanner: () => AvScanIteratee = new VirusScanner(clamAvClient, configuration, environment).scanIteratee
   lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
     val disableScanning = configuration.getConfig(s"${environment.mode}.clam.antivirus")
                             .flatMap(_.getBoolean("disableScanning")).getOrElse(false)
     if (disableScanning) (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
-    else ScanningService.scanBinaryData(scanner, getFileFromQuarantine)(createS3Key)
+    else ScanningService.scanBinaryData(scanner, numberOfTimeoutAttempts, getFileFromQuarantine)(createS3Key)
   }
 
   override lazy val httpFilters: Seq[EssentialFilter] =
