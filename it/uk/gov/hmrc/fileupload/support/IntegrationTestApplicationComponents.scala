@@ -26,9 +26,6 @@ import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Try}
-
 trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSuite
                                                             with FakeFileUploadBackend {
   this: Suite =>
