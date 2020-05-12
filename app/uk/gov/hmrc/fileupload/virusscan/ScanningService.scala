@@ -57,15 +57,15 @@ object ScanningService {
   private def retries(scanResult: => Future[ScanResult],
                       timeoutAttempts: Int,
                       fileId: FileId,
-                      acc: Int = 1)
+                      scansAttempted: Int = 1)
                      (implicit ec: ExecutionContext): Future[ScanResult] = {
     scanResult.flatMap {
-      case result if acc == timeoutAttempts =>
-        Logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($acc of $timeoutAttempts)")
+      case result if scansAttempted >= timeoutAttempts =>
+        Logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($scansAttempted of $timeoutAttempts)")
         Future.successful(result)
       case Xor.Left(ScanReadCommandTimeOut) =>
-        Logger.error(s"Scan $acc of $timeoutAttempts timed out for fileId $fileId")
-        retries(scanResult, timeoutAttempts, fileId, acc + 1)
+        Logger.error(s"Scan $scansAttempted of $timeoutAttempts timed out for fileId $fileId")
+        retries(scanResult, timeoutAttempts, fileId, scansAttempted + 1)
       case result => Future.successful(result)
     }
   }
