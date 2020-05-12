@@ -36,6 +36,10 @@ class ScanningServiceSpec extends FlatSpec with Matchers with ScalaFutures with 
 
   "A successful scan" should behave like scanWithNumberOfAttempts(Xor.Right(ScanResultFileClean), 1)
 
+  "A successful scan with 0 scanTimeoutAttempts" should behave like scanWithNumberOfAttempts(Xor.Right(ScanResultFileClean), 1, 0)
+
+  "A successful scan with -1 scanTimeoutAttempts" should behave like scanWithNumberOfAttempts(Xor.Right(ScanResultFileClean), 1, -1)
+
   "A scan with a virus" should behave like scanWithNumberOfAttempts(Xor.Left(ScanResultVirusDetected), 1)
 
   "A scan with a failure sending chunks" should behave like scanWithNumberOfAttempts(Xor.Left(ScanResultFailureSendingChunks(exception)), 1)
@@ -69,12 +73,12 @@ class ScanningServiceSpec extends FlatSpec with Matchers with ScalaFutures with 
     }
   }
 
-  def scanWithNumberOfAttempts(scanResult: ScanResult, attempts: Int) {
+  def scanWithNumberOfAttempts(scanResult: ScanResult, attempts: Int, maxNumberOfAttemps: Int = timeoutAttempts) {
     it should s"make exactly $attempts attempt[s] at scanning" in {
       val scanner = stubFunction[Iteratee[Array[Byte], Future[ScanResult]]]
       scanner.when().returns(buildIteratee(scanResult))
 
-      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = timeoutAttempts, getFile = (_, _) => file)((_, _) => "some-key")(EnvelopeId(), FileId(), FileRefId()).futureValue
+      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = maxNumberOfAttemps, getFile = (_, _) => file)((_, _) => "some-key")(EnvelopeId(), FileId(), FileRefId()).futureValue
 
       result shouldBe scanResult
 
