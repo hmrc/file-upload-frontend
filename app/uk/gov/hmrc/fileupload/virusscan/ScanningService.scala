@@ -51,21 +51,21 @@ object ScanningService {
                     (envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId)
                     (implicit ec: ExecutionContext): Future[ScanResult] = {
     val appendedKey = s3KeyAppender(envelopeId, fileId)
-    retries(scan(scanner, getFile(appendedKey, fileRefId.value)), scanTimeoutAttempts, fileId)
+    retries(scan(scanner, getFile(appendedKey, fileRefId.value)), fileId, scanTimeoutAttempts)
   }
 
   private def retries(scanResult: => Future[ScanResult],
-                      timeoutAttempts: Int,
                       fileId: FileId,
+                      maximumScansAllowed: Int,
                       scansAttempted: Int = 1)
                      (implicit ec: ExecutionContext): Future[ScanResult] = {
     scanResult.flatMap {
-      case result if scansAttempted >= timeoutAttempts =>
-        Logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($scansAttempted of $timeoutAttempts)")
+      case result if scansAttempted >= maximumScansAllowed =>
+        Logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($scansAttempted of $maximumScansAllowed)")
         Future.successful(result)
       case Xor.Left(ScanReadCommandTimeOut) =>
-        Logger.error(s"Scan $scansAttempted of $timeoutAttempts timed out for fileId $fileId")
-        retries(scanResult, timeoutAttempts, fileId, scansAttempted + 1)
+        Logger.error(s"Scan $scansAttempted of $maximumScansAllowed timed out for fileId $fileId")
+        retries(scanResult, fileId, maximumScansAllowed, scansAttempted + 1)
       case result => Future.successful(result)
     }
   }
