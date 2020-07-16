@@ -36,10 +36,13 @@ import com.google.common.base.MoreObjects.ToStringHelper
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
+import uk.gov.hmrc.fileupload.zip.ZipStream
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
@@ -95,16 +98,14 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     om
   }
 
-  def getFileLengthFromQuarantine(key: String, versionId: String) =
+  def getFileLengthFromQuarantine(key: String, versionId: String): Long =
     getFileLength(awsConfig.quarantineBucketName, key, versionId)
 
-  def getFileLength(bucketName: String, key: String, versionId: String): Long = {
+  def getFileLength(bucketName: String, key: String, versionId: String): Long =
     getObjectMetadata(bucketName, key, versionId).getContentLength
-  }
 
-  def getObjectMetadata(bucketName: String, key: String, versionId: String): ObjectMetadata = {
+  def getObjectMetadata(bucketName: String, key: String, versionId: String): ObjectMetadata =
     s3Client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key, versionId))
-  }
 
   def objectMetadataWithServerSideEncryption: ObjectMetadata = {
     val om = new ObjectMetadata()
@@ -112,7 +113,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     om
   }
 
-  private def downloadByObject(s3Object: S3Object) = {
+  private def downloadByObject(s3Object: S3Object): StreamWithMetadata = {
     val meta = s3Object.getObjectMetadata
     Logger.info(s"Downloading $s3Object from S3")
     metricGetObjectContent.mark()
@@ -126,31 +127,29 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
       ))
   }
 
-  def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): Option[S3Object] = {
+  def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): Option[S3Object] =
     if (s3Client.doesObjectExist(bucketName, key.value)) {
       Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $S3KeyName and version: $versionId")
       metricGetObjectByKeyVersion.mark()
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId)))
     }
     else None
-  }
 
-  def objectByKey(bucketName: String, key: S3KeyName): Option[S3Object] = {
+  def objectByKey(bucketName: String, key: S3KeyName): Option[S3Object] =
     if (s3Client.doesObjectExist(bucketName, key.value)) {
       Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $S3KeyName)")
       metricGetObjectByKey.mark()
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value)))
     }
     else None
-  }
 
-  def download(bucketName: String, key: S3KeyName, versionId: String) =
+  def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata] =
     objectByKeyVersion(bucketName, key, versionId).map(downloadByObject)
 
-  def download(bucketName: String, key: S3KeyName) =
+  def download(bucketName: String, key: S3KeyName): Option[StreamWithMetadata] =
     objectByKey(bucketName, key).map(downloadByObject)
 
-  override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext) = {
+  override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
     Future {
       val s3Object = s3Client.getObject(new GetObjectRequest(awsConfig.quarantineBucketName, key, versionId))
       val objectDataIS = s3Object.getObjectContent
@@ -166,20 +165,18 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] = {
     val fileInfo = s"bucket=$bucketName key=$key fileSize=$fileSize"
     val uploadTime = metricUploadCompleted.time()
-    Try( transferManager.upload(bucketName, key, file, objectMetadata(fileSize)) ) match {
+    Try(transferManager.upload(bucketName, key, file, objectMetadata(fileSize))) match {
       case Success(upload) =>
         val promise = Promise[UploadResult]
         Logger.info(s"upload-s3 started: $fileInfo")
         upload.addProgressListener(new ProgressListener {
           var events:List[ProgressEvent] = List.empty
-          def progressChanged(progressEvent: ProgressEvent): Unit = Try{
+          def progressChanged(progressEvent: ProgressEvent): Unit = Try {
             events = progressEvent :: events
             if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
               uploadTime.stop()
               metricUploadCompletedSize.inc(fileSize)
-              val resultTry = Try({
-                upload.waitForUploadResult()
-              })
+              val resultTry = Try(upload.waitForUploadResult())
               Logger.info(s"upload-s3 completed: $fileInfo with success=${resultTry.isSuccess}")
               promise.tryComplete(resultTry)
             } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT ||
@@ -187,7 +184,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
             ) {
               metricUploadFailed.mark()
               val exception = upload.waitForException()
-              Logger.error(s"""upload-s3 Transfer events: ${events.reverse.map(_.toString).mkString("\n")}""")
+              Logger.error(s"upload-s3 Transfer events: ${events.reverse.map(_.toString).mkString("\n")}")
               Logger.error(s"upload-s3 error: transfer failed: $fileInfo", exception)
               promise.failure(new Exception("transfer failed", exception))
             }
@@ -198,9 +195,8 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     }
   }
 
-  def listFilesInBucket(bucketName: String) = {
+  def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], akka.NotUsed] =
     Source.fromIterator(() => new S3FilesIterator(s3Client, bucketName))
-  }
 
   def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult] = Try {
     Logger.info(s"Copying a file key $key and version: $versionId")
@@ -210,7 +206,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     s3Client.copyObject(copyRequest)
   }
 
-  def getBucketProperties(bucketName: String) = {
+  def getBucketProperties(bucketName: String): JsObject = {
     val versioningStatus = s3Client.getBucketVersioningConfiguration(bucketName).getStatus
     Json.obj(
       "versioningStatus" -> versioningStatus
@@ -229,7 +225,108 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
       val outcome = Try(s3Client.deleteVersion(bucketName, summary.getKey, summary.getVersionId))
       Logger.info(s"Outcome of deleting $key / ${summary.getVersionId}: $outcome")
     }
+  }
 
+  import java.io.{BufferedOutputStream, ByteArrayOutputStream}
+  import java.net.URL
+  import java.util.UUID
+  import java.util.zip.ZipOutputStream
+  import akka.stream.Materializer
+  import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+  import akka.util.ByteString
+  import play.api.libs.iteratee.Enumerator
+  import play.api.libs.streams.Streams
+
+  def zipAndUpload(
+    envelopeId: EnvelopeId,
+    files: List[(FileId, Option[String])]
+  )(implicit
+    ec: ExecutionContext,
+    materializer: Materializer
+  ): Future[URL] = {
+
+    // TODO can we just use a standard library? should be rewritten to use akka.stream rather than iteratees.
+    // e.g. akka.stream.scaladsl.Compression - does it support multi-file
+    // (what about 0 compression level, so we can estimate the file size, and avoid loading into memory?)
+    val zip: Enumerator[Array[Byte]] = createZipStream(envelopeId, files)
+
+    val zipId = UUID.randomUUID().toString
+
+    val source: Source[Array[Byte], akka.NotUsed] = Source.fromPublisher(Streams.enumeratorToPublisher(zip))
+
+    val stdin: Sink[Array[Byte], InputStream] = StreamConverters.asInputStream().contramap[Array[Byte]](ByteString.apply)
+
+    val is: InputStream = source.toMat(stdin)(Keep.right).run()
+
+    val res: Future[UploadResult] =
+      upload(
+        bucketName = awsConfig.transientBucketName,
+        key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(zipId),
+        file       = is,
+        fileSize   = -1 // TODO support None (or can we get the filesize without loading into memory/ writing to a temporary location...)
+      )
+
+    res.map { uploadResult =>
+      presign(
+        bucketName         = uploadResult.getBucketName,
+        key                = uploadResult.getKey,
+        expirationDuration = awsConfig.zipDuration
+      )
+    }
+  }
+
+  def createZipStream(envelopeId: EnvelopeId, files: List[(FileId, Option[String])])(implicit ec: ExecutionContext, materializer: Materializer): Enumerator[Array[Byte]] =
+    if (files.isEmpty)
+      emptyZip()
+    else {
+      val zipFiles: List[ZipStream.ZipFileInfo] = files.map {
+        case (fileId, fileName) =>
+          // TODO rewrite, dropping Iteratees for akka.streams
+
+          def sourceToEnumerator(source: Source[ByteString, _]): Enumerator[Array[Byte]] =
+            Streams.publisherToEnumerator(
+              source.via(Flow[ByteString].map(_.toArray)).runWith(Sink.asPublisher(fanout = false))
+            )
+
+          def getContent(envelopeId: EnvelopeId, fileId: FileId): Future[Enumerator[Array[Byte]]] =
+            download(
+              bucketName = awsConfig.transientBucketName,
+              key = S3KeyName(S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId))
+            ) match {
+              case None => Future.failed(sys.error(s"Could not find file $fileId, for envelope $envelopeId"))
+              case Some(streamWithMetadata) => Future.successful(sourceToEnumerator(streamWithMetadata.stream))
+            }
+
+          ZipStream.ZipFileInfo(
+            name       = fileName.getOrElse(UUID.randomUUID().toString),
+            isDir      = false,
+            modified   = new java.util.Date(),
+            getContent = Some(() => getContent(envelopeId, fileId))
+          )
+      }
+      ZipStream.ZipStreamEnumerator(zipFiles)
+    }
+
+  def emptyZip(): Enumerator[Array[Byte]] = {
+    val baos = new ByteArrayOutputStream()
+    val out  = new ZipOutputStream(new BufferedOutputStream(baos))
+    out.close()
+    Enumerator(baos.toByteArray)
+  }
+
+  import com.amazonaws.HttpMethod
+
+  def presign(bucketName: String, key: String, expirationDuration: Duration): URL = {
+    import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
+
+    val expiration = new java.util.Date
+    expiration.setTime(expiration.getTime + expirationDuration.toMillis)
+
+    s3Client.generatePresignedUrl(
+      new GeneratePresignedUrlRequest(bucketName, key)
+        .withMethod(HttpMethod.GET)
+        .withExpiration(expiration)
+    )
   }
 }
 

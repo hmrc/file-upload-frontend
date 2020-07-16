@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import java.net.URL
+
 import akka.util.ByteString
 import play.api.Logger
 import play.api.http.HttpEntity
@@ -24,13 +26,15 @@ import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromBucket
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
-class FileDownloadController(downloadFromTransient: DownloadFromBucket,
-                             createS3Key: (EnvelopeId, FileId) => S3KeyName,
-                             now: () => Long,
-                             downloadFromQuarantine: DownloadFromBucket)
-  (implicit executionContext: ExecutionContext) extends Controller {
+class FileDownloadController(
+  downloadFromTransient : DownloadFromBucket,
+  createS3Key           : (EnvelopeId, FileId) => S3KeyName,
+  now                   : () => Long,
+  downloadFromQuarantine: DownloadFromBucket,
+  zipAndUpload          : (EnvelopeId, List[(FileId, Option[String])]) => Future[URL]
+)(implicit executionContext: ExecutionContext) extends Controller {
 
   def download(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
     Logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
@@ -61,5 +65,14 @@ class FileDownloadController(downloadFromTransient: DownloadFromBucket,
         body = HttpEntity.Strict(ByteString("{\"msg\":\"File not found\"}"), Some("application/json"))
       )
     }
+  }
+
+  def presign(envelopeId: EnvelopeId): Action[AnyContent] = Action.async {
+    Logger.info(s"preparing presigned url for envelopeId: $envelopeId")
+      // TODO do we know what files are in the envelope? Or do we have to send the list from frontend (it's certainly in S3....)
+      val files = List.empty
+      zipAndUpload(envelopeId, files).map { url =>
+        Created.withHeaders(LOCATION -> url.toString)
+      }
   }
 }

@@ -108,12 +108,15 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   val redirectionFeature = new RedirectionFeature(configuration.underlying, httpErrorHandler)
 
+  lazy val zipAndUpload = s3Service.zipAndUpload _
+
   lazy val fileDownloadController =
     new FileDownloadController(
       downloadFromTransient,
       (e, f) => S3KeyName(createS3Key(e, f)),
       now,
-      s3Service.downloadFromQuarantine
+      s3Service.downloadFromQuarantine,
+      zipAndUpload
     )
 
   lazy val loggerHelper = new LoggerHelperFileExtensionAndUserAgent
