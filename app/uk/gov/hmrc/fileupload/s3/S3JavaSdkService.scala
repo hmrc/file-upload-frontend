@@ -81,7 +81,9 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   val s3Client = awsConfig.endpoint.fold(
     s3Builder.withRegion(Regions.EU_WEST_2)
   ) { endpoint =>
-    s3Builder.withEndpointConfiguration(new EndpointConfiguration(endpoint, "local-test"))
+    s3Builder
+      .withPathStyleAccessEnabled(true) // for localstack
+      .withEndpointConfiguration(new EndpointConfiguration(endpoint, "local-test"))
   }.build()
 
   val transferManager =
@@ -92,7 +94,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
       .withS3Client(s3Client)
       .build()
 
-  def objectMetadata(fileSize: Int) = {
+  def objectMetadata(fileSize: Int): ObjectMetadata = {
     val om = objectMetadataWithServerSideEncryption
     om.setContentLength(fileSize)
     om
@@ -162,10 +164,13 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     }
   }
 
-  def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] = {
-    val fileInfo = s"bucket=$bucketName key=$key fileSize=$fileSize"
+  def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] =
+    upload2(bucketName, key, file, objectMetadata(fileSize))
+
+  def upload2(bucketName: String, key: String, file: InputStream, metadata: ObjectMetadata): Future[UploadResult] = {
+    val fileInfo = s"bucket=$bucketName key=$key fileSize=${metadata.getContentLength}"
     val uploadTime = metricUploadCompleted.time()
-    Try(transferManager.upload(bucketName, key, file, objectMetadata(fileSize))) match {
+    Try(transferManager.upload(bucketName, key, file, metadata)) match {
       case Success(upload) =>
         val promise = Promise[UploadResult]
         Logger.info(s"upload-s3 started: $fileInfo")
@@ -175,7 +180,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
             events = progressEvent :: events
             if (progressEvent.getEventType == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
               uploadTime.stop()
-              metricUploadCompletedSize.inc(fileSize)
+              metricUploadCompletedSize.inc(metadata.getContentLength)
               val resultTry = Try(upload.waitForUploadResult())
               Logger.info(s"upload-s3 completed: $fileInfo with success=${resultTry.isSuccess}")
               promise.tryComplete(resultTry)
@@ -248,22 +253,29 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     // TODO can we just use a standard library? should be rewritten to use akka.stream rather than iteratees.
     // e.g. akka.stream.scaladsl.Compression - does it support multi-file
     // (what about 0 compression level, so we can estimate the file size, and avoid loading into memory?)
-    val zip: Enumerator[Array[Byte]] = createZipStream(envelopeId, files)
+    val zipStream: Enumerator[Array[Byte]] = createZipStream(envelopeId, files)
 
-    val zipId = UUID.randomUUID().toString
+    // TODO if we use this name, we replace the file each time we generate a pre-signed url, but the previously issued url is not invalidated - should it? (how?)
+    val zipId = s"$envelopeId.zip" //UUID.randomUUID().toString
 
-    val source: Source[Array[Byte], akka.NotUsed] = Source.fromPublisher(Streams.enumeratorToPublisher(zip))
+    val zipSource: Source[Array[Byte], akka.NotUsed] = Source.fromPublisher(Streams.enumeratorToPublisher(zipStream))
 
-    val stdin: Sink[Array[Byte], InputStream] = StreamConverters.asInputStream().contramap[Array[Byte]](ByteString.apply)
+    val isSink: Sink[Array[Byte], InputStream] = StreamConverters.asInputStream().contramap[Array[Byte]](ByteString.apply)
 
-    val is: InputStream = source.toMat(stdin)(Keep.right).run()
+    val is: InputStream = zipSource.toMat(isSink)(Keep.right).run()
 
     val res: Future[UploadResult] =
-      upload(
+      upload2(
         bucketName = awsConfig.transientBucketName,
         key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(zipId),
         file       = is,
-        fileSize   = -1 // TODO support None (or can we get the filesize without loading into memory/ writing to a temporary location...)
+        metadata   = {
+                      val om = new ObjectMetadata()
+                      om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
+                      //om.setContentLength(220000000L) // TODO if not set, will buffer all in to memory... (can we get the filesize without loading into memory/ writing to a temporary location...)
+                      om.setContentType("application/zip")
+                      om
+                     }
       )
 
     res.map { uploadResult =>
@@ -272,6 +284,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
         key                = uploadResult.getKey,
         expirationDuration = awsConfig.zipDuration
       )
+      // TODO we also need to return the name size, md5 checksum (or other algorithm)
     }
   }
 
