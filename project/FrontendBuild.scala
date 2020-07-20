@@ -19,7 +19,7 @@ import sbt._
 object FrontendBuild extends Build with MicroService {
 
   val appName = "file-upload-frontend"
-  
+
   override lazy val appDependencies: Seq[ModuleID] = AppDependencies()
 }
 
@@ -42,7 +42,8 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "auth-client" % authClient,
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
     "org.typelevel" %% "cats" % catsVersion,
-    "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion
+    "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion,
+    "com.lightbend.akka" %% "akka-stream-alpakka-file" % "2.0.1"
   )
 
   trait TestDependencies {
@@ -87,5 +88,3 @@ private object AppDependencies {
 
   def apply() = compile ++ Test() ++ IntegrationTest()
 }
-
-

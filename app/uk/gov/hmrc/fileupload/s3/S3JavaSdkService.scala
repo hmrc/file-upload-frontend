@@ -36,10 +36,10 @@ import com.google.common.base.MoreObjects.ToStringHelper
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
-import uk.gov.hmrc.fileupload.zip.ZipStream
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -250,81 +250,57 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     materializer: Materializer
   ): Future[URL] = {
 
-    // TODO can we just use a standard library? should be rewritten to use akka.stream rather than iteratees.
-    // e.g. akka.stream.scaladsl.Compression - does it support multi-file
-    // (what about 0 compression level, so we can estimate the file size, and avoid loading into memory?)
-    val zipStream: Enumerator[Array[Byte]] = createZipStream(envelopeId, files)
+    import java.nio.file.Paths
+    import akka.stream.scaladsl.FileIO
+    import akka.stream.alpakka.file.ArchiveMetadata
+    import akka.stream.alpakka.file.scaladsl.Archive
+
+    val filesStream = Source(
+      files.map { case (fileId, name) =>
+        val filename = name.getOrElse(UUID.randomUUID().toString)
+        download(
+          bucketName = awsConfig.transientBucketName,
+          key = S3KeyName(S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId))
+        ) match {
+          case None => sys.error(s"Could not find file $fileId, for envelope $envelopeId")
+          case Some(streamWithMetadata) => (ArchiveMetadata(filename), streamWithMetadata.stream)
+        }
+      }
+    )
 
     // TODO if we use this name, we replace the file each time we generate a pre-signed url, but the previously issued url is not invalidated - should it? (how?)
     val zipId = s"$envelopeId.zip" //UUID.randomUUID().toString
 
-    val zipSource: Source[Array[Byte], akka.NotUsed] = Source.fromPublisher(Streams.enumeratorToPublisher(zipStream))
+    val tempFile = TemporaryFile("prefix", "suffix")
 
-    val isSink: Sink[Array[Byte], InputStream] = StreamConverters.asInputStream().contramap[Array[Byte]](ByteString.apply)
+    val result: Future[akka.stream.IOResult] = filesStream
+      .via(Archive.zip())
+      .runWith(FileIO.toPath(tempFile.file.toPath))
 
-    val is: InputStream = zipSource.toMat(isSink)(Keep.right).run()
-
-    val res: Future[UploadResult] =
-      upload2(
-        bucketName = awsConfig.transientBucketName,
-        key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(zipId),
-        file       = is,
-        metadata   = {
-                      val om = new ObjectMetadata()
-                      om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
-                      //om.setContentLength(220000000L) // TODO if not set, will buffer all in to memory... (can we get the filesize without loading into memory/ writing to a temporary location...)
-                      om.setContentType("application/zip")
-                      om
-                     }
-      )
-
-    res.map { uploadResult =>
-      presign(
-        bucketName         = uploadResult.getBucketName,
-        key                = uploadResult.getKey,
-        expirationDuration = awsConfig.zipDuration
-      )
-      // TODO we also need to return the name size, md5 checksum (or other algorithm)
-    }
-  }
-
-  def createZipStream(envelopeId: EnvelopeId, files: List[(FileId, Option[String])])(implicit ec: ExecutionContext, materializer: Materializer): Enumerator[Array[Byte]] =
-    if (files.isEmpty)
-      emptyZip()
-    else {
-      val zipFiles: List[ZipStream.ZipFileInfo] = files.map {
-        case (fileId, fileName) =>
-          // TODO rewrite, dropping Iteratees for akka.streams
-
-          def sourceToEnumerator(source: Source[ByteString, _]): Enumerator[Array[Byte]] =
-            Streams.publisherToEnumerator(
-              source.via(Flow[ByteString].map(_.toArray)).runWith(Sink.asPublisher(fanout = false))
-            )
-
-          def getContent(envelopeId: EnvelopeId, fileId: FileId): Future[Enumerator[Array[Byte]]] =
-            download(
-              bucketName = awsConfig.transientBucketName,
-              key = S3KeyName(S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId))
-            ) match {
-              case None => Future.failed(sys.error(s"Could not find file $fileId, for envelope $envelopeId"))
-              case Some(streamWithMetadata) => Future.successful(sourceToEnumerator(streamWithMetadata.stream))
-            }
-
-          ZipStream.ZipFileInfo(
-            name       = fileName.getOrElse(UUID.randomUUID().toString),
-            isDir      = false,
-            modified   = new java.util.Date(),
-            getContent = Some(() => getContent(envelopeId, fileId))
-          )
+    result.flatMap { _ =>
+      val res: Future[UploadResult] =
+        upload2(
+          bucketName = awsConfig.transientBucketName,
+          key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(zipId),
+          file       = new java.io.FileInputStream(tempFile.file),
+          metadata   = {
+                        val om = new ObjectMetadata()
+                        om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
+                        om.setContentLength(tempFile.file.length)
+                        om.setContentType("application/zip")
+                        om
+                       }
+        )
+      res.map { uploadResult =>
+        presign(
+          bucketName         = uploadResult.getBucketName,
+          key                = uploadResult.getKey,
+          expirationDuration = awsConfig.zipDuration
+        )
+        // TODO we also need to return the name size, md5 checksum (or other algorithm)
       }
-      ZipStream.ZipStreamEnumerator(zipFiles)
     }
-
-  def emptyZip(): Enumerator[Array[Byte]] = {
-    val baos = new ByteArrayOutputStream()
-    val out  = new ZipOutputStream(new BufferedOutputStream(baos))
-    out.close()
-    Enumerator(baos.toByteArray)
+    .andThen { case _ => tempFile.clean() }
   }
 
   import com.amazonaws.HttpMethod
