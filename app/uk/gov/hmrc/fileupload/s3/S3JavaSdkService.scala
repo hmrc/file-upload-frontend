@@ -16,11 +16,18 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import java.io.InputStream
+import java.io.{File, InputStream}
+import java.net.URL
+import java.nio.file.Paths
 import java.util.concurrent.Executors
+import java.util.{Base64, UUID}
+import java.security.{DigestInputStream, MessageDigest}
 
-import akka.stream.scaladsl.{Source, StreamConverters}
-import com.amazonaws.ClientConfiguration
+import akka.stream.Materializer
+import akka.stream.alpakka.file.ArchiveMetadata
+import akka.stream.alpakka.file.scaladsl.Archive
+import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
+import com.amazonaws.{ClientConfiguration, HttpMethod}
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.client.builder.ExecutorFactory
@@ -35,8 +42,8 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.base.MoreObjects.ToStringHelper
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder
 import play.api.Logger
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.Files.TemporaryFile
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
@@ -47,7 +54,7 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: MetricRegistry) extends S3Service {
-  val awsConfig = new AwsConfig(configuration)
+  override val awsConfig = new AwsConfig(configuration)
 
   val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
 
@@ -94,13 +101,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
       .withS3Client(s3Client)
       .build()
 
-  def objectMetadata(fileSize: Int): ObjectMetadata = {
-    val om = objectMetadataWithServerSideEncryption
-    om.setContentLength(fileSize)
-    om
-  }
-
-  def getFileLengthFromQuarantine(key: String, versionId: String): Long =
+  override def getFileLengthFromQuarantine(key: String, versionId: String): Long =
     getFileLength(awsConfig.quarantineBucketName, key, versionId)
 
   def getFileLength(bucketName: String, key: String, versionId: String): Long =
@@ -131,7 +132,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
   def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): Option[S3Object] =
     if (s3Client.doesObjectExist(bucketName, key.value)) {
-      Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $S3KeyName and version: $versionId")
+      Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $key and version: $versionId")
       metricGetObjectByKeyVersion.mark()
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId)))
     }
@@ -139,19 +140,19 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
   def objectByKey(bucketName: String, key: S3KeyName): Option[S3Object] =
     if (s3Client.doesObjectExist(bucketName, key.value)) {
-      Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $S3KeyName)")
+      Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $key)")
       metricGetObjectByKey.mark()
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value)))
     }
     else None
 
-  def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata] =
+  override def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata] =
     objectByKeyVersion(bucketName, key, versionId).map(downloadByObject)
 
-  def download(bucketName: String, key: S3KeyName): Option[StreamWithMetadata] =
+  override def download(bucketName: String, key: S3KeyName): Option[StreamWithMetadata] =
     objectByKey(bucketName, key).map(downloadByObject)
 
-  override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
+  override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] =
     Future {
       val s3Object = s3Client.getObject(new GetObjectRequest(awsConfig.quarantineBucketName, key, versionId))
       val objectDataIS = s3Object.getObjectContent
@@ -162,12 +163,17 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
       Some(FileData(length = metadata.getContentLength, filename = s3Object.getKey,
         contentType = Some(metadata.getContentType), data = Enumerator.fromStream(objectDataIS)))
     }
-  }
 
-  def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] =
-    upload2(bucketName, key, file, objectMetadata(fileSize))
+  override def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] =
+    uploadFile(bucketName, key, file,
+      metadata = {
+        val om = objectMetadataWithServerSideEncryption
+        om.setContentLength(fileSize)
+        om
+      }
+    )
 
-  def upload2(bucketName: String, key: String, file: InputStream, metadata: ObjectMetadata): Future[UploadResult] = {
+  def uploadFile(bucketName: String, key: String, file: InputStream, metadata: ObjectMetadata): Future[UploadResult] = {
     val fileInfo = s"bucket=$bucketName key=$key fileSize=${metadata.getContentLength}"
     val uploadTime = metricUploadCompleted.time()
     Try(transferManager.upload(bucketName, key, file, metadata)) match {
@@ -200,10 +206,10 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     }
   }
 
-  def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], akka.NotUsed] =
+  override def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], akka.NotUsed] =
     Source.fromIterator(() => new S3FilesIterator(s3Client, bucketName))
 
-  def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult] = Try {
+  override def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult] = Try {
     Logger.info(s"Copying a file key $key and version: $versionId")
     metricCopyFromQtoT.mark()
     val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key, versionId, awsConfig.transientBucketName, key)
@@ -211,14 +217,14 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     s3Client.copyObject(copyRequest)
   }
 
-  def getBucketProperties(bucketName: String): JsObject = {
+  override def getBucketProperties(bucketName: String): JsObject = {
     val versioningStatus = s3Client.getBucketVersioningConfiguration(bucketName).getStatus
     Json.obj(
       "versioningStatus" -> versioningStatus
     )
   }
 
-  def deleteObjectFromBucket(bucketName: String, key: String): Unit = {
+  override def deleteObjectFromBucket(bucketName: String, key: String): Unit = {
 
     val summaries = s3Client.listVersions(bucketName, key).getVersionSummaries
 
@@ -232,78 +238,68 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     }
   }
 
-  import java.io.{BufferedOutputStream, ByteArrayOutputStream}
-  import java.net.URL
-  import java.util.UUID
-  import java.util.zip.ZipOutputStream
-  import akka.stream.Materializer
-  import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
-  import akka.util.ByteString
-  import play.api.libs.iteratee.Enumerator
-  import play.api.libs.streams.Streams
-
-  def zipAndUpload(
+  override def zipAndPresign(
     envelopeId: EnvelopeId,
-    files: List[(FileId, Option[String])]
+    files     : List[(FileId, Option[String])]
   )(implicit
-    ec: ExecutionContext,
+    ec          : ExecutionContext,
     materializer: Materializer
-  ): Future[URL] = {
+  ): Future[ZipData] = {
+    val fileName = s"$envelopeId.zip"
+    val tempFile = TemporaryFile(prefix = "zip")
+    (for {
+       _            <- zipToFile(envelopeId, files, tempFile.file)
+       fileSize     =  tempFile.file.length
+       is           =  new java.io.FileInputStream(tempFile.file)
 
-    import java.nio.file.Paths
-    import akka.stream.scaladsl.FileIO
-    import akka.stream.alpakka.file.ArchiveMetadata
-    import akka.stream.alpakka.file.scaladsl.Archive
+       // decorate inputstream so we can calculate checksum on same pass
+       md           =  MessageDigest.getInstance("MD5")
+       dis          =  new DigestInputStream(is, md)
 
-    val filesStream = Source(
+       uploadResult <- uploadFile(
+                         bucketName = awsConfig.transientBucketName,
+                         key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(fileName),
+                         file       = dis,
+                         metadata   = { val om = new ObjectMetadata()
+                                        om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
+                                        om.setContentLength(fileSize)
+                                        om.setContentType("application/zip")
+                                        om
+                                      }
+                       )
+       url          =  presign(
+                         bucketName         = uploadResult.getBucketName,
+                         key                = uploadResult.getKey,
+                         expirationDuration = awsConfig.zipDuration
+                       )
+     } yield
+         ZipData(
+           name        = fileName,
+           size        = fileSize,
+           md5Checksum = Base64.getEncoder().encodeToString(md.digest()),
+           url         = url
+         )
+    ).andThen { case _ => tempFile.clean() }
+  }
+
+  def zipToFile(
+    envelopeId: EnvelopeId,
+    files     : List[(FileId, Option[String])],
+    targetFile: File
+  )(implicit materializer: Materializer): Future[akka.stream.IOResult] =
+    Source(
       files.map { case (fileId, name) =>
         val filename = name.getOrElse(UUID.randomUUID().toString)
         download(
           bucketName = awsConfig.transientBucketName,
-          key = S3KeyName(S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId))
+          key        = S3KeyName(S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId))
         ) match {
           case None => sys.error(s"Could not find file $fileId, for envelope $envelopeId")
           case Some(streamWithMetadata) => (ArchiveMetadata(filename), streamWithMetadata.stream)
         }
       }
-    )
-
-    // TODO if we use this name, we replace the file each time we generate a pre-signed url, but the previously issued url is not invalidated - should it? (how?)
-    val zipId = s"$envelopeId.zip" //UUID.randomUUID().toString
-
-    val tempFile = TemporaryFile("prefix", "suffix")
-
-    val result: Future[akka.stream.IOResult] = filesStream
-      .via(Archive.zip())
-      .runWith(FileIO.toPath(tempFile.file.toPath))
-
-    result.flatMap { _ =>
-      val res: Future[UploadResult] =
-        upload2(
-          bucketName = awsConfig.transientBucketName,
-          key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(zipId),
-          file       = new java.io.FileInputStream(tempFile.file),
-          metadata   = {
-                        val om = new ObjectMetadata()
-                        om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
-                        om.setContentLength(tempFile.file.length)
-                        om.setContentType("application/zip")
-                        om
-                       }
-        )
-      res.map { uploadResult =>
-        presign(
-          bucketName         = uploadResult.getBucketName,
-          key                = uploadResult.getKey,
-          expirationDuration = awsConfig.zipDuration
-        )
-        // TODO we also need to return the name size, md5 checksum (or other algorithm)
-      }
-    }
-    .andThen { case _ => tempFile.clean() }
-  }
-
-  import com.amazonaws.HttpMethod
+    ).via(Archive.zip())
+     .runWith(FileIO.toPath(targetFile.toPath))
 
   def presign(bucketName: String, key: String, expirationDuration: Duration): URL = {
     import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest

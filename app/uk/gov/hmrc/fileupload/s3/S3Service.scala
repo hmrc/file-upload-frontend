@@ -17,14 +17,16 @@
 package uk.gov.hmrc.fileupload.s3
 
 import java.io.InputStream
+import java.net.URL
 
 import akka.NotUsed
-import akka.stream.IOResult
+import akka.stream.{IOResult, Materializer}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.amazonaws.services.s3.model.{CopyObjectResult, S3ObjectSummary}
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import play.api.libs.json.JsValue
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service.{DeleteFileFromQuarantineBucket, DownloadFromBucket, StreamResult, UploadToQuarantine}
 
@@ -42,11 +44,14 @@ trait S3Service {
 
   def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult]
 
-  def uploadToQuarantine: UploadToQuarantine = upload(awsConfig.quarantineBucketName, _, _, _)
+  def uploadToQuarantine: UploadToQuarantine =
+    upload(awsConfig.quarantineBucketName, _, _, _)
 
-  def downloadFromTransient: DownloadFromBucket = download(awsConfig.transientBucketName, _)
+  def downloadFromTransient: DownloadFromBucket =
+    download(awsConfig.transientBucketName, _)
 
-  def downloadFromQuarantine: DownloadFromBucket = download(awsConfig.quarantineBucketName, _)
+  def downloadFromQuarantine: DownloadFromBucket =
+    download(awsConfig.quarantineBucketName, _)
 
   def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], NotUsed]
 
@@ -62,15 +67,21 @@ trait S3Service {
 
   def getBucketProperties(bucketName: String): JsValue
 
-  def getQuarantineBucketProperties = getBucketProperties(awsConfig.quarantineBucketName)
+  def getQuarantineBucketProperties =
+    getBucketProperties(awsConfig.quarantineBucketName)
 
-  def getTransientBucketProperties = getBucketProperties(awsConfig.transientBucketName)
+  def getTransientBucketProperties =
+    getBucketProperties(awsConfig.transientBucketName)
 
   def deleteObjectFromBucket(bucketName: String, key: String): Unit
 
-  def deleteObjectFromTransient: String => Unit = deleteObjectFromBucket(awsConfig.transientBucketName, _)
+  def deleteObjectFromTransient: String => Unit =
+    deleteObjectFromBucket(awsConfig.transientBucketName, _)
 
-  def deleteObjectFromQuarantine: DeleteFileFromQuarantineBucket = deleteObjectFromBucket(awsConfig.quarantineBucketName, _)
+  def deleteObjectFromQuarantine: DeleteFileFromQuarantineBucket =
+    deleteObjectFromBucket(awsConfig.quarantineBucketName, _)
+
+  def zipAndPresign(envelopeId: EnvelopeId, files: List[(FileId, Option[String])])(implicit ec : ExecutionContext, materializer: Materializer): Future[ZipData]
 }
 
 object S3Service {
@@ -91,3 +102,21 @@ case class Metadata(
                      s3Metadata: Option[Map[String, String]] = None)
 
 case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
+
+
+case class ZipData(
+  name       : String,
+  size       : Long,
+  md5Checksum: String,
+  url        : URL
+)
+object ZipData {
+  import play.api.libs.json.__
+  import play.api.libs.functional.syntax._
+  val writes =
+    ( (__ \ "name"       ).write[String]
+    ~ (__ \ "size"       ).write[Long]
+    ~ (__ \ "md5Checksum").write[String]
+    ~ (__ \ "url"        ).write[String].contramap[URL](_.toString)
+    )(unlift(ZipData.unapply))
+}

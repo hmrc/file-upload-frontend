@@ -67,13 +67,13 @@ class TestOnlyController(baseUrl: String, wSClient: WSClient, val s3Service: S3J
   }
 
   def downloadFile(envelopeId: String, fileId: String) = Action.async { implicit request =>
-    wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").get().flatMap {
-      resultFromBackEnd ⇒ if (resultFromBackEnd.status == 200) {
-        Future.successful(Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
+    wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").get().map {
+      resultFromBackEnd => if (resultFromBackEnd.status == 200) {
+        Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
           "Content-Length" -> resultFromBackEnd.header("Content-Length").getOrElse("unknown"),
           "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
-        ))
-      } else Future.successful(Ok(resultFromBackEnd.json))
+        )
+      } else Ok(resultFromBackEnd.json)
     }
   }
 
