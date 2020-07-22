@@ -16,21 +16,26 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import java.net.URL
+
 import akka.util.ByteString
 import play.api.Logger
 import play.api.http.HttpEntity
+import play.api.libs.json.{__, Json, JsObject, JsSuccess, JsError, JsValue, Reads}
 import play.api.mvc._
-import uk.gov.hmrc.fileupload.s3.S3KeyName
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, ZipData}
 import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromBucket
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
-class FileDownloadController(downloadFromTransient: DownloadFromBucket,
-                             createS3Key: (EnvelopeId, FileId) => S3KeyName,
-                             now: () => Long,
-                             downloadFromQuarantine: DownloadFromBucket)
-  (implicit executionContext: ExecutionContext) extends Controller {
+class FileDownloadController(
+  downloadFromTransient : DownloadFromBucket,
+  createS3Key           : (EnvelopeId, FileId) => S3KeyName,
+  now                   : () => Long,
+  downloadFromQuarantine: DownloadFromBucket,
+  zipAndPresign         : (EnvelopeId, List[(FileId, Option[String])]) => Future[ZipData]
+)(implicit executionContext: ExecutionContext) extends Controller {
 
   def download(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
     Logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
@@ -62,4 +67,29 @@ class FileDownloadController(downloadFromTransient: DownloadFromBucket,
       )
     }
   }
+
+  def zip(envelopeId: EnvelopeId): Action[JsValue] = Action.async(parse.json) { request =>
+    Logger.info(s"zipping files for envelopeId: $envelopeId")
+    implicit val zrr = ZipRequest.reads
+    request.body.validate[ZipRequest] match {
+      case JsSuccess(zipRequest, _) =>
+        zipAndPresign(envelopeId, zipRequest.files).map { zipData =>
+          implicit val zdw = ZipData.writes
+          Ok(Json.toJson(zipData))
+        }
+      case JsError(errors) => Future.successful(BadRequest(s"$errors"))
+    }
+  }
+}
+
+case class ZipRequest(
+  files: List[(FileId, Option[String])]
+)
+
+object ZipRequest {
+  import play.api.libs.functional.syntax._
+  val reads: Reads[ZipRequest] =
+    Reads.at[JsObject](__ \ "files")
+      .map(_.fieldSet.map { case (k, v) => FileId(k) -> v.asOpt[String] }.toList)
+      .map(ZipRequest.apply)
 }

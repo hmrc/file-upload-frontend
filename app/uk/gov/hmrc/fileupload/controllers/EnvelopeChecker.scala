@@ -56,7 +56,7 @@ object EnvelopeChecker {
             val status = envelopeDetails.status.getOrElse("")
             status match {
               case "OPEN" =>
-                val constraints = extractEnvelopeDetails(envelope).constraints
+                val constraints = envelopeDetails.constraints
                 action(constraints)(rh)
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")

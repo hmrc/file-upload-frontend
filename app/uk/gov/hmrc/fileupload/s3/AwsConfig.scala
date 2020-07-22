@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.s3
 
+import scala.concurrent.duration.{Duration, DurationLong}
 
 class AwsConfig(config: com.typesafe.config.Config) {
   def quarantineBucketName: String = config.getString("aws.s3.bucket.upload.quarantine")
@@ -23,6 +24,8 @@ class AwsConfig(config: com.typesafe.config.Config) {
   def accessKeyId: String = config.getString("aws.access.key.id")
   def secretAccessKey: String = config.getString("aws.secret.access.key")
   def envSubdir: String = config.getString("aws.s3.bucket.env-subdir")
+  def zipSubdir: String = config.getString("aws.s3.bucket.zip-subdir")
+  def zipDuration: Duration = config.getDuration("aws.s3.bucket.zip-duration").toMillis.millis
   def endpoint: Option[String] = {
     val path = "aws.service_endpoint"
     if (config.hasPath(path)) {
