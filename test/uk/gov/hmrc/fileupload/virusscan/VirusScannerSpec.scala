@@ -17,13 +17,18 @@
 package uk.gov.hmrc.fileupload.virusscan
 
 import java.net.SocketException
+import java.io.InputStream
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
 import cats.data.Xor
 import org.scalatest.Matchers
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.time.{Second, Span}
 import play.api.libs.iteratee.Enumerator
-import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
+import uk.gov.hmrc.clamav.{ClamAntiVirus, ClamAntiVirusFactory}
+import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import uk.gov.hmrc.play.test.UnitSpec
@@ -32,87 +37,54 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class VirusScannerSpec extends UnitSpec with Matchers with ScalaFutures with TestApplicationComponents {
+class VirusScannerSpec
+  extends UnitSpec
+     with Matchers
+     with ScalaFutures
+     with TestApplicationComponents
+     with IntegrationPatience {
 
-  private def enumerator(): Enumerator[Array[Byte]] = {
-    val inputString = "a random string long enough to by divided into chunks"
-    Enumerator[Array[Byte]](inputString.grouped(10).map(_.getBytes).toList: _*)
-  }
+  implicit val sys = ActorSystem("test")
+  implicit val mat = ActorMaterializer
 
-  val sendingChunksSuccessful = (_ : Array[Byte]) => Future.successful(())
-  val noVirusFound = () => Future.successful(Success(true))
-  val virusDetected = () => Future.successful(Failure(new VirusDetectedException("test virus")))
-  val commandTimeout = () => Future.successful(Failure(new VirusDetectedException("COMMAND READ TIMED OUT")))
+  val inputString = "a random string long enough to by divided into chunks"
+  private def fileSource: Source[Array[Byte], akka.NotUsed] = Source.single(inputString.getBytes)
+  val fileLength = inputString.getBytes.length
 
-  val virusScanner = new VirusScanner(ClamAntiVirus(_), components.configuration, components.environment)
+  def clean(inputstream: InputStream, length: Int) = Future.successful(Clean)
+  def virusDetected(inputstream: InputStream, length: Int) = Future.successful(Infected("test virus"))
+  def commandTimeout(inputstream: InputStream, length: Int) = Future.successful(Infected("COMMAND READ TIMED OUT"))
+  def failWith(exception: Exception)(inputStream: InputStream, length: Int): Future[ScanningResult] = Future.failed(exception)
+
+  val virusScanner = new VirusScanner(new ClamAntiVirusFactory(_).getClient, components.configuration, components.environment)
 
   "VirusScanner" should {
-
     s"return $ScanResultFileClean result if input did not contain a virus" in {
-      val chunkEnumerator = enumerator()
-
-      val result = await(chunkEnumerator.run(new VirusScanner(
-        ClamAntiVirus(_), components.configuration, components.environment).scanIteratee(sendingChunksSuccessful, noVirusFound)).flatMap(identity))
-
+      val result = virusScanner.scanWith(sendAndCheck = clean)(fileSource, fileLength).futureValue
       result shouldBe Xor.Right(ScanResultFileClean)
     }
 
     s"return $ScanResultVirusDetected result if input contained a virus" in {
-      val chunkEnumerator = enumerator()
-
-      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, virusDetected)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultVirusDetected)
+      val result = virusScanner.scanWith(sendAndCheck = virusDetected)(fileSource, fileLength).futureValue
+      result shouldBe Xor.left(ScanResultVirusDetected)
     }
 
     //clamav client unfortunately returns this as a virus detected exception
     s"return $ScanReadCommandTimeOut result if exception indicates command read timeout" in {
-      val chunkEnumerator = enumerator()
-
-      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, commandTimeout)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanReadCommandTimeOut)
+      val result = virusScanner.scanWith(sendAndCheck = commandTimeout)(fileSource, fileLength).futureValue
+      result shouldBe Xor.left(ScanReadCommandTimeOut)
     }
 
-    s"return $ScanResultError result if checkForVirus returned unexpected Success(false) which should never happen" in {
-      val chunkEnumerator = enumerator()
-      val unexpectedResultFromCheckingForAVirus = () => Future.successful(Success(false))
-
-      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, unexpectedResultFromCheckingForAVirus)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultUnexpectedResult)
-    }
-
-    s"return $ScanResultError result if $ClamAntiVirus returned an unanticipated error" in {
-      val chunkEnumerator = enumerator()
+    s"return $ScanResultError result if ClamAntiVirus returned an unanticipated error" in {
       val exception = new RuntimeException("av-client error")
-      val avClientReturnedErrorWhenCheckingForAVirus = () => Future.successful(Failure(exception))
-
-      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, avClientReturnedErrorWhenCheckingForAVirus)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultError(exception))
+      val result = virusScanner.scanWith(sendAndCheck = failWith(exception))(fileSource, fileLength).futureValue
+      result shouldBe Xor.left(ScanResultError(exception))
     }
 
     s"return $ScanResultError result if calling checkForVirus failed (e.g. network issue)" in {
-      val chunkEnumerator = enumerator()
       val exception = new SocketException("failed to connect to clam av")
-      val problemCheckingForAVirus = () => Future.failed(exception)
-
-      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksSuccessful, problemCheckingForAVirus)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultError(exception))
-    }
-
-    s"return $ScanResultFailureSendingChunks result if calling sendChunk failed (e.g. network issue)" in {
-      val chunkEnumerator = enumerator()
-      val exception = new RuntimeException("unknown error")
-      val sendingChunksFailed = (_ : Array[Byte]) => Future.failed(exception)
-
-      val result = await(chunkEnumerator.run(virusScanner.scanIteratee(sendingChunksFailed, noVirusFound)).flatMap(identity))
-
-      result shouldBe Xor.Left(ScanResultFailureSendingChunks(exception))
+      val result = virusScanner.scanWith(sendAndCheck = failWith(exception))(fileSource, fileLength).futureValue
+      result shouldBe Xor.left(ScanResultError(exception))
     }
   }
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(5, Second))
 }

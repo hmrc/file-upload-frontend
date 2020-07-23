@@ -16,43 +16,70 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
+import akka.stream.scaladsl.{Source, StreamConverters}
+import akka.stream.Materializer
+import java.io.InputStream
+
 import cats.data.Xor
+import uk.gov.hmrc.clamav.model.{Clean, Infected}
 import play.api.libs.iteratee.Iteratee
-import play.api.{Configuration, Environment}
+import play.api.{Configuration, Environment, Logger}
+import uk.gov.hmrc.clamav.ClamAntiVirus
 import uk.gov.hmrc.clamav.config.ClamAvConfig
-import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
+import uk.gov.hmrc.clamav.model.ScanningResult
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
-class VirusScanner(clamAvClient: ClamAvConfig => ClamAntiVirus, config : Configuration, environment: Environment) {
-  private def clamAvConfig = ClamAvConfig(config.getConfig(s"${environment.mode}.clam.antivirus"))
+class VirusScanner(clamAvClient: ClamAvConfig => ClamAntiVirus, config: Configuration, environment: Environment) {
+  private val clamAntiVirus =
+    clamAvClient(
+      new ClamAvConfig {
+        def getString(key: String) =
+          config.getString(key).getOrElse(sys.error(s"No config for key `$key` defined"))
+
+        def getInt(key: String) =
+          config.getInt(key).getOrElse(sys.error(s"No config for key `$key` defined"))
+
+
+        override val host   : String = getString(s"${environment.mode}.clam.antivirus.host")
+        override val port   : Int    = getInt(s"${environment.mode}.clam.antivirus.port")
+        override val timeout: Int    = getInt(s"${environment.mode}.clam.antivirus.timeout")
+      }
+    )
+
   private val commandReadTimedOutMessage = "COMMAND READ TIMED OUT"
 
-  def scanIteratee()(implicit ec: ExecutionContext): AvScanIteratee = {
-    val clamAntiVirus = clamAvClient(clamAvConfig)
-    scanIteratee(clamAntiVirus.send, clamAntiVirus.checkForVirus)
-  }
+  def scan(
+    source: Source[Array[Byte], akka.NotUsed],
+    length: Long
+  )(implicit
+    ec: ExecutionContext,
+    materializer: Materializer
+  ): Future[ScanResult] =
+    scanWith(clamAntiVirus.sendAndCheck)(source, length)
 
-  private[virusscan] def scanIteratee(sendChunk: Array[Byte] => Future[Unit], checkForVirus: () => Future[Try[Boolean]])
-                                     (implicit ec: ExecutionContext): AvScanIteratee =
-    Iteratee.fold[Array[Byte], Future[Unit]](Future.successful(())) { (previousResult, chunk) =>
-      previousResult.flatMap(_ => sendChunk(chunk))
-    }.map {
-      resultOfSendingChunks => resultOfSendingChunks.flatMap { _ =>
-        checkForVirus().map {
-          case Success(true) => Xor.right(ScanResultFileClean)
-          case Success(false) => Xor.left(ScanResultUnexpectedResult) // should never happen as client only returns Success(true)...
-          case Failure(virusDetected : VirusDetectedException) if virusDetected.virusInformation.contains(commandReadTimedOutMessage) => Xor.left(ScanReadCommandTimeOut)
-          case Failure(_ : VirusDetectedException) => Xor.left(ScanResultVirusDetected)
-          case Failure(NonFatalWithLogging(ex)) => Xor.left(ScanResultError(ex))
-        }.recover {
-          case NonFatalWithLogging(ex) => Xor.left(ScanResultError(ex))
-        }
-      }.recover {
-        case NonFatalWithLogging(ex) => Xor.left(ScanResultFailureSendingChunks(ex))
-      }
+  private[virusscan] def scanWith(
+    sendAndCheck: (InputStream, Int) => Future[ScanningResult]
+  )(
+    source: Source[Array[Byte], akka.NotUsed],
+    length: Long
+  )(implicit
+    ec: ExecutionContext,
+    materializer: Materializer
+  ): Future[ScanResult] = {
+    val inputStream: InputStream = source.map(akka.util.ByteString.apply).runWith(StreamConverters.asInputStream(3.seconds))
+    sendAndCheck(inputStream, length.toInt).map {
+      case Clean             => Xor.right(ScanResultFileClean)
+      case Infected(message) if message.contains(commandReadTimedOutMessage) =>
+                                Xor.left(ScanReadCommandTimeOut)
+      case Infected(message) => Logger.warn(s"File is infected: [$message].")
+                                Xor.left(ScanResultVirusDetected)
+    }.recover {
+      case NonFatalWithLogging(ex) => Xor.left(ScanResultError(ex))
     }
+  }
 }
