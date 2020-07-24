@@ -17,14 +17,12 @@
 package uk.gov.hmrc.fileupload
 
 import java.util.UUID
+import java.io.InputStream
 
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsError, JsSuccess, _}
 import play.api.mvc.PathBindable
 import play.core.routing.dynamicString
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
-
-import scala.concurrent.Future
 
 case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString: String = value
@@ -66,11 +64,7 @@ object FileId {
     )
 }
 
-case class File(data: Enumerator[Array[Byte]], length: Long, filename: String, contentType: Option[String]) {
-  def streamTo[A](iteratee: Iteratee[Array[Byte], A]): Future[A] = {
-    data.run(iteratee)
-  }
-}
+case class File(data: InputStream, length: Long, filename: String, contentType: Option[String])
 
 case class FileRefId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString: String = value

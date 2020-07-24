@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.s3
 
 import java.io.{File, InputStream}
 import java.net.URL
-import java.nio.file.Paths
 import java.util.concurrent.Executors
 import java.util.{Base64, UUID}
 import java.security.{DigestInputStream, MessageDigest}
@@ -35,15 +34,13 @@ import com.amazonaws.event.{ProgressEvent, ProgressEventType, ProgressListener}
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.model._
 import com.amazonaws.services.s3.transfer.Transfer.TransferState
-import com.amazonaws.services.s3.transfer.{TransferManagerBuilder, Upload}
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.codahale.metrics.MetricRegistry
-import com.google.common.base.MoreObjects.ToStringHelper
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
@@ -160,8 +157,12 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
       metricGetFileFromQuarantine.mark()
 
-      Some(FileData(length = metadata.getContentLength, filename = s3Object.getKey,
-        contentType = Some(metadata.getContentType), data = Enumerator.fromStream(objectDataIS)))
+      Some(FileData(
+        length      = metadata.getContentLength,
+        filename    = s3Object.getKey,
+        contentType = Some(metadata.getContentType),
+        data        = objectDataIS
+      ))
     }
 
   override def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] =

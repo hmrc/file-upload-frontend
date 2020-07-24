@@ -16,43 +16,39 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
+import java.io.InputStream
+
+import akka.stream.Materializer
 import cats.data.Xor
-import play.api.libs.iteratee.Iteratee
-import play.api.{Configuration, Environment}
-import uk.gov.hmrc.clamav.config.ClamAvConfig
-import uk.gov.hmrc.clamav.{ClamAntiVirus, VirusDetectedException}
+import play.api.Logger
+import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
 
-class VirusScanner(clamAvClient: ClamAvConfig => ClamAntiVirus, config : Configuration, environment: Environment) {
-  private def clamAvConfig = ClamAvConfig(config.getConfig(s"${environment.mode}.clam.antivirus"))
+class VirusScanner(avClient: AvClient) {
   private val commandReadTimedOutMessage = "COMMAND READ TIMED OUT"
 
-  def scanIteratee()(implicit ec: ExecutionContext): AvScanIteratee = {
-    val clamAntiVirus = clamAvClient(clamAvConfig)
-    scanIteratee(clamAntiVirus.send, clamAntiVirus.checkForVirus)
-  }
+  def scan(implicit ec: ExecutionContext, materializer: Materializer): AvScan =
+    scanWith(avClient.sendAndCheck)
 
-  private[virusscan] def scanIteratee(sendChunk: Array[Byte] => Future[Unit], checkForVirus: () => Future[Try[Boolean]])
-                                     (implicit ec: ExecutionContext): AvScanIteratee =
-    Iteratee.fold[Array[Byte], Future[Unit]](Future.successful(())) { (previousResult, chunk) =>
-      previousResult.flatMap(_ => sendChunk(chunk))
-    }.map {
-      resultOfSendingChunks => resultOfSendingChunks.flatMap { _ =>
-        checkForVirus().map {
-          case Success(true) => Xor.right(ScanResultFileClean)
-          case Success(false) => Xor.left(ScanResultUnexpectedResult) // should never happen as client only returns Success(true)...
-          case Failure(virusDetected : VirusDetectedException) if virusDetected.virusInformation.contains(commandReadTimedOutMessage) => Xor.left(ScanReadCommandTimeOut)
-          case Failure(_ : VirusDetectedException) => Xor.left(ScanResultVirusDetected)
-          case Failure(NonFatalWithLogging(ex)) => Xor.left(ScanResultError(ex))
-        }.recover {
-          case NonFatalWithLogging(ex) => Xor.left(ScanResultError(ex))
-        }
-      }.recover {
-        case NonFatalWithLogging(ex) => Xor.left(ScanResultFailureSendingChunks(ex))
-      }
+  private[virusscan] def scanWith(
+    sendAndCheck: (InputStream, Int) => Future[ScanningResult]
+  )(is    : InputStream,
+    length: Long
+  )(implicit
+    ec: ExecutionContext,
+    materializer: Materializer
+  ): Future[ScanResult] = {
+    sendAndCheck(is, length.toInt).map {
+      case Clean             => Xor.right(ScanResultFileClean)
+      case Infected(message) if message.contains(commandReadTimedOutMessage) =>
+                                Xor.left(ScanReadCommandTimeOut)
+      case Infected(message) => Logger.warn(s"File is infected: [$message].")
+                                Xor.left(ScanResultVirusDetected)
+    }.recover {
+      case NonFatalWithLogging(ex) => Xor.left(ScanResultError(ex))
     }
+  }
 }

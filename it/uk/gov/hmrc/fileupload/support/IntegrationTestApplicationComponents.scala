@@ -21,9 +21,8 @@ import org.scalatestplus.play.OneServerPerSuite
 import play.api.ApplicationLoader.Context
 import play.api._
 import play.api.mvc.EssentialFilter
-import uk.gov.hmrc.clamav.ClamAntiVirus
-import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.fileupload.ApplicationModule
+import uk.gov.hmrc.fileupload.virusscan.AvClient
 import uk.gov.hmrc.play.test.UnitSpec
 
 trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSuite
@@ -34,13 +33,13 @@ trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSui
 
   override lazy val port: Int = 9000
 
-  lazy val clamAntiVirusTestClient: ClamAvConfig => ClamAntiVirus = ClamAntiVirus(_)
+  lazy val mkAvClient: ((Configuration, Environment)) => AvClient = (AvClient.apply _).tupled
   lazy val disableAvScanning: Boolean = true
   lazy val numberOfTimeoutAttempts: Int = 1
 
   // accessed to get the components in tests
   lazy val components: ApplicationModule =
-    new IntegrationTestApplicationModule(context, clamAntiVirusTestClient)
+    new IntegrationTestApplicationModule(context, mkAvClient)
 
   lazy val context: ApplicationLoader.Context = {
     val classLoader = ApplicationLoader.getClass.getClassLoader
@@ -58,10 +57,14 @@ trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSui
       "aws.secret.access.key" -> "ENTER YOUR SECRET KEY"
     ))
   }
-
 }
 
-class IntegrationTestApplicationModule(context: Context, clamAntiVirusTestClient: ClamAvConfig => ClamAntiVirus) extends ApplicationModule(context = context) {
+class IntegrationTestApplicationModule(
+  context: Context,
+  mkAvClient: ((Configuration, Environment)) => AvClient
+) extends ApplicationModule(context = context) {
+  override lazy val avClient: AvClient =
+    mkAvClient((context.initialConfiguration, context.environment))
+
   override lazy val httpFilters: Seq[EssentialFilter] = Seq()
-  override lazy val clamAvClient: ClamAvConfig => ClamAntiVirus = clamAntiVirusTestClient
 }

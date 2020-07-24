@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
+import java.io.InputStream
+
 import cats.data.Xor
 import play.api.Logger
-import play.api.libs.iteratee.Iteratee
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
@@ -42,9 +43,9 @@ object ScanningService {
 
   case object ScanResultFileClean
 
-  type AvScanIteratee = Iteratee[Array[Byte], Future[ScanResult]]
+  type AvScan = (InputStream, Long) => Future[ScanResult]
 
-  def scanBinaryData(scanner: () => Iteratee[Array[Byte], Future[ScanResult]],
+  def scanBinaryData(scanner: AvScan,
                      scanTimeoutAttempts: Int,
                      getFile: (String, String) => Future[QuarantineDownloadResult])
                     (s3KeyAppender: (EnvelopeId, FileId) => String)
@@ -58,7 +59,7 @@ object ScanningService {
                       fileId: FileId,
                       maximumScansAllowed: Int,
                       scansAttempted: Int = 1)
-                     (implicit ec: ExecutionContext): Future[ScanResult] = {
+                     (implicit ec: ExecutionContext): Future[ScanResult] =
     scanResult.flatMap {
       case result if scansAttempted >= maximumScansAllowed =>
         Logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($scansAttempted of $maximumScansAllowed)")
@@ -68,15 +69,12 @@ object ScanningService {
         retries(scanResult, fileId, maximumScansAllowed, scansAttempted + 1)
       case result => Future.successful(result)
     }
-  }
 
-  private def scan(scanner: () => Iteratee[Array[Byte], Future[ScanResult]],
+  private def scan(scanner: AvScan,
                    file: Future[QuarantineDownloadResult])
-                  (implicit ec: ExecutionContext): Future[ScanResult] = {
+                  (implicit ec: ExecutionContext): Future[ScanResult] =
     file.flatMap {
-      case Xor.Right(file) => file.streamTo(scanner()).flatMap(identity)
+      case Xor.Right(file) => scanner(file.data, file.length)
       case Xor.Left(e) => Future.successful(Xor.Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
     }
-  }
-
 }

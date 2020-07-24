@@ -32,7 +32,7 @@ private object AppDependencies {
   private val authClient = "2.17.0-play-25"
   private val playConfigVersion = "7.3.0"
   private val hmrcTestVersion = "3.3.0"
-  private val clamAvClientVersion = "2.4.0"
+  private val clamAvClientVersion = "6.9.0"
   private val catsVersion = "0.6.0"
   private val awsJavaSdkVersion = "1.11.97"
 
@@ -43,7 +43,9 @@ private object AppDependencies {
     "uk.gov.hmrc" %% "clamav-client" % clamAvClientVersion,
     "org.typelevel" %% "cats" % catsVersion,
     "com.amazonaws" % "aws-java-sdk" % awsJavaSdkVersion,
-    "com.lightbend.akka" %% "akka-stream-alpakka-file" % "2.0.1"
+    "com.lightbend.akka" %% "akka-stream-alpakka-file" % "2.0.1",
+    // ensure all akka versions are the same
+    "com.typesafe.akka" %% "akka-slf4j" % "2.5.31"
   )
 
   trait TestDependencies {
