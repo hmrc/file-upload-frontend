@@ -23,54 +23,29 @@ import java.io.InputStream
 import cats.data.Xor
 import uk.gov.hmrc.clamav.model.{Clean, Infected}
 import play.api.libs.iteratee.Iteratee
-import play.api.{Configuration, Environment, Logger}
-import uk.gov.hmrc.clamav.config.ClamAvConfig
+import play.api.{Configuration, Logger}
 import uk.gov.hmrc.clamav.model.ScanningResult
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
-class VirusScanner(mkClamAvClient: ClamAvConfig => ClamAvClient, config: Configuration, environment: Environment) {
-  private val clamAvClient =
-    mkClamAvClient(
-      new ClamAvConfig {
-        def getString(key: String) =
-          config.getString(key).getOrElse(sys.error(s"No config for key `$key` defined"))
-
-        def getInt(key: String) =
-          config.getInt(key).getOrElse(sys.error(s"No config for key `$key` defined"))
-
-
-        override val host   : String = getString(s"${environment.mode}.clam.antivirus.host")
-        override val port   : Int    = getInt(s"${environment.mode}.clam.antivirus.port")
-        override val timeout: Int    = getInt(s"${environment.mode}.clam.antivirus.timeout")
-      }
-    )
-
+class VirusScanner(avClient: AvClient) {
   private val commandReadTimedOutMessage = "COMMAND READ TIMED OUT"
 
-  def scan(
-    source: Source[Array[Byte], akka.NotUsed],
-    length: Long
-  )(implicit
-    ec: ExecutionContext,
-    materializer: Materializer
-  ): Future[ScanResult] =
-    scanWith(clamAvClient.sendAndCheck)(source, length)
+  def scan(implicit ec: ExecutionContext, materializer: Materializer): AvScan =
+    scanWith(avClient.sendAndCheck)
 
   private[virusscan] def scanWith(
     sendAndCheck: (InputStream, Int) => Future[ScanningResult]
-  )(
-    source: Source[Array[Byte], akka.NotUsed],
+  )(source: Source[Array[Byte], akka.NotUsed],
     length: Long
   )(implicit
     ec: ExecutionContext,
     materializer: Materializer
   ): Future[ScanResult] = {
-    val inputStream: InputStream = source.map(akka.util.ByteString.apply).runWith(StreamConverters.asInputStream(3.seconds))
+    val inputStream: InputStream = source.map(akka.util.ByteString.apply).runWith(StreamConverters.asInputStream())
     sendAndCheck(inputStream, length.toInt).map {
       case Clean             => Xor.right(ScanResultFileClean)
       case Infected(message) if message.contains(commandReadTimedOutMessage) =>

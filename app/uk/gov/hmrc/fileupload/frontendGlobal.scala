@@ -35,7 +35,6 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.{EssentialFilter, Request}
-import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.fileupload.controllers._
 import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
@@ -46,9 +45,8 @@ import uk.gov.hmrc.fileupload.s3._
 import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.{LoggerHelperFileExtensionAndUserAgent, ShowErrorAsJson}
-import uk.gov.hmrc.fileupload.virusscan.ClamAvClient
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean}
-import uk.gov.hmrc.fileupload.virusscan.{DeletionActor, ScannerActor, ScanningService, VirusScanner}
+import uk.gov.hmrc.fileupload.virusscan.{AvClient, DeletionActor, ScannerActor, ScanningService, VirusScanner}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScan, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.frontend.config.LoadAuditingConfig
@@ -187,8 +185,8 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
 
   lazy val numberOfTimeoutAttempts: Int = configuration.getInt(s"${environment.mode}.clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
-  val mkClamAvClient: ClamAvConfig => ClamAvClient = ClamAvClient.apply
-  lazy val scanner: (Source[Array[Byte], akka.NotUsed], Long) => Future[ScanResult] = new VirusScanner(mkClamAvClient, configuration, environment).scan
+  lazy val avClient: AvClient = AvClient(configuration, environment)
+  lazy val scanner: AvScan = new VirusScanner(avClient).scan
   lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
     val disableScanning = configuration.getConfig(s"${environment.mode}.clam.antivirus")
                             .flatMap(_.getBoolean("disableScanning")).getOrElse(false)

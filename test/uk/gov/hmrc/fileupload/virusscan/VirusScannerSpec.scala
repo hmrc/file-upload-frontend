@@ -56,7 +56,7 @@ class VirusScannerSpec
   def commandTimeout(inputstream: InputStream, length: Int) = Future.successful(Infected("COMMAND READ TIMED OUT"))
   def failWith(exception: Exception)(inputStream: InputStream, length: Int): Future[ScanningResult] = Future.failed(exception)
 
-  val virusScanner = new VirusScanner(ClamAvClient.apply, components.configuration, components.environment)
+  val virusScanner = new VirusScanner(AvClient(components.configuration, components.environment))
 
   "VirusScanner" should {
     s"return $ScanResultFileClean result if input did not contain a virus" in {

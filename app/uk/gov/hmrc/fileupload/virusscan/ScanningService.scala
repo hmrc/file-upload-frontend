@@ -43,7 +43,9 @@ object ScanningService {
 
   case object ScanResultFileClean
 
-  def scanBinaryData(scanner: (Source[Array[Byte], akka.NotUsed], Long) => Future[ScanResult],
+  type AvScan = (Source[Array[Byte], akka.NotUsed], Long) => Future[ScanResult]
+
+  def scanBinaryData(scanner: AvScan,
                      scanTimeoutAttempts: Int,
                      getFile: (String, String) => Future[QuarantineDownloadResult])
                     (s3KeyAppender: (EnvelopeId, FileId) => String)
@@ -68,7 +70,7 @@ object ScanningService {
       case result => Future.successful(result)
     }
 
-  private def scan(scanner: (Source[Array[Byte], akka.NotUsed], Long) => Future[ScanResult],
+  private def scan(scanner: AvScan,
                    file: Future[QuarantineDownloadResult])
                   (implicit ec: ExecutionContext): Future[ScanResult] =
     file.flatMap {
