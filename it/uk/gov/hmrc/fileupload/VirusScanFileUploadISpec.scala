@@ -89,6 +89,23 @@ class VirusScanFileUploadISpec
       (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).verify(*, *, *).twice()
     }
 
+    "retry virus scanning if COMMAND READ TIMED OUT occurs until virus detected" in {
+      Wiremock.responseToUpload(envelopeId, fileId)
+      Wiremock.respondToEnvelopeCheck(envelopeId)
+      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(commandReadTimeout()).noMoreThanOnce()
+      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(virusDetected())
+
+      val result = uploadDummyFile(envelopeId, fileId)
+      result.status should be(200)
+
+      Wiremock.quarantineFileCommandTriggered()
+      eventually {
+        Wiremock.scanFileCommandTriggered()
+      }
+      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).verify(*, *, *).twice()
+    }
+
+
     "retry virus scanning fails if COMMAND READ TIMED OUT occurs up to the maximum attempts" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)

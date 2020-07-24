@@ -64,7 +64,7 @@ class VirusScannerSpec
       result shouldBe Xor.left(ScanResultVirusDetected)
     }
 
-    //clamav client unfortunately returns this as a virus detected exception
+    //clamav client unfortunately returns this as an Infection
     s"return $ScanReadCommandTimeOut result if exception indicates command read timeout" in {
       val result = virusScanner.scanWith(sendAndCheck = commandTimeout)(fileSource, fileLength).futureValue
       result shouldBe Xor.left(ScanReadCommandTimeOut)
