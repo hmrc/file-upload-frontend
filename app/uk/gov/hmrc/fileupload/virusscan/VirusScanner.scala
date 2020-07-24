@@ -24,7 +24,6 @@ import cats.data.Xor
 import uk.gov.hmrc.clamav.model.{Clean, Infected}
 import play.api.libs.iteratee.Iteratee
 import play.api.{Configuration, Environment, Logger}
-import uk.gov.hmrc.clamav.ClamAntiVirus
 import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.clamav.model.ScanningResult
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
@@ -34,9 +33,9 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
-class VirusScanner(clamAvClient: ClamAvConfig => ClamAntiVirus, config: Configuration, environment: Environment) {
-  private val clamAntiVirus =
-    clamAvClient(
+class VirusScanner(mkClamAvClient: ClamAvConfig => ClamAvClient, config: Configuration, environment: Environment) {
+  private val clamAvClient =
+    mkClamAvClient(
       new ClamAvConfig {
         def getString(key: String) =
           config.getString(key).getOrElse(sys.error(s"No config for key `$key` defined"))
@@ -60,7 +59,7 @@ class VirusScanner(clamAvClient: ClamAvConfig => ClamAntiVirus, config: Configur
     ec: ExecutionContext,
     materializer: Materializer
   ): Future[ScanResult] =
-    scanWith(clamAntiVirus.sendAndCheck)(source, length)
+    scanWith(clamAvClient.sendAndCheck)(source, length)
 
   private[virusscan] def scanWith(
     sendAndCheck: (InputStream, Int) => Future[ScanningResult]
