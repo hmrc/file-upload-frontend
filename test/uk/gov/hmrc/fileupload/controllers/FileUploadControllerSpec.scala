@@ -16,16 +16,14 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import akka.util.ByteString
 import cats.data.Xor
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.scalatest.concurrent.ScalaFutures
 import play.api.Configuration
 import play.api.http.Status
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData.FilePart
-import play.api.mvc.{MaxSizeExceeded, MultipartFormData, Request}
+import play.api.mvc.{MultipartFormData, Request}
 import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.RestFixtures._

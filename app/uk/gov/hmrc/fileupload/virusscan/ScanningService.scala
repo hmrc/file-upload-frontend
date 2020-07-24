@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
-import akka.stream.scaladsl.Source
+import java.io.InputStream
+
 import cats.data.Xor
 import play.api.Logger
-import play.api.libs.iteratee.Iteratee
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
@@ -43,7 +43,7 @@ object ScanningService {
 
   case object ScanResultFileClean
 
-  type AvScan = (Source[Array[Byte], akka.NotUsed], Long) => Future[ScanResult]
+  type AvScan = (InputStream, Long) => Future[ScanResult]
 
   def scanBinaryData(scanner: AvScan,
                      scanTimeoutAttempts: Int,
@@ -74,9 +74,7 @@ object ScanningService {
                    file: Future[QuarantineDownloadResult])
                   (implicit ec: ExecutionContext): Future[ScanResult] =
     file.flatMap {
-      case Xor.Right(file) => import play.api.libs.streams.Streams
-                              val source: Source[Array[Byte], akka.NotUsed] = Source.fromPublisher(Streams.enumeratorToPublisher(file.data))
-                              scanner(source, file.length)
+      case Xor.Right(file) => scanner(file.data, file.length)
       case Xor.Left(e) => Future.successful(Xor.Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
     }
 }

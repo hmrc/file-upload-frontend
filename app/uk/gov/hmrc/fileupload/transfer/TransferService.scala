@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.transfer
 
 import cats.data.Xor
 import play.api.http.Status
-import play.api.libs.iteratee.Iteratee
+import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsValue
 import play.api.mvc.Request
 import uk.gov.hmrc.fileupload._
@@ -68,7 +68,7 @@ object TransferService {
         // TODO check request
         val iterator = toHttpBodyStreamer(baseUrl, envelopeId, fileId, fileRefId, null)
 
-        (file.data |>>> iterator).map(r =>
+        (Enumerator.fromStream(file.data) |>>> iterator).map(r =>
           r.status match {
             case Status.OK =>
               Xor.Right(envelopeId)

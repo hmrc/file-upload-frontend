@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
-import akka.stream.scaladsl.Source
+import java.io.{FileInputStream, InputStream}
+
 import cats.data.Xor
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.{FlatSpec, Matchers}
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import uk.gov.hmrc.fileupload.{DomainFixtures, EnvelopeId, File, FileId, FileRefId}
@@ -66,7 +66,7 @@ class ScanningServiceSpec
 
   def timeoutFollowedByNonTimeout(scanResult: ScanResult, scanResultType: String, attempts: Int) {
     it should s"make exactly $attempts when followed by a $scanResultType scan result" in {
-      val scanner = stubFunction[Source[Array[Byte], akka.NotUsed], Long, Future[ScanResult]]
+      val scanner = stubFunction[InputStream, Long, Future[ScanResult]]
 
       scanner.when(*, *).returns(Future.successful(Xor.left(ScanReadCommandTimeOut))).noMoreThanOnce()
       scanner.when(*, *).returns(Future.successful(scanResult))
@@ -81,7 +81,7 @@ class ScanningServiceSpec
 
   def scanWithNumberOfAttempts(scanResult: ScanResult, attempts: Int, maxNumberOfAttemps: Int = timeoutAttempts) {
     it should s"make exactly $attempts attempt[s] at scanning" in {
-      val scanner = stubFunction[Source[Array[Byte], akka.NotUsed], Long, Future[ScanResult]]
+      val scanner = stubFunction[InputStream, Long, Future[ScanResult]]
 
       scanner.when(*, *).returns(Future.successful(scanResult))
 
@@ -95,6 +95,6 @@ class ScanningServiceSpec
 
   private def file: Future[QuarantineDownloadResult] = {
     val tempFile = DomainFixtures.temporaryFile("file", Some("hello world"))
-    Future.successful(Xor.right(File(Enumerator.fromFile(tempFile), 0, tempFile.getName, None)))
+    Future.successful(Xor.right(File(new FileInputStream(tempFile), 0, tempFile.getName, None)))
   }
 }

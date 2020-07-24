@@ -16,12 +16,18 @@
 
 package uk.gov.hmrc.fileupload.quarantine
 
+import java.io.InputStream
+
 import org.joda.time.DateTime
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import uk.gov.hmrc.fileupload._
 
-case class FileData(length: Long = 0, filename: String, contentType: Option[String], data: Enumerator[Array[Byte]] = null)
+case class FileData(
+  length     : Long,
+  filename   : String,
+  contentType: Option[String],
+  data       : InputStream
+)
 
 //This class is needed to keep in sync with the backend
 case class EnvelopeReport(id: Option[EnvelopeId] = None,

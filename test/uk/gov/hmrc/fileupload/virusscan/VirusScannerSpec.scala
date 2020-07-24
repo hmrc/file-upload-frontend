@@ -17,17 +17,13 @@
 package uk.gov.hmrc.fileupload.virusscan
 
 import java.net.SocketException
-import java.io.InputStream
+import java.io.{ByteArrayInputStream, InputStream}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
 import cats.data.Xor
 import org.scalatest.Matchers
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.time.{Second, Span}
-import play.api.libs.iteratee.Enumerator
-import uk.gov.hmrc.clamav.{ClamAntiVirus, ClamAntiVirusFactory}
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
@@ -35,7 +31,6 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 class VirusScannerSpec
   extends UnitSpec
@@ -48,7 +43,7 @@ class VirusScannerSpec
   implicit val mat = ActorMaterializer
 
   val inputString = "a random string long enough to by divided into chunks"
-  private def fileSource: Source[Array[Byte], akka.NotUsed] = Source.single(inputString.getBytes)
+  private def fileSource: InputStream = new ByteArrayInputStream(inputString.getBytes)
   val fileLength = inputString.getBytes.length
 
   def clean(inputstream: InputStream, length: Int) = Future.successful(Clean)
