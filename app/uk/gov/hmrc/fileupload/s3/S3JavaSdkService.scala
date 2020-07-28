@@ -248,26 +248,27 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   ): Future[ZipData] = {
     val fileName = s"$envelopeId.zip"
     val tempFile = TemporaryFile(prefix = "zip")
+    Logger.info(s"zipping $envelopeId to ${tempFile.file}")
     (for {
        _            <- zipToFile(envelopeId, files, tempFile.file)
+       _            =  Logger.info(s"zipped $envelopeId to ${tempFile.file}")
+
        fileSize     =  tempFile.file.length
-       is           =  new java.io.FileInputStream(tempFile.file)
-
-       // decorate inputstream so we can calculate checksum on same pass
-       md           =  MessageDigest.getInstance("MD5")
-       dis          =  new DigestInputStream(is, md)
-
+       md5Hash      =  Md5Hash.fromInputStream(new java.io.FileInputStream(tempFile.file))
+       _            =  Logger.info(s"uploading $envelopeId to S3")
        uploadResult <- uploadFile(
                          bucketName = awsConfig.transientBucketName,
                          key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(fileName),
-                         file       = dis,
+                         file       = new java.io.FileInputStream(tempFile.file),
                          metadata   = { val om = new ObjectMetadata()
                                         om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
                                         om.setContentLength(fileSize)
                                         om.setContentType("application/zip")
+                                        om.setContentMD5(md5Hash)
                                         om
                                       }
                        )
+       _            =  Logger.info(s"presigning $envelopeId")
        url          =  presign(
                          bucketName         = uploadResult.getBucketName,
                          key                = uploadResult.getKey,
@@ -277,7 +278,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
          ZipData(
            name        = fileName,
            size        = fileSize,
-           md5Checksum = Base64.getEncoder().encodeToString(md.digest()),
+           md5Checksum = md5Hash,
            url         = url
          )
     ).andThen { case _ => tempFile.clean() }
