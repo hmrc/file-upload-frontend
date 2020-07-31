@@ -18,6 +18,7 @@ package uk.gov.hmrc.fileupload.testonly
 
 import akka.util.ByteString
 import org.joda.time.DateTime
+import play.api.http.HttpVerbs.POST
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
 import play.api.libs.streams.{Accumulator, Streams}
@@ -32,7 +33,7 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-class TestOnlyController(baseUrl: String, wSClient: WSClient, val s3Service: S3JavaSdkService)
+class TestOnlyController(baseUrl: String, sdesStubBaseUrl: String, wSClient: WSClient, val s3Service: S3JavaSdkService)
    extends Controller with S3TestController {
 
 
@@ -148,6 +149,18 @@ class TestOnlyController(baseUrl: String, wSClient: WSClient, val s3Service: S3J
   def iterateeToAccumulator[T](iteratee: Iteratee[ByteStream, T]): Accumulator[ByteString, T] = {
     val sink = Streams.iterateeToAccumulator(iteratee).toSink
     Accumulator(sink.contramap[ByteString](_.toArray[Byte]))
+  }
+
+  def configureFileReadyNotification(): Action[AnyContent] = Action.async { implicit request =>
+    val params = request.queryString.toSeq.flatMap { case (name, values) =>
+      values.map(name -> _)
+    }
+    wSClient.url(s"$sdesStubBaseUrl/sdes-stub/configure/notification/fileready")
+      .withQueryString(params: _*)
+      .execute(POST)
+      .map { response =>
+        new Status(response.status)(response.body)
+      }
   }
 }
 
