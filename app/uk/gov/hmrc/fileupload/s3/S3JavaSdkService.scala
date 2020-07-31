@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.net.URL
 import java.util.concurrent.Executors
-import java.util.{Base64, UUID}
-import java.security.{DigestInputStream, MessageDigest}
+import java.util.UUID
 
-import akka.stream.Materializer
+import akka.stream.{ClosedShape, Materializer}
 import akka.stream.alpakka.file.ArchiveMetadata
 import akka.stream.alpakka.file.scaladsl.Archive
-import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
+import akka.stream.scaladsl.{Broadcast, FileIO, Flow, GraphDSL, RunnableGraph, Sink, Source, StreamConverters}
+import akka.util.ByteString
 import com.amazonaws.{ClientConfiguration, HttpMethod}
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
@@ -248,26 +248,31 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   ): Future[ZipData] = {
     val fileName = s"$envelopeId.zip"
     val tempFile = TemporaryFile(prefix = "zip")
+    val (uploadFinished, md5Finished) =
+      broadcast2(
+        source = zipSource(envelopeId, files),
+        sink1  = FileIO.toPath(tempFile.file.toPath),
+        sink2  = Md5Hash.md5HashSink
+      ).run()
     (for {
-       _            <- zipToFile(envelopeId, files, tempFile.file)
+       _            <- Future.successful(Logger.debug(s"zipping $envelopeId to ${tempFile.file}"))
+       _            <- uploadFinished
+       md5Hash      <- md5Finished
        fileSize     =  tempFile.file.length
-       is           =  new java.io.FileInputStream(tempFile.file)
-
-       // decorate inputstream so we can calculate checksum on same pass
-       md           =  MessageDigest.getInstance("MD5")
-       dis          =  new DigestInputStream(is, md)
-
+       _            =  Logger.debug(s"uploading $envelopeId to S3")
        uploadResult <- uploadFile(
                          bucketName = awsConfig.transientBucketName,
                          key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(fileName),
-                         file       = dis,
+                         file       = new java.io.FileInputStream(tempFile.file),
                          metadata   = { val om = new ObjectMetadata()
                                         om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
                                         om.setContentLength(fileSize)
                                         om.setContentType("application/zip")
+                                        om.setContentMD5(md5Hash)
                                         om
                                       }
                        )
+       _            =  Logger.debug(s"presigning $envelopeId")
        url          =  presign(
                          bucketName         = uploadResult.getBucketName,
                          key                = uploadResult.getKey,
@@ -277,17 +282,31 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
          ZipData(
            name        = fileName,
            size        = fileSize,
-           md5Checksum = Base64.getEncoder().encodeToString(md.digest()),
+           md5Checksum = md5Hash,
            url         = url
          )
     ).andThen { case _ => tempFile.clean() }
   }
 
-  def zipToFile(
+  private def broadcast2[T, Mat1, Mat2](
+    source: Source[T, Any],
+    sink1: Sink[T, Mat1],
+    sink2: Sink[T, Mat2]
+  ): RunnableGraph[(Mat1, Mat2)] =
+    RunnableGraph.fromGraph(GraphDSL.create(sink1, sink2)(Tuple2.apply) {
+      implicit builder => (s1, s2) =>
+        import GraphDSL.Implicits._
+        val broadcast = builder.add(Broadcast[T](2))
+        source ~> broadcast
+        broadcast.out(0) ~> Flow[T].async ~> s1
+        broadcast.out(1) ~> Flow[T].async ~> s2
+        ClosedShape
+    })
+
+  def zipSource(
     envelopeId: EnvelopeId,
-    files     : List[(FileId, Option[String])],
-    targetFile: File
-  )(implicit materializer: Materializer): Future[akka.stream.IOResult] =
+    files     : List[(FileId, Option[String])]
+  ): Source[(ArchiveMetadata, S3Service.StreamResult), akka.NotUsed]#Repr[ByteString] =
     Source(
       files.map { case (fileId, name) =>
         val filename = name.getOrElse(UUID.randomUUID().toString)
@@ -300,7 +319,6 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
         }
       }
     ).via(Archive.zip())
-     .runWith(FileIO.toPath(targetFile.toPath))
 
   def presign(bucketName: String, key: String, expirationDuration: Duration): URL = {
     import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
