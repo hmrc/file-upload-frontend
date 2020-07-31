@@ -36,7 +36,7 @@ GET         /file-upload/test-only/s3/quarantine/properties                     
 GET         /file-upload/test-only/s3/transient/properties                                      uk.gov.hmrc.fileupload.testonly.TestOnlyController.getTransientProperties
 
 # allow configuration of sdes-stub from public zone
-POST        /sdes-stub/test-only/configure/notification/fileready                               uk.gov.hmrc.fileupload.testonly.TestOnlyController.configureFileReadyNotification
+POST        /file-upload/test-only/sdes-stub/configure/notification/fileready                   uk.gov.hmrc.fileupload.testonly.TestOnlyController.configureFileReadyNotification
 
 # Add all the application routes to the prod.routes file
 ->          /                                                                                   prod.Routes
