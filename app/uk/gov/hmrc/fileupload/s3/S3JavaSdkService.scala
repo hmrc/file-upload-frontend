@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.net.URL
 import java.util.concurrent.Executors
-import java.util.{Base64, UUID}
-import java.security.{DigestInputStream, MessageDigest}
+import java.util.UUID
 
-import akka.stream.Materializer
+import akka.stream.{ClosedShape, Materializer}
 import akka.stream.alpakka.file.ArchiveMetadata
 import akka.stream.alpakka.file.scaladsl.Archive
-import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
+import akka.stream.scaladsl.{Broadcast, FileIO, Flow, GraphDSL, RunnableGraph, Sink, Source, StreamConverters}
+import akka.util.ByteString
 import com.amazonaws.{ClientConfiguration, HttpMethod}
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
@@ -248,14 +248,18 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   ): Future[ZipData] = {
     val fileName = s"$envelopeId.zip"
     val tempFile = TemporaryFile(prefix = "zip")
-    Logger.info(s"zipping $envelopeId to ${tempFile.file}")
+    val (uploadFinished, md5Finished) =
+      broadcast2(
+        source = zipSource(envelopeId, files),
+        sink1  = FileIO.toPath(tempFile.file.toPath),
+        sink2  = Md5Hash.md5HashSink
+      ).run()
     (for {
-       _            <- zipToFile(envelopeId, files, tempFile.file)
-       _            =  Logger.info(s"zipped $envelopeId to ${tempFile.file}")
-
+       _            <- Future.successful(Logger.debug(s"zipping $envelopeId to ${tempFile.file}"))
+       _            <- uploadFinished
+       md5Hash      <- md5Finished
        fileSize     =  tempFile.file.length
-       md5Hash      =  Md5Hash.fromInputStream(new java.io.FileInputStream(tempFile.file))
-       _            =  Logger.info(s"uploading $envelopeId to S3")
+       _            =  Logger.debug(s"uploading $envelopeId to S3")
        uploadResult <- uploadFile(
                          bucketName = awsConfig.transientBucketName,
                          key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(fileName),
@@ -268,7 +272,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
                                         om
                                       }
                        )
-       _            =  Logger.info(s"presigning $envelopeId")
+       _            =  Logger.debug(s"presigning $envelopeId")
        url          =  presign(
                          bucketName         = uploadResult.getBucketName,
                          key                = uploadResult.getKey,
@@ -284,11 +288,25 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     ).andThen { case _ => tempFile.clean() }
   }
 
-  def zipToFile(
+  private def broadcast2[T, Mat1, Mat2](
+    source: Source[T, Any],
+    sink1: Sink[T, Mat1],
+    sink2: Sink[T, Mat2]
+  ): RunnableGraph[(Mat1, Mat2)] =
+    RunnableGraph.fromGraph(GraphDSL.create(sink1, sink2)(Tuple2.apply) {
+      implicit builder => (s1, s2) =>
+        import GraphDSL.Implicits._
+        val broadcast = builder.add(Broadcast[T](2))
+        source ~> broadcast
+        broadcast.out(0) ~> Flow[T].async ~> s1
+        broadcast.out(1) ~> Flow[T].async ~> s2
+        ClosedShape
+    })
+
+  def zipSource(
     envelopeId: EnvelopeId,
-    files     : List[(FileId, Option[String])],
-    targetFile: File
-  )(implicit materializer: Materializer): Future[akka.stream.IOResult] =
+    files     : List[(FileId, Option[String])]
+  ): Source[(ArchiveMetadata, S3Service.StreamResult), akka.NotUsed]#Repr[ByteString] =
     Source(
       files.map { case (fileId, name) =>
         val filename = name.getOrElse(UUID.randomUUID().toString)
@@ -301,7 +319,6 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
         }
       }
     ).via(Archive.zip())
-     .runWith(FileIO.toPath(targetFile.toPath))
 
   def presign(bucketName: String, key: String, expirationDuration: Duration): URL = {
     import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest

@@ -16,18 +16,17 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import java.io.InputStream
-import java.security.{DigestInputStream, MessageDigest}
+import java.security.MessageDigest
 import java.util.Base64
 
+import akka.stream.scaladsl.Sink
+import akka.util.ByteString
+
+import scala.concurrent.{ExecutionContext, Future}
+
 object Md5Hash {
-  def fromInputStream(is: InputStream): String =
-    try {
-      val md  = MessageDigest.getInstance("MD5")
-      val dis = new DigestInputStream(is, md)
-      Iterator.continually(dis.read()).takeWhile(_ != -1).toArray
-      Base64.getEncoder.encodeToString(md.digest())
-    } finally {
-      is.close()
-    }
+  def md5HashSink(implicit ec: ExecutionContext): Sink[ByteString, Future[String]] = {
+    val md  = MessageDigest.getInstance("MD5")
+    Sink.foreach[ByteString](bs => md.update(bs.toArray)).mapMaterializedValue(_.map(_ => Base64.getEncoder.encodeToString(md.digest())))
+  }
 }
