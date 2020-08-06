@@ -119,15 +119,17 @@ class ApplicationModule(context: Context) extends BuiltInComponentsFromContext(c
 
   lazy val loggerHelper = new LoggerHelperFileExtensionAndUserAgent
 
-  lazy val fileUploadController =
-    new FileUploadController(redirectionFeature, withValidEnvelope, inMemoryBodyParser, commandHandler, uploadToQuarantine, createS3Key, now, configuration, loggerHelper)
+  lazy val fileUploadController = new FileUploadController(redirectionFeature, withValidEnvelope, inMemoryBodyParser,
+    commandHandler, uploadToQuarantine, createS3Key, now, configuration, loggerHelper)
 
   lazy val fileUploadBackendBaseUrl = baseUrl("file-upload-backend")
-  lazy val testOnlySdesStubBaseUrl = baseUrl("sdes-stub")
+
+  lazy val testOnlySdesStubIsEnabled = getConfBool("sdes-stub.enabled", defBool = false)
+  lazy val maybeTestOnlySdesStubBaseUrl = if (testOnlySdesStubIsEnabled) Some(baseUrl("sdes-stub")) else None
 
   lazy val healthController = new uk.gov.hmrc.play.health.HealthController(configuration, environment)
 
-  lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, testOnlySdesStubBaseUrl, wsClient, s3Service)
+  lazy val testOnlyController = new TestOnlyController(fileUploadBackendBaseUrl, maybeTestOnlySdesStubBaseUrl, wsClient, s3Service)
 
   lazy val testRoutes = new testOnlyDoNotUseInAppConf.Routes(httpErrorHandler, testOnlyController, prodRoutes)
 

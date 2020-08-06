@@ -33,9 +33,8 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-class TestOnlyController(baseUrl: String, sdesStubBaseUrl: String, wSClient: WSClient, val s3Service: S3JavaSdkService)
+class TestOnlyController(baseUrl: String, maybeSdesStubBaseUrl: Option[String], wSClient: WSClient, val s3Service: S3JavaSdkService)
    extends Controller with S3TestController {
-
 
   def createEnvelope() = Action.async(jsonBodyParser[CreateEnvelopeRequest]) { implicit request =>
     def extractEnvelopeId(response: WSResponse): String =
@@ -152,15 +151,17 @@ class TestOnlyController(baseUrl: String, sdesStubBaseUrl: String, wSClient: WSC
   }
 
   def configureFileReadyNotification(): Action[AnyContent] = Action.async { implicit request =>
-    val params = request.queryString.toSeq.flatMap { case (name, values) =>
-      values.map(name -> _)
-    }
-    wSClient.url(s"$sdesStubBaseUrl/sdes-stub/configure/notification/fileready")
-      .withQueryString(params: _*)
-      .execute(POST)
-      .map { response =>
-        new Status(response.status)(response.body)
+    maybeSdesStubBaseUrl.fold(Future.successful(NotImplemented("sdes-stub is not enabled for this deployment"))) { sdesStubBaseUrl =>
+      val params = request.queryString.toSeq.flatMap { case (name, values) =>
+        values.map(name -> _)
       }
+      wSClient.url(s"$sdesStubBaseUrl/sdes-stub/configure/notification/fileready")
+        .withQueryString(params: _*)
+        .execute(POST)
+        .map { response =>
+          new Status(response.status)(response.body)
+        }
+    }
   }
 }
 
