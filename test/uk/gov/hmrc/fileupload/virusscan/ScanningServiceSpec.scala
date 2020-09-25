@@ -23,6 +23,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.{FlatSpec, Matchers}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
+import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import uk.gov.hmrc.fileupload.{DomainFixtures, EnvelopeId, File, FileId, FileRefId}
 
@@ -71,7 +72,7 @@ class ScanningServiceSpec
       scanner.when(*, *).returns(Future.successful(Xor.left(ScanReadCommandTimeOut))).noMoreThanOnce()
       scanner.when(*, *).returns(Future.successful(scanResult))
 
-      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = timeoutAttempts, getFile = (_, _) => file)((_, _) => "some-key")(EnvelopeId(), FileId(), FileRefId()).futureValue
+      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = timeoutAttempts, getFile = (_, _) => file)((_, _) => S3KeyName("some-key"))(EnvelopeId(), FileId(), FileRefId()).futureValue
 
       result shouldBe scanResult
 
@@ -85,7 +86,7 @@ class ScanningServiceSpec
 
       scanner.when(*, *).returns(Future.successful(scanResult))
 
-      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = maxNumberOfAttemps, getFile = (_, _) => file)((_, _) => "some-key")(EnvelopeId(), FileId(), FileRefId()).futureValue
+      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = maxNumberOfAttemps, getFile = (_, _) => file)((_, _) => S3KeyName("some-key"))(EnvelopeId(), FileId(), FileRefId()).futureValue
 
       result shouldBe scanResult
 

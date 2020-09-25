@@ -21,7 +21,7 @@ class FileUploadISpec extends FileActions with EnvelopeActions with Eventually {
 
       Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.scanFileCommandTriggered()
+        Wiremock.markFileAsCleanCommandTriggered()
       }
       eventually {
         val res = download(envelopeId, fileId)
@@ -40,7 +40,7 @@ class FileUploadISpec extends FileActions with EnvelopeActions with Eventually {
 
       Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.scanFileCommandTriggered()
+        Wiremock.markFileAsCleanCommandTriggered()
       }
       eventually {
         val res = download(envelopeId, fileId)
@@ -73,4 +73,3 @@ class FileUploadISpec extends FileActions with EnvelopeActions with Eventually {
   }
 
 }
-

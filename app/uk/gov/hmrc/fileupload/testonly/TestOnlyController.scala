@@ -16,23 +16,36 @@
 
 package uk.gov.hmrc.fileupload.testonly
 
+import java.net.URLEncoder
+
 import akka.util.ByteString
+import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.http.HttpVerbs.POST
 import play.api.libs.json._
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc._
+import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
 import uk.gov.hmrc.fileupload.testonly.CreateEnvelopeRequest.{ByteStream, ContentTypes}
-import java.net.URLEncoder
+import uk.gov.hmrc.play.bootstrap.controller.FrontendController
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-class TestOnlyController(baseUrl: String, maybeSdesStubBaseUrl: Option[String], wSClient: WSClient, val s3Service: S3JavaSdkService)
-   extends Controller with S3TestController {
+@Singleton
+class TestOnlyController @Inject()(
+  appModule    : ApplicationModule,
+  wSClient     : WSClient,
+  val s3Service: S3JavaSdkService,
+  mcc          : MessagesControllerComponents
+) extends FrontendController(mcc)
+     with S3TestController {
+
+  val baseUrl                    = appModule.fileUploadBackendBaseUrl
+  val optTestOnlySdesStubBaseUrl = appModule.optTestOnlySdesStubBaseUrl
 
   def createEnvelope() = Action.async(parse.json[CreateEnvelopeRequest]) { implicit request =>
     def extractEnvelopeId(response: WSResponse): String =
@@ -132,7 +145,7 @@ class TestOnlyController(baseUrl: String, maybeSdesStubBaseUrl: Option[String], 
   }
 
   def configureFileReadyNotification(): Action[AnyContent] = Action.async { implicit request =>
-    maybeSdesStubBaseUrl.fold(Future.successful(NotImplemented("sdes-stub is not enabled for this deployment"))) { sdesStubBaseUrl =>
+    optTestOnlySdesStubBaseUrl.fold(Future.successful(NotImplemented("sdes-stub is not enabled for this deployment"))) { sdesStubBaseUrl =>
       val params = request.queryString.toSeq.flatMap { case (name, values) =>
         values.map(name -> _)
       }

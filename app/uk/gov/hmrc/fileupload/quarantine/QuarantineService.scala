@@ -19,14 +19,15 @@ package uk.gov.hmrc.fileupload.quarantine
 import cats.data.Xor
 import uk.gov.hmrc.fileupload._
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.fileupload.s3.S3KeyName
 
 object QuarantineService {
 
   type QuarantineDownloadResult = Xor[QuarantineDownloadFileNotFound.type, File]
   case object QuarantineDownloadFileNotFound
 
-  def getFileFromQuarantine(retrieveFile: (String, String) => Future[Option[FileData]])
-                           (key: String, version: String)
+  def getFileFromQuarantine(retrieveFile: (S3KeyName, String) => Future[Option[FileData]])
+                           (key: S3KeyName, version: String)
                            (implicit executionContext: ExecutionContext): Future[QuarantineDownloadResult] =
     for {
       maybeFileData <- retrieveFile(key, version)

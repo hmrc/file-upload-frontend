@@ -18,19 +18,20 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import com.amazonaws.services.s3.transfer.model.UploadResult
+import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json.Json
-import play.api.mvc.MultipartFormData.FilePart
-import play.api.mvc.{MultipartFormData, Request}
+import play.api.mvc.{MessagesControllerComponents, MultipartFormData, Request}
 import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
-import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler
+import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3KeyName}
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
@@ -40,7 +41,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
+class FileUploadControllerSpec extends UnitSpec with MockitoSugar with ScalaFutures with TestApplicationComponents {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -52,23 +53,26 @@ class FileUploadControllerSpec extends UnitSpec with ScalaFutures with TestAppli
     }
     val fakeCurrentTime = () => 10L
     val uploadToQuarantine: UploadToQuarantine = (_,_,_) => new UploadResult()
-    val s3Key: (EnvelopeId, FileId) => String = (_,_) => "key"
+    val createS3Key: (EnvelopeId, FileId) => S3KeyName = (_,_) => S3KeyName("key")
     val configuration = Configuration.from(Map.empty)
     val loggerHelper = new LoggerHelper {
-      override def getLoggerValues(formData: FilePart[FileCachedInMemory], request: Request[_]): LoggerValues =
+      override def getLoggerValues(formData: MultipartFormData.FilePart[FileCachedInMemory], request: Request[_]): LoggerValues =
         LoggerValues("txt", "some-user-agent")
     }
 
+    val appModule = mock[ApplicationModule]
+    when(appModule.withValidEnvelope).thenReturn(noEnvelopeValidation)
+    when(appModule.inMemoryBodyParser).thenReturn(noParsingIsActuallyDoneHere)
+    when(appModule.commandHandler).thenReturn(commandHandler)
+    when(appModule.uploadToQuarantine).thenReturn(uploadToQuarantine)
+    when(appModule.createS3Key).thenReturn(createS3Key)
+    when(appModule.now).thenReturn(fakeCurrentTime)
+    when(appModule.loggerHelper).thenReturn(loggerHelper)
+
     new FileUploadController(
-      null,
-      noEnvelopeValidation,
-      noParsingIsActuallyDoneHere,
-      commandHandler,
-      uploadToQuarantine,
-      s3Key,
-      fakeCurrentTime,
+      appModule,
       configuration,
-      loggerHelper
+      app.injector.instanceOf[MessagesControllerComponents]
     )
   }
 

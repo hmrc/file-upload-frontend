@@ -24,6 +24,7 @@ import akka.stream.ActorMaterializer
 import cats.data.Xor
 import org.scalatest.Matchers
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import play.api.{Configuration, Environment}
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
@@ -51,7 +52,7 @@ class VirusScannerSpec
   def commandTimeout(inputstream: InputStream, length: Int) = Future.successful(Infected("COMMAND READ TIMED OUT"))
   def failWith(exception: Exception)(inputStream: InputStream, length: Int): Future[ScanningResult] = Future.failed(exception)
 
-  val virusScanner = new VirusScanner(AvClient(components.configuration, components.environment))
+  val virusScanner = new VirusScanner(app.injector.instanceOf[AvClient])
 
   "VirusScanner" should {
     s"return $ScanResultFileClean result if input did not contain a virus" in {

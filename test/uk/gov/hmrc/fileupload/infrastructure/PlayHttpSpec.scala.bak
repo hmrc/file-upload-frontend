@@ -29,12 +29,12 @@ import play.api.{Configuration, Play}
 import play.api.Mode.Mode
 import play.api.http.Status
 import play.api.libs.json.{JsSuccess, Json}
+import play.api.libs.ws.WSClient
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.transfer.FakeAuditer
 import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.config.RunMode
 import uk.gov.hmrc.play.test.UnitSpec
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -49,7 +49,7 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
 
   private val testAppName = "test-app"
 
-  object TestAuditConnector extends AuditConnector with RunMode {
+  object TestAuditConnector extends AuditConnector {
     override lazy val consumer = Consumer(BaseUri("localhost", fakeAuditer.port(), "http"))
     override lazy val auditingConfig = AuditingConfig(Some(consumer), enabled = true, auditSource = "test-app")
 
@@ -96,7 +96,8 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
             .withStatus(statusCode).withBody("someResponseBody"))
           .build())
 
-      val response = await(testExecute(components.wsClient.url(downstreamUrl).withMethod("GET"))).valueOr(t => fail(t.message))
+      val wsClient = app.injector.instanceOf[WSClient]
+      val response = await(testExecute(wsClient.url(downstreamUrl).withMethod("GET"))).valueOr(t => fail(t.message))
 
       response.status shouldBe statusCode
       eventually {
@@ -120,7 +121,8 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
             .withFault(Fault.MALFORMED_RESPONSE_CHUNK))
           .build())
 
-      val response = await(testExecute(components.wsClient.url(downstreamUrl).withMethod("GET")))
+      val wsClient = app.injector.instanceOf[WSClient]
+      val response = await(testExecute(wsClient.url(downstreamUrl).withMethod("GET")))
 
       response shouldBe Xor.Left(PlayHttpError("Remotely closed"))
       loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely closed"

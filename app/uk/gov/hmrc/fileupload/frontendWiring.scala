@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
+/*
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import play.api.Mode.Mode
@@ -56,4 +57,4 @@ object FrontendAuthConnector extends PlayAuthConnector with ServicesConfig {
 
   override protected def runModeConfiguration: Configuration = Play.current.configuration
 }
-
+*/

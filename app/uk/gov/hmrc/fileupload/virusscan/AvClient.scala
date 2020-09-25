@@ -18,6 +18,7 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import java.io.InputStream
 
+import javax.inject.{Inject, Provider, Singleton}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.clamav.{ClamAntiVirus, ClamAntiVirusFactory}
 import uk.gov.hmrc.clamav.config.ClamAvConfig
@@ -25,31 +26,29 @@ import uk.gov.hmrc.clamav.model.ScanningResult
 
 import scala.concurrent.{ExecutionContext, Future}
 
-// ClamAntiVirus for some reason has a private constructor and no interface...
-trait AvClient {
-    def sendAndCheck(inputStream: InputStream, length: Int)(implicit ec: ExecutionContext): Future[ScanningResult]
-}
+@Singleton
+class AvClient @Inject()(
+  configuration: Configuration,
+  environment: Environment
+)(implicit
+  ec: ExecutionContext
+) {
+  val clamAvConfig =
+    new ClamAvConfig {
+      def getString(key: String) =
+        configuration.getString(key).getOrElse(sys.error(s"No config for key `$key` defined"))
 
-object AvClient {
-  def apply(configuration: Configuration, environment: Environment)(implicit ec: ExecutionContext): AvClient =
-    new AvClient {
-      val clamAvConfig =
-        new ClamAvConfig {
-          def getString(key: String) =
-            configuration.getString(key).getOrElse(sys.error(s"No config for key `$key` defined"))
-
-          def getInt(key: String) =
-            configuration.getInt(key).getOrElse(sys.error(s"No config for key `$key` defined"))
+      def getInt(key: String) =
+        configuration.getInt(key).getOrElse(sys.error(s"No config for key `$key` defined"))
 
 
-          override val host   : String = getString(s"${environment.mode}.clam.antivirus.host")
-          override val port   : Int    = getInt(s"${environment.mode}.clam.antivirus.port")
-          override val timeout: Int    = getInt(s"${environment.mode}.clam.antivirus.timeout")
-        }
-
-      val clamAntiVirus: ClamAntiVirus = new ClamAntiVirusFactory(clamAvConfig).getClient
-
-      override def sendAndCheck(inputStream: InputStream, length: Int)(implicit ec: ExecutionContext): Future[ScanningResult] =
-        clamAntiVirus.sendAndCheck(inputStream, length)
+      override val host   : String = getString(s"${environment.mode}.clam.antivirus.host")
+      override val port   : Int    = getInt(s"${environment.mode}.clam.antivirus.port")
+      override val timeout: Int    = getInt(s"${environment.mode}.clam.antivirus.timeout")
     }
+
+  val clamAntiVirus: ClamAntiVirus = new ClamAntiVirusFactory(clamAvConfig).getClient
+
+  def sendAndCheck(inputStream: InputStream, length: Int)(implicit ec: ExecutionContext): Future[ScanningResult] =
+    clamAntiVirus.sendAndCheck(inputStream, length)
 }

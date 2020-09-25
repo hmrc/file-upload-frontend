@@ -19,23 +19,31 @@ package uk.gov.hmrc.fileupload.controllers
 import java.net.URL
 
 import akka.util.ByteString
+import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.libs.json.{__, Json, JsObject, JsSuccess, JsError, JsValue, Reads}
 import play.api.mvc._
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, ZipData}
 import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromBucket
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import uk.gov.hmrc.play.bootstrap.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileDownloadController(
-  downloadFromTransient : DownloadFromBucket,
-  createS3Key           : (EnvelopeId, FileId) => S3KeyName,
-  now                   : () => Long,
-  downloadFromQuarantine: DownloadFromBucket,
-  zipAndPresign         : (EnvelopeId, List[(FileId, Option[String])]) => Future[ZipData]
-)(implicit executionContext: ExecutionContext) extends Controller {
+@Singleton
+class FileDownloadController @Inject()(
+  appModule: ApplicationModule,
+  mcc      : MessagesControllerComponents
+)(implicit
+  executionContext: ExecutionContext
+) extends FrontendController(mcc) {
+
+  val downloadFromTransient : DownloadFromBucket                                              = appModule.downloadFromTransient
+  val createS3Key           : (EnvelopeId, FileId) => S3KeyName                               = appModule.createS3Key
+  val now                   : () => Long                                                      = appModule.now
+  val downloadFromQuarantine: DownloadFromBucket                                              = appModule.downloadFromQuarantine
+  val zipAndPresign         : (EnvelopeId, List[(FileId, Option[String])]) => Future[ZipData] = appModule.zipAndPresign
 
   def download(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
     Logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")

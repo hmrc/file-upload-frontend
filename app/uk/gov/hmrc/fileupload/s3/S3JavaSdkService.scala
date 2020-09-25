@@ -98,14 +98,14 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
       .withS3Client(s3Client)
       .build()
 
-  override def getFileLengthFromQuarantine(key: String, versionId: String): Long =
+  override def getFileLengthFromQuarantine(key: S3KeyName, versionId: String): Long =
     getFileLength(awsConfig.quarantineBucketName, key, versionId)
 
-  def getFileLength(bucketName: String, key: String, versionId: String): Long =
+  def getFileLength(bucketName: String, key: S3KeyName, versionId: String): Long =
     getObjectMetadata(bucketName, key, versionId).getContentLength
 
-  def getObjectMetadata(bucketName: String, key: String, versionId: String): ObjectMetadata =
-    s3Client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key, versionId))
+  def getObjectMetadata(bucketName: String, key: S3KeyName, versionId: String): ObjectMetadata =
+    s3Client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key.value, versionId))
 
   def objectMetadataWithServerSideEncryption: ObjectMetadata = {
     val om = new ObjectMetadata()
@@ -149,9 +149,9 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   override def download(bucketName: String, key: S3KeyName): Option[StreamWithMetadata] =
     objectByKey(bucketName, key).map(downloadByObject)
 
-  override def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] =
+  override def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] =
     Future {
-      val s3Object = s3Client.getObject(new GetObjectRequest(awsConfig.quarantineBucketName, key, versionId))
+      val s3Object = s3Client.getObject(new GetObjectRequest(awsConfig.quarantineBucketName, key.value, versionId))
       val objectDataIS = s3Object.getObjectContent
       val metadata = s3Object.getObjectMetadata
 
@@ -165,7 +165,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
       ))
     }
 
-  override def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult] =
+  override def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[UploadResult] =
     uploadFile(bucketName, key, file,
       metadata = {
         val om = objectMetadataWithServerSideEncryption
@@ -174,10 +174,10 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
       }
     )
 
-  def uploadFile(bucketName: String, key: String, file: InputStream, metadata: ObjectMetadata): Future[UploadResult] = {
-    val fileInfo = s"bucket=$bucketName key=$key fileSize=${metadata.getContentLength}"
+  def uploadFile(bucketName: String, key: S3KeyName, file: InputStream, metadata: ObjectMetadata): Future[UploadResult] = {
+    val fileInfo = s"bucket=$bucketName key=${key.value} fileSize=${metadata.getContentLength}"
     val uploadTime = metricUploadCompleted.time()
-    Try(transferManager.upload(bucketName, key, file, metadata)) match {
+    Try(transferManager.upload(bucketName, key.value, file, metadata)) match {
       case Success(upload) =>
         val promise = Promise[UploadResult]
         Logger.info(s"upload-s3 started: $fileInfo")
@@ -210,10 +210,10 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
   override def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], akka.NotUsed] =
     Source.fromIterator(() => new S3FilesIterator(s3Client, bucketName))
 
-  override def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult] = Try {
-    Logger.info(s"Copying a file key $key and version: $versionId")
+  override def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResult] = Try {
+    Logger.info(s"Copying a file key ${key.value} and version: $versionId")
     metricCopyFromQtoT.mark()
-    val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key, versionId, awsConfig.transientBucketName, key)
+    val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key.value, versionId, awsConfig.transientBucketName, key.value)
     copyRequest.setNewObjectMetadata(objectMetadataWithServerSideEncryption)
     s3Client.copyObject(copyRequest)
   }
@@ -225,17 +225,16 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     )
   }
 
-  override def deleteObjectFromBucket(bucketName: String, key: String): Unit = {
+  override def deleteObjectFromBucket(bucketName: String, key: S3KeyName): Unit = {
+    val summaries = s3Client.listVersions(bucketName, key.value).getVersionSummaries
 
-    val summaries = s3Client.listVersions(bucketName, key).getVersionSummaries
+    val objectDescription = ReflectionToStringBuilder.toString(s3Client.getObjectMetadata(bucketName, key.value))
 
-    val objectDescription = ReflectionToStringBuilder.toString(s3Client.getObjectMetadata(bucketName, key))
-
-    Logger.info(s"Deleting object. Object $key from bucket $bucketName has ${summaries.size()} versions. Description: $objectDescription")
+    Logger.info(s"Deleting object. Object ${key.value} from bucket $bucketName has ${summaries.size()} versions. Description: $objectDescription")
 
     for (summary: S3VersionSummary <- summaries.asScala) {
       val outcome = Try(s3Client.deleteVersion(bucketName, summary.getKey, summary.getVersionId))
-      Logger.info(s"Outcome of deleting $key / ${summary.getVersionId}: $outcome")
+      Logger.info(s"Outcome of deleting ${key.value} / ${summary.getVersionId}: $outcome")
     }
   }
 
@@ -312,7 +311,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
         val filename = name.getOrElse(UUID.randomUUID().toString)
         download(
           bucketName = awsConfig.transientBucketName,
-          key        = S3KeyName(S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId))
+          key        = S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId)
         ) match {
           case None => sys.error(s"Could not find file $fileId, for envelope $envelopeId")
           case Some(streamWithMetadata) => (ArchiveMetadata(filename), streamWithMetadata.stream)

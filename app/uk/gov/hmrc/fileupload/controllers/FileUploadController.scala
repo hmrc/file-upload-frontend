@@ -17,37 +17,46 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
+import javax.inject.{Inject, Singleton}
 import org.slf4j.MDC
+import play.api.Configuration
 import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc._
-import play.api.Configuration
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
-import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
+import uk.gov.hmrc.play.bootstrap.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadController( redirectionFeature: RedirectionFeature,
-                            withValidEnvelope: WithValidEnvelope,
-                            uploadParser: InMemoryMultiPartBodyParser,
-                            commandHandler: CommandHandler,
-                            uploadToQuarantine: UploadToQuarantine,
-                            createS3Key: (EnvelopeId, FileId) => String,
-                            now: () => Long,
-                            config: Configuration,
-                            loggerHelper: LoggerHelper
-                          )
-                          (implicit executionContext: ExecutionContext) extends Controller {
+@Singleton
+class FileUploadController @Inject()(
+  appModule: ApplicationModule,
+  config   : Configuration,
+  mcc      : MessagesControllerComponents
+)(implicit
+  executionContext: ExecutionContext
+) extends FrontendController(mcc) {
 
-  private val logFileExtensions: Boolean = config.getBoolean("flags.log-file-extensions").getOrElse(false)
+  val redirectionFeature: RedirectionFeature                = appModule.redirectionFeature
+  val withValidEnvelope : WithValidEnvelope                 = appModule.withValidEnvelope
+  val uploadParser      : InMemoryMultiPartBodyParser       = appModule.inMemoryBodyParser
+  val commandHandler    : CommandHandler                    = appModule.commandHandler
+  val uploadToQuarantine: S3Service.UploadToQuarantine      = appModule.uploadToQuarantine
+  val createS3Key       : (EnvelopeId, FileId) => S3KeyName = appModule.createS3Key
+  val now               : () => Long                        = appModule.now
+  val loggerHelper      : LoggerHelper                      = appModule.loggerHelper
+
+  private val logFileExtensions: Boolean =
+    config.getBoolean("flags.log-file-extensions").getOrElse(false)
 
   def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
                             `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction = {

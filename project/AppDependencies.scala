@@ -20,15 +20,14 @@ private object AppDependencies {
 
   import play.core.PlayVersion
 
-  private val frontendBootstrapVersion = "12.4.0"
-  private val playPartialsVersion      = "6.5.0"
-  private val authClient               = "2.17.0-play-26"
-  private val playConfigVersion        = "7.3.0"
-  private val hmrcTestVersion          = "3.3.0"
-  private val clamAvClientVersion      = "6.9.0"
+  private val playBootstrapVersion = "1.16.0"
+  private val playPartialsVersion  = "6.11.0-play-26"
+  private val authClient           = "3.1.0-play-26"
+  private val hmrcTestVersion      = "3.9.0-play-26"
+  private val clamAvClientVersion  = "6.9.0"
 
   val compile = Seq(
-    "uk.gov.hmrc"        %% "frontend-bootstrap"       % frontendBootstrapVersion,
+    "uk.gov.hmrc"        %% "bootstrap-play-26"        % playBootstrapVersion,
     "uk.gov.hmrc"        %% "play-partials"            % playPartialsVersion,
     "uk.gov.hmrc"        %% "auth-client"              % authClient,
     "uk.gov.hmrc"        %% "clamav-client"            % clamAvClientVersion,
@@ -43,17 +42,18 @@ private object AppDependencies {
   )
 
   val test = Seq(
-        "uk.gov.hmrc"            %% "hmrctest"                    % hmrcTestVersion     % "test,it",
-        "org.scalatest"          %% "scalatest"                   % "3.0.5"             % "test,it",
-        "org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"             % "test,it",
-        "com.github.tomakehurst" %  "wiremock"                    % "1.58"              % "test,it",
-        "org.scalatestplus.play" %% "scalatestplus-play"          % "2.0.1"             % "test,it",
-        "org.pegdown"            %  "pegdown"                     % "1.6.0"             % "test,it",
-        "org.jsoup"              %  "jsoup"                       % "1.11.3"            % "test,it",
-        "com.typesafe.play"      %% "play-test"                   % PlayVersion.current % "test,it",
-        "com.typesafe.akka"      %% "akka-testkit"                % "2.3.2"             % "test,it",
-        "io.findify"             %% "s3mock"                      % "0.2.5"             % "it"
-      )
+    "uk.gov.hmrc"            %% "hmrctest"                    % hmrcTestVersion     % "test,it",
+    "org.scalatest"          %% "scalatest"                   % "3.0.5"             % "test,it",
+    "org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"             % "test,it",
+    "com.github.tomakehurst" %  "wiremock"                    % "1.58"              % "test,it",
+    "org.scalatestplus.play" %% "scalatestplus-play"          % "3.1.3"             % "test,it",
+    "org.mockito"            %  "mockito-core"                % "2.21.0"            % "test,it",
+    "org.pegdown"            %  "pegdown"                     % "1.6.0"             % "test,it",
+    "org.jsoup"              %  "jsoup"                       % "1.11.3"            % "test,it",
+    "com.typesafe.play"      %% "play-test"                   % PlayVersion.current % "test,it",
+    "com.typesafe.akka"      %% "akka-testkit"                % "2.3.2"             % "test,it",
+    "io.findify"             %% "s3mock"                      % "0.2.5"             % "it"
+  )
 
   val dependencies = compile ++ test
 }

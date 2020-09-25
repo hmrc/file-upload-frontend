@@ -22,7 +22,7 @@ import org.scalatest.Matchers
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 import uk.gov.hmrc.fileupload.notifier.{MarkFileAsClean, MarkFileAsInfected}
-import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -46,17 +46,15 @@ class DeletionActorSpec extends TestKit(ActorSystem("deletion")) with ImplicitSe
         MarkFileAsInfected(EnvelopeId(), FileId(), FileRefId())
       }
 
-      val deletion: DeleteFileFromQuarantineBucket = { (s3Key: String) =>
+      val deletion: S3Service.DeleteFileFromQuarantineBucket = { (s3Key: S3KeyName) =>
         Thread.sleep(100)
-        collector = collector :+ s3Key
+        collector = collector :+ s3Key.value
       }
 
-      val s3Key: (EnvelopeId, FileId) => String =
-      { (e: EnvelopeId, f: FileId) =>
-        {f.value}
-      }
+      val createS3Key: (EnvelopeId, FileId) => S3KeyName =
+        (e: EnvelopeId, f: FileId) => S3KeyName(f.value)
 
-      val actor = system.actorOf(DeletionActor.props((_: ActorRef, _: Class[_]) => true, deletion, s3Key))
+      val actor = system.actorOf(DeletionActor.props((_: ActorRef, _: Class[_]) => true, deletion, createS3Key))
 
       sendToActor(actor, infectedEventsToSend)
 

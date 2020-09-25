@@ -111,17 +111,17 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
           .build())
     }
 
-    def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] = {
+    def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] =
       backend.findAll(putRequestedFor(urlPathMatching(fileContentUrl(envelopeId, fileId)))).asScala.headOption
-    }
 
-    def quarantineFileCommandTriggered() = {
+    def quarantineFileCommandTriggered() =
       backend.verify(postRequestedFor(urlEqualTo("/file-upload/commands/quarantine-file")))
-    }
 
-    def scanFileCommandTriggered() = {
+    def markFileAsCleanCommandTriggered() =
       backend.verify(postRequestedFor(urlEqualTo("/file-upload/commands/mark-file-as-clean")))
-    }
+
+    def markFileAsInfectedTriggered() =
+      backend.verify(postRequestedFor(urlEqualTo("/file-upload/commands/mark-file-as-infected")))
 
     private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) = {
       s"/file-upload/envelopes/$envelopeId/files/$fileId"

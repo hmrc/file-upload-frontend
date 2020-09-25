@@ -17,29 +17,19 @@
 package uk.gov.hmrc.fileupload
 
 import org.scalatest.{BeforeAndAfterAll, Suite}
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.ApplicationLoader.Context
 import play.api._
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.EssentialFilter
 import uk.gov.hmrc.play.test.UnitSpec
 
-trait TestApplicationComponents extends UnitSpec with OneAppPerSuite with BeforeAndAfterAll {
+trait TestApplicationComponents extends UnitSpec with GuiceOneServerPerSuite with BeforeAndAfterAll {
   this: Suite =>
 
-  // accessed to get the components in tests
-  lazy val components: ApplicationModule = new TestApplicationModule(context)
-
   // creates a new application and sets the components
-  implicit override lazy val app: Application = components.application
-
-  lazy val context: ApplicationLoader.Context = {
-    val classLoader = ApplicationLoader.getClass.getClassLoader
-    val env = new Environment(new java.io.File("."), classLoader, Mode.Test)
-    ApplicationLoader.createContext(env)
-  }
-
-}
-
-class TestApplicationModule(context: Context) extends ApplicationModule(context = context) {
-  override lazy val httpFilters: Seq[EssentialFilter] = Seq()
+  implicit override lazy val app: Application =
+    new GuiceApplicationBuilder()
+      .configure("metrics.jvm" -> false)
+      .build()
 }

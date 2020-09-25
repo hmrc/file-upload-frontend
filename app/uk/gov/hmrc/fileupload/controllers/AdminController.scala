@@ -16,15 +16,25 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import play.api.mvc.{Action, Controller}
+import javax.inject.{Inject, Singleton}
+import play.api.mvc.{Action, Controller, MessagesControllerComponents}
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
+import uk.gov.hmrc.play.bootstrap.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AdminController(commandHandler: CommandHandler)(implicit executionContext: ExecutionContext) extends Controller {
+@Singleton
+class AdminController @Inject()(
+  appModule: ApplicationModule,
+  mcc      : MessagesControllerComponents
+)(implicit
+  executionContext: ExecutionContext
+) extends FrontendController(mcc) {
+
+  val commandHandler: CommandHandler = appModule.commandHandler
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { _ =>
     commandHandler.notify(VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId))

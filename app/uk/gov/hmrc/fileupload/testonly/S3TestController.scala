@@ -24,13 +24,14 @@ import play.api.http.HttpEntity
 import play.api.mvc.{Action, Controller, ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.cacheFileInMemory
 import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3KeyName}
+import uk.gov.hmrc.play.bootstrap.controller.FrontendController
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
-trait S3TestController { self: Controller =>
+trait S3TestController { self: FrontendController =>
 
   val s3Service: S3JavaSdkService
 
@@ -64,23 +65,20 @@ trait S3TestController { self: Controller =>
         s"key $getKey, version: $getVersionId, eTag: $getETag"
       }
 
-      s3Service.upload(bucketName, fileName, uploadedFile.inputStream, uploadedFile.size)
+      s3Service.upload(bucketName, S3KeyName(fileName), uploadedFile.inputStream, uploadedFile.size)
         .map(r => Ok(formatResult(r)))
     } else {
      Future.successful(BadRequest("Expected exactly one file to be attached"))
     }
   }
 
-  def copyFromQtoT(key: String, versionId: String) = Action { _ =>
-    def formatResponse(r: CopyObjectResult) =
-      s"Successfully copied file: $key, etag: ${r.getETag}, versionId: ${r.getVersionId}"
-
-    s3Service.copyFromQtoT(key, versionId) match {
-      case Success(result) => Ok(formatResponse(result))
+  def copyFromQtoT(fileName: String, versionId: String) = Action { _ =>
+    s3Service.copyFromQtoT(S3KeyName(fileName), versionId) match {
+      case Success(result) => Ok(s"Successfully copied file: $fileName, etag: ${result.getETag}, versionId: ${result.getVersionId}")
       case Failure(NonFatal(ex)) => InternalServerError("Problem copying to transient: " + ex.getMessage)
     }
   }
-  
+
   def s3downloadFileQ(fileName: String, version: Option[String]) = s3downloadFile(quarantineBucketName, fileName, version)
   def s3downloadFileT(fileName: String, version: Option[String]) = s3downloadFile(transientBucketName, fileName, version)
 

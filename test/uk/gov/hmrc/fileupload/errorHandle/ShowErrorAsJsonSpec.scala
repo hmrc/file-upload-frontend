@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.errorHandle
 
 import org.scalatest.concurrent.ScalaFutures
+import play.api.{Configuration, Environment}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
@@ -28,7 +29,7 @@ import scala.concurrent.ExecutionContext
 class ShowErrorAsJsonSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
 
   implicit val ec = ExecutionContext.global
-  val errorHandler = new ShowErrorAsJson(components.environment, components.configuration)
+  val errorHandler = new ShowErrorAsJson(app.injector.instanceOf[Environment], app.injector.instanceOf[Configuration])
 
   "Error Handler For the Controllers" should {
 

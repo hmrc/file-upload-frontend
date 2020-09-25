@@ -20,8 +20,9 @@ import java.io.InputStream
 
 import cats.data.Xor
 import play.api.Logger
-import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
+import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
+import uk.gov.hmrc.fileupload.s3.S3KeyName
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -47,8 +48,8 @@ object ScanningService {
 
   def scanBinaryData(scanner: AvScan,
                      scanTimeoutAttempts: Int,
-                     getFile: (String, String) => Future[QuarantineDownloadResult])
-                    (s3KeyAppender: (EnvelopeId, FileId) => String)
+                     getFile: (S3KeyName, String) => Future[QuarantineDownloadResult])
+                    (s3KeyAppender: (EnvelopeId, FileId) => S3KeyName)
                     (envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId)
                     (implicit ec: ExecutionContext): Future[ScanResult] = {
     val appendedKey = s3KeyAppender(envelopeId, fileId)

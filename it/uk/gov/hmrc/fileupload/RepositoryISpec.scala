@@ -19,6 +19,7 @@ package uk.gov.hmrc.fileupload
 import java.net.HttpURLConnection._
 
 import cats.data.Xor
+import play.api.libs.ws.WSClient
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.IntegrationTestApplicationComponents
 import uk.gov.hmrc.fileupload.transfer.Repository
@@ -26,9 +27,11 @@ import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableService
 
 class RepositoryISpec extends IntegrationTestApplicationComponents {
 
+  val wsClient = app.injector.instanceOf[WSClient]
+
   "When calling the envelope check" should {
 
-    val envelopeAvailable = Repository.envelopeAvailable(_.execute().map(response => Xor.Right(response)), fileUploadBackendBaseUrl, components.wsClient) _
+    val envelopeAvailable = Repository.envelopeAvailable(_.execute().map(response => Xor.Right(response)), fileUploadBackendBaseUrl, wsClient) _
 
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId

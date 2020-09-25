@@ -19,18 +19,19 @@ package uk.gov.hmrc.fileupload.transfer
 import akka.actor.{Actor, ActorRef, Props}
 import com.amazonaws.services.s3.model.CopyObjectResult
 import play.api.Logger
-import uk.gov.hmrc.fileupload.notifier.{BackendCommand, CommandHandler, MarkFileAsClean, StoreFile}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
+import uk.gov.hmrc.fileupload.notifier.{BackendCommand, CommandHandler, MarkFileAsClean, StoreFile}
+import uk.gov.hmrc.fileupload.s3.S3KeyName
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                    createS3Key: (EnvelopeId, FileId) => String,
+                    createS3Key: (EnvelopeId, FileId) => S3KeyName,
                     commandHandler: CommandHandler,
                     getFileLength: (EnvelopeId, FileId, FileRefId) => Long,
-                    transferFile: (String, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) extends Actor {
+                    transferFile: (S3KeyName, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) extends Actor {
 
   override def preStart = {
     subscribe(self, classOf[MarkFileAsClean])
@@ -60,9 +61,9 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
 object TransferActor {
 
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
-            createS3Key: (EnvelopeId, FileId) => String,
+            createS3Key: (EnvelopeId, FileId) => S3KeyName,
             commandHandler: CommandHandler,
             getFileLength: (EnvelopeId, FileId, FileRefId) => Long,
-            transferFile: (String, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) =
+            transferFile: (S3KeyName, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) =
     Props(new TransferActor(subscribe, createS3Key, commandHandler, getFileLength, transferFile))
 }

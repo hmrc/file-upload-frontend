@@ -24,6 +24,7 @@ import play.api.mvc.Request
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
+import uk.gov.hmrc.fileupload.s3.S3KeyName
 import scala.concurrent.{ExecutionContext, Future}
 
 object TransferService {
@@ -45,21 +46,19 @@ object TransferService {
   case class EnvelopeDetailServiceError(id: EnvelopeId, message: String) extends EnvelopeError
 
   def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
-                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
+                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] =
     isEnvelopeAvailable(envelopeId)
-  }
 
   def envelopeResult(result: (EnvelopeId) => Future[EnvelopeDetailResult])
                     (envelopeId: EnvelopeId)
-                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] = {
+                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] =
     result(envelopeId)
-  }
 
   def stream(baseUrl: String,
              publish: (AnyRef) => Unit,
              toHttpBodyStreamer: (String, EnvelopeId, FileId, FileRefId, Request[_]) => Iteratee[Array[Byte], HttpStreamingBody.Result],
-             getFile: (String, String) => Future[QuarantineDownloadResult])
-            (s3KeyAppender: (EnvelopeId, FileId) => String)
+             getFile: (S3KeyName, String) => Future[QuarantineDownloadResult])
+            (s3KeyAppender: (EnvelopeId, FileId) => S3KeyName)
             (envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId)
             (implicit executionContext: ExecutionContext): Future[TransferResult] = {
     val appendedKey = s3KeyAppender(envelopeId, fileId)

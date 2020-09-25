@@ -2,8 +2,9 @@ package uk.gov.hmrc.fileupload
 
 import java.io.InputStream
 
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{times, verify, when}
+import org.scalatest.concurrent.{IntegrationPatience, Eventually}
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions, ITTestAppComponentsWithStubbedClamAV}
@@ -14,10 +15,8 @@ class VirusScanFileUploadISpec
   extends FileActions
      with EnvelopeActions
      with Eventually
-     with ITTestAppComponentsWithStubbedClamAV {
-
-  implicit val defaultPatience: PatienceConfig =
-    PatienceConfig(timeout = Span(5, Seconds), interval = Span(50, Millis))
+     with ITTestAppComponentsWithStubbedClamAV
+     with IntegrationPatience {
 
   "File upload front-end" should {
     val fileId = anyFileId
@@ -26,7 +25,8 @@ class VirusScanFileUploadISpec
     "transfer a file to the back-end if virus scanning succeeds" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(cleanScan())
+      when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
+        .thenReturn(cleanScan())
 
       val result = uploadDummyFile(envelopeId, fileId)
 
@@ -34,16 +34,17 @@ class VirusScanFileUploadISpec
 
       Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.scanFileCommandTriggered()
+        Wiremock.markFileAsCleanCommandTriggered()
       }
 
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).verify(*, *, *).once()
+      verify(stubbedAvClient).sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext])
     }
 
     "not retry virus scanning fails if general error occurs" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(virusDetected())
+      when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
+        .thenReturn(virusDetected())
 
       val result = uploadDummyFile(envelopeId, fileId)
 
@@ -51,74 +52,75 @@ class VirusScanFileUploadISpec
 
       Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.scanFileCommandTriggered()
+        Wiremock.markFileAsInfectedTriggered()
       }
 
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).verify(*, *, *).once()
+      verify(stubbedAvClient).sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext])
     }
 
     "retry virus scanning fails if COMMAND READ TIMED OUT occurs until successful" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(commandReadTimeout()).noMoreThanOnce()
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(cleanScan())
+      when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
+        .thenReturn(commandReadTimeout())
+        .thenReturn(cleanScan())
 
       val result = uploadDummyFile(envelopeId, fileId)
       result.status should be(200)
 
       Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.scanFileCommandTriggered()
+        Wiremock.markFileAsCleanCommandTriggered()
       }
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).verify(*, *, *).twice()
+      verify(stubbedAvClient, times(2)).sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext])
     }
 
     "retry virus scanning if COMMAND READ TIMED OUT occurs until scanner failure" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(commandReadTimeout()).noMoreThanOnce()
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(scannerFailure())
+      when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
+        .thenReturn(commandReadTimeout())
+        .thenReturn(scannerFailure())
 
       val result = uploadDummyFile(envelopeId, fileId)
       result.status should be(200)
 
       Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.scanFileCommandTriggered()
+        verify(stubbedAvClient, times(2)).sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext])
       }
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).verify(*, *, *).twice()
     }
 
     "retry virus scanning if COMMAND READ TIMED OUT occurs until virus detected" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(commandReadTimeout()).noMoreThanOnce()
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(virusDetected())
+      when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
+        .thenReturn(commandReadTimeout())
+        .thenReturn(virusDetected())
 
       val result = uploadDummyFile(envelopeId, fileId)
       result.status should be(200)
 
       Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.scanFileCommandTriggered()
+        Wiremock.markFileAsInfectedTriggered()
       }
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).verify(*, *, *).twice()
+      verify(stubbedAvClient, times(2)).sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext])
     }
-
 
     "retry virus scanning fails if COMMAND READ TIMED OUT occurs up to the maximum attempts" in {
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).when(*, *, *).returns(commandReadTimeout())
+      when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
+        .thenReturn(commandReadTimeout())
+
       val result = uploadDummyFile(envelopeId, fileId)
       result.status should be(200)
 
       Wiremock.quarantineFileCommandTriggered()
       eventually {
-        Wiremock.scanFileCommandTriggered()
+        verify(stubbedAvClient, times(3)).sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext])
       }
-
-      (stubbedAvClient.sendAndCheck(_: InputStream, _: Int)(_: ExecutionContext)).verify(*, *, *).repeat(3)
     }
   }
 

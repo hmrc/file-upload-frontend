@@ -22,7 +22,6 @@ import java.io.InputStream
 import play.api.libs.json.{JsError, JsSuccess, _}
 import play.api.mvc.PathBindable
 import play.core.routing.dynamicString
-import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString: String = value
@@ -91,4 +90,14 @@ trait Event {
 
 package object fileupload {
   type ByteStream = Array[Byte]
+}
+
+class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(implicit m: Manifest[T]) extends PathBindable[T] {
+  override def bind(key: String, value: String): Either[String, T] = try {
+    Right(bind(value))
+  } catch {
+    case _: Throwable => Left(s"Cannot parse parameter '$key' with value '$value' as '${m.runtimeClass.getSimpleName}'")
+  }
+
+  def unbind(key: String, value: T): String = unbind(value)
 }
