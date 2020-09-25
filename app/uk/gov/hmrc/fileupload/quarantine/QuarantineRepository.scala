@@ -41,9 +41,11 @@ case class EnvelopeReport(id: Option[EnvelopeId] = None,
                           files: Option[Seq[JsObject]] = None)
 
 object EnvelopeReport{
-  implicit val readsJodaLocalDateTime = Reads[DateTime](js =>
-    js.validate[String].map[DateTime](dtString => new DateTime(dtString)))
-  implicit val envelopeFormat: OFormat[EnvelopeReport] = Json.format[EnvelopeReport]
+  implicit val envelopeFormat: OFormat[EnvelopeReport] = {
+    implicit val dtr = Reads[DateTime](js => js.validate[String].map[DateTime](dtString => new DateTime(dtString)))
+    implicit val dtw = Writes[DateTime](dt => JsString(dt.toString))
+    Json.format[EnvelopeReport]
+  }
 }
 
 

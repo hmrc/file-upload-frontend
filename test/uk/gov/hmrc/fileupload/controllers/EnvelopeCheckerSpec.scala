@@ -18,8 +18,8 @@ package uk.gov.hmrc.fileupload.controllers
 
 import cats.data.Xor
 import play.api.http.MimeTypes
-import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.Json
+import play.api.libs.streams.Accumulator
 import play.api.mvc.Results._
 import play.api.mvc.{Action, BodyParser}
 import play.api.test.FakeRequest
@@ -28,7 +28,6 @@ import play.mvc.BodyParser.AnyContent
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeDetailNotFoundError, EnvelopeDetailServiceError}
-import uk.gov.hmrc.fileupload.utils.StreamsConverter
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -223,11 +222,8 @@ class EnvelopeCheckerSpec extends UnitSpec {
   }
 
   def bodyParserThatShouldNotExecute: BodyParser[AnyContent] = BodyParser { _ =>
-    StreamsConverter.iterateeToAccumulator(Iteratee.consume[Array[Byte]]())
-      .map { _ =>
-        fail("body parser executed which we wanted to prevent")
-      }
+    Accumulator.done(
+      fail("body parser executed which we wanted to prevent")
+    )
   }
-
-
 }

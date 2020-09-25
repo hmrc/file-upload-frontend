@@ -29,7 +29,6 @@ import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.quarantine.{EnvelopeConstraints, EnvelopeReport}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.transfer.TransferService._
-import uk.gov.hmrc.fileupload.utils.StreamsConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,8 +36,7 @@ object EnvelopeChecker {
 
   type FileSize = Long
   type ContentType = String
-  type WithValidEnvelope =
-  EnvelopeId => (Option[EnvelopeConstraints] => EssentialAction) => EssentialAction
+  type WithValidEnvelope = EnvelopeId => (Option[EnvelopeConstraints] => EssentialAction) => EssentialAction
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
@@ -93,7 +91,6 @@ object EnvelopeChecker {
   def logAndReturn(statusCode: Int, problem: String)
                   (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
     Logger.warn(s"Request: $rh failed because: $problem")
-    val iteratee = Done[Array[Byte], Result](new Status(statusCode).apply(Json.obj("message" -> problem)))
-    StreamsConverter.iterateeToAccumulator(iteratee)
+    Accumulator.done(new Status(statusCode).apply(Json.obj("message" -> problem)))
   }
 }

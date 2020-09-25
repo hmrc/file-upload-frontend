@@ -19,9 +19,7 @@ package uk.gov.hmrc.fileupload.testonly
 import akka.util.ByteString
 import org.joda.time.DateTime
 import play.api.http.HttpVerbs.POST
-import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
-import play.api.libs.streams.{Accumulator, Streams}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
@@ -36,7 +34,7 @@ import scala.util.{Failure, Success, Try}
 class TestOnlyController(baseUrl: String, maybeSdesStubBaseUrl: Option[String], wSClient: WSClient, val s3Service: S3JavaSdkService)
    extends Controller with S3TestController {
 
-  def createEnvelope() = Action.async(jsonBodyParser[CreateEnvelopeRequest]) { implicit request =>
+  def createEnvelope() = Action.async(parse.json[CreateEnvelopeRequest]) { implicit request =>
     def extractEnvelopeId(response: WSResponse): String =
       response
         .allHeaders
@@ -133,23 +131,6 @@ class TestOnlyController(baseUrl: String, maybeSdesStubBaseUrl: Option[String], 
     }
   }
 
-  def jsonBodyParser[A : Reads]: BodyParser[A] = new BodyParser[A] {
-    def apply(v1: RequestHeader): Accumulator[ByteString, Either[Result, A]] = {
-      iterateeToAccumulator(Iteratee.consume[Array[Byte]]()).map { data =>
-        Try(Json.parse(data).validate[A]) match {
-          case Success(JsSuccess(a, _)) => Right(a)
-          case Success(JsError(errors)) => Left(BadRequest(s"$errors"))
-          case Failure(NonFatal(ex)) => Left(BadRequest(s"$ex"))
-        }
-      }
-    }
-  }
-
-  def iterateeToAccumulator[T](iteratee: Iteratee[ByteStream, T]): Accumulator[ByteString, T] = {
-    val sink = Streams.iterateeToAccumulator(iteratee).toSink
-    Accumulator(sink.contramap[ByteString](_.toArray[Byte]))
-  }
-
   def configureFileReadyNotification(): Action[AnyContent] = Action.async { implicit request =>
     maybeSdesStubBaseUrl.fold(Future.successful(NotImplemented("sdes-stub is not enabled for this deployment"))) { sdesStubBaseUrl =>
       val params = request.queryString.toSeq.flatMap { case (name, values) =>
@@ -184,6 +165,7 @@ object CreateEnvelopeRequest {
 
 object EnvelopeRequestWrites extends Writes[CreateEnvelopeRequest] {
   override def writes(s: CreateEnvelopeRequest): JsValue = {
+    implicit val dateWrites: Writes[DateTime] = JodaWrites.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss'Z'")
     val envelopeConstraintsUserSetting = s.constraints.getOrElse(EnvelopeConstraintsUserSetting(None,None,None,None))
     Json.obj("expiryDate" -> s.expiryDate,
              "metadata" -> s.metadata,
@@ -198,8 +180,7 @@ object EnvelopeRequestWrites extends Writes[CreateEnvelopeRequest] {
 }
 
 object EnvelopeRequestReads extends Reads[CreateEnvelopeRequest] {
-  implicit val dateReads: Reads[DateTime] = Reads.jodaDateReads("yyyy-MM-dd'T'HH:mm:ss'Z'")
-  implicit val dateWrites: Writes[DateTime] = Writes.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss'Z'")
+  implicit val dateReads: Reads[DateTime] = JodaReads.jodaDateReads("yyyy-MM-dd'T'HH:mm:ss'Z'")
   implicit val constraintsFormats: OFormat[EnvelopeConstraintsUserSetting] = Json.format[EnvelopeConstraintsUserSetting]
 
   override def reads(value: JsValue): JsSuccess[CreateEnvelopeRequest] = {

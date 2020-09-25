@@ -40,7 +40,7 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.codahale.metrics.MetricRegistry
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder
 import play.api.Logger
-import play.api.libs.Files.TemporaryFile
+import play.api.libs.Files.SingletonTemporaryFileCreator
 import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
@@ -247,7 +247,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     materializer: Materializer
   ): Future[ZipData] = {
     val fileName = s"$envelopeId.zip"
-    val tempFile = TemporaryFile(prefix = "zip")
+    val tempFile = SingletonTemporaryFileCreator.create(prefix = "zip")
     val (uploadFinished, md5Finished) =
       broadcast2(
         source = zipSource(envelopeId, files),
@@ -285,7 +285,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
            md5Checksum = md5Hash,
            url         = url
          )
-    ).andThen { case _ => tempFile.clean() }
+    ).andThen { case _ => SingletonTemporaryFileCreator.delete(tempFile) }
   }
 
   private def broadcast2[T, Mat1, Mat2](

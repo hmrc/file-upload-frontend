@@ -24,12 +24,10 @@ import com.typesafe.config.Config
 import play.api.Logger
 import play.api.http.{HttpEntity, HttpErrorHandler}
 import play.api.http.Status.{BAD_REQUEST, MOVED_PERMANENTLY}
-import play.api.libs.iteratee.Done
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
 import play.api.mvc.Results.Status
 import play.api.mvc._
-import uk.gov.hmrc.fileupload.utils.StreamsConverter
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
@@ -105,9 +103,9 @@ object RedirectionFeature {
   def logUrlProblemAndReturn(statusCode: Int, problem: Throwable)
                             (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
     Logger.warn(s"Request: $rh failed because: ${problem.toString}")
-    val iteratee = Done[Array[Byte], Result](new Status(statusCode).apply(Json.obj("message" -> "URL is invalid")))
-    StreamsConverter.iterateeToAccumulator(iteratee)
+    Accumulator.done(new Status(statusCode).apply(Json.obj("message" -> "URL is invalid")))
   }
+
   // with cats it should be much better:
   private def optTry2TryOpt(sO: Option[Try[ValidatedUrl]], fO: Option[Try[ValidatedUrl]]) = {
     val failureCheck = Seq(sO, fO).flatten.filter(_.isFailure)

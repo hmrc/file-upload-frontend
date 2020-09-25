@@ -31,7 +31,6 @@ import play.Logger
 import play.api.ApplicationLoader.Context
 import play.api.Mode.Mode
 import play.api._
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.{EssentialFilter, Request}
 import uk.gov.hmrc.fileupload.controllers._
