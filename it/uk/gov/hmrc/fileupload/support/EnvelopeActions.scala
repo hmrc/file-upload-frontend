@@ -18,7 +18,7 @@ trait EnvelopeActions extends ActionsSupport {
   def createEnvelope(data: Array[Byte]): WSResponse =
     wsClient
       .url(s"$url/envelope")
-      .withHeaders("Content-Type" -> "application/json")
+      .withHttpHeaders("Content-Type" -> "application/json")
       .post(data)
       .futureValue
 

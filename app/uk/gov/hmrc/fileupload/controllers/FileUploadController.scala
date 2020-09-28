@@ -29,7 +29,7 @@ import uk.gov.hmrc.fileupload.controllers.FileUploadController._
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
-import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
+import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{cacheFileInMemory, FileCachedInMemory, InMemoryMultiPartBodyParser}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
@@ -48,22 +48,20 @@ class FileUploadController @Inject()(
 
   val redirectionFeature: RedirectionFeature                = appModule.redirectionFeature
   val withValidEnvelope : WithValidEnvelope                 = appModule.withValidEnvelope
-  val uploadParser      : InMemoryMultiPartBodyParser       = appModule.inMemoryBodyParser
   val commandHandler    : CommandHandler                    = appModule.commandHandler
   val uploadToQuarantine: S3Service.UploadToQuarantine      = appModule.uploadToQuarantine
   val createS3Key       : (EnvelopeId, FileId) => S3KeyName = appModule.createS3Key
   val now               : () => Long                        = appModule.now
   val loggerHelper      : LoggerHelper                      = appModule.loggerHelper
 
-  private val logFileExtensions: Boolean =
-    config.getBoolean("flags.log-file-extensions").getOrElse(false)
+  private lazy val logFileExtensions: Boolean =
+    config.getOptional[Boolean]("flags.log-file-extensions").getOrElse(false)
 
   def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
-                            `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction = {
+                            `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction =
     redirectionFeature.redirect(`redirect-success-url`, `redirect-error-url`) {
       uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
     }
-  }
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId): EssentialAction =
     withValidEnvelope(envelopeId) {
@@ -73,7 +71,7 @@ class FileUploadController @Inject()(
   def upload(constraints: Option[EnvelopeConstraints])
             (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
     val maxSize = getMaxFileSizeFromEnvelope(constraints)
-    Action.async(parse.maxLength(maxSize, uploadParser())) { implicit request =>
+    Action.async(parse.maxLength(maxSize, parse.multipartFormData(cacheFileInMemory))) { implicit request =>
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
@@ -81,7 +79,7 @@ class FileUploadController @Inject()(
           val fileIsEmpty = formData.files.headOption.map(_.ref.size)
 
           val failedRequirementsO =
-            if(formData.files.size != 1) Some(
+            if (formData.files.size != 1) Some(
                 BadRequest(errorAsJson(
                   "Request must have exactly 1 file attached"
               )))

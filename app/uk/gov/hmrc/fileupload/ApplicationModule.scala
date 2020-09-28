@@ -47,9 +47,6 @@ import uk.gov.hmrc.fileupload.virusscan.{AvClient, DeletionActor, ScannerActor, 
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScan, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-// import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
-// import uk.gov.hmrc.play.frontend.config.LoadAuditingConfig
-// import uk.gov.hmrc.play.frontend.filters.{FrontendAuditFilter, LoggingFilter}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -70,8 +67,6 @@ class ApplicationModule @Inject()(
 ) extends AhcWSComponents {
 
   lazy val httpErrorHandler = new ShowErrorAsJson(environment, configuration)
-
-  lazy val inMemoryBodyParser = InMemoryMultipartFileHandler.parser
 
   lazy val s3Service = new S3JavaSdkService(configuration.underlying, metrics.defaultRegistry)
 
@@ -148,11 +143,10 @@ class ApplicationModule @Inject()(
     fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine)(createS3Key) _
 
 
-  lazy val numberOfTimeoutAttempts: Int = configuration.getInt(s"${environment.mode}.clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
+  lazy val numberOfTimeoutAttempts: Int = configuration.getOptional[Int](s"${environment.mode}.clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
   lazy val scanner: AvScan = new VirusScanner(avClient).scan
   lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
-    val disableScanning = configuration.getConfig(s"${environment.mode}.clam.antivirus")
-                            .flatMap(_.getBoolean("disableScanning")).getOrElse(false)
+    val disableScanning = configuration.getOptional[Boolean](s"${environment.mode}.clam.antivirus.disableScanning").getOrElse(false)
     if (disableScanning) (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
     else ScanningService.scanBinaryData(scanner, numberOfTimeoutAttempts, getFileFromQuarantine)(createS3Key)
   }

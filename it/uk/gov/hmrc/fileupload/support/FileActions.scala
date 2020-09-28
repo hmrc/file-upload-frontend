@@ -34,7 +34,7 @@ trait FileActions extends ActionsSupport {
   def upload(data: Array[Byte], envelopeId: EnvelopeId, fileId: FileId): WSResponse =
     wsClient
       .url(s"$url/envelopes/$envelopeId/files/$fileId/content")
-      .withHeaders("Content-Type" -> "application/octet-stream")
+      .withHttpHeaders("Content-Type" -> "application/octet-stream")
       .put(data)
       .futureValue
 
@@ -47,7 +47,7 @@ trait FileActions extends ActionsSupport {
   def updateFileMetadata(data: String, envelopeId: EnvelopeId, fileId: FileId): WSResponse =
     wsClient
       .url(s"$url/envelopes/$envelopeId/files/$fileId/metadata")
-      .withHeaders("Content-Type" -> "application/json")
+      .withHttpHeaders("Content-Type" -> "application/json")
       .put(data.getBytes)
       .futureValue
 
@@ -59,38 +59,46 @@ trait FileActions extends ActionsSupport {
 
   def uploadDummyFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse =
     wsClient.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
-      .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-                   "X-Request-ID" -> "someId",
-                   "X-Session-ID" -> "someId",
-                   "X-Requested-With" -> "someId")
+      .withHttpHeaders(
+        "Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
+        "X-Request-ID" -> "someId",
+        "X-Session-ID" -> "someId",
+        "X-Requested-With" -> "someId"
+      )
       .post(file)
       .futureValue
 
   def uploadDummyFileWithoutRedirects(envelopeId: EnvelopeId, fileId: FileId, redirectParams: String): WSResponse =
     wsClient.url(s"$url/upload/envelopes/$envelopeId/files/$fileId?$redirectParams")
       .withFollowRedirects(false)
-      .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-                   "X-Request-ID" -> "someId",
-                   "X-Session-ID" -> "someId",
-                   "X-Requested-With" -> "someId")
+      .withHttpHeaders(
+        "Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
+        "X-Request-ID" -> "someId",
+        "X-Session-ID" -> "someId",
+        "X-Requested-With" -> "someId"
+      )
       .post(file)
       .futureValue
 
   def uploadDummyLargeFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse =
     wsClient.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
-      .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-                   "X-Request-ID" -> "someId",
-                   "X-Session-ID" -> "someId",
-                   "X-Requested-With" -> "someId")
+      .withHttpHeaders(
+        "Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
+        "X-Request-ID" -> "someId",
+        "X-Session-ID" -> "someId",
+        "X-Requested-With" -> "someId"
+      )
       .post(tooLargeFile)
       .futureValue
 
   def uploadDummyUnsupportedContentTypeFile(envelopeId: EnvelopeId, fileId: FileId): WSResponse =
     wsClient.url(s"$url/upload/envelopes/$envelopeId/files/$fileId")
-      .withHeaders("Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
-                   "X-Request-ID" -> "someId",
-                   "X-Session-ID" -> "someId",
-                   "X-Requested-With" -> "someId")
+      .withHttpHeaders(
+        "Content-Type" -> "multipart/form-data; boundary=---011000010111000001101001",
+        "X-Request-ID" -> "someId",
+        "X-Session-ID" -> "someId",
+        "X-Requested-With" -> "someId"
+      )
       .post(wrongTypeFile)
       .futureValue
 }

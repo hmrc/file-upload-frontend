@@ -36,10 +36,10 @@ class AvClient @Inject()(
   val clamAvConfig =
     new ClamAvConfig {
       def getString(key: String) =
-        configuration.getString(key).getOrElse(sys.error(s"No config for key `$key` defined"))
+        configuration.getOptional[String](key).getOrElse(sys.error(s"No config for key `$key` defined"))
 
       def getInt(key: String) =
-        configuration.getInt(key).getOrElse(sys.error(s"No config for key `$key` defined"))
+        configuration.getOptional[Int](key).getOrElse(sys.error(s"No config for key `$key` defined"))
 
 
       override val host   : String = getString(s"${environment.mode}.clam.antivirus.host")

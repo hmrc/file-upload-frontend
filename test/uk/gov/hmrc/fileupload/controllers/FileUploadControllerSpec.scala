@@ -47,7 +47,7 @@ class FileUploadControllerSpec extends UnitSpec with MockitoSugar with ScalaFutu
 
   val controller = {
     val noEnvelopeValidation = null
-    val noParsingIsActuallyDoneHere = InMemoryMultipartFileHandler.parser
+    //val noParsingIsActuallyDoneHere = InMemoryMultipartFileHandler.parser
     val commandHandler = new CommandHandler {
       def notify(command: AnyRef)(implicit ec: ExecutionContext) = Future.successful(Xor.right(NotifySuccess))
     }
@@ -62,7 +62,7 @@ class FileUploadControllerSpec extends UnitSpec with MockitoSugar with ScalaFutu
 
     val appModule = mock[ApplicationModule]
     when(appModule.withValidEnvelope).thenReturn(noEnvelopeValidation)
-    when(appModule.inMemoryBodyParser).thenReturn(noParsingIsActuallyDoneHere)
+    //when(appModule.inMemoryBodyParser).thenReturn(noParsingIsActuallyDoneHere)
     when(appModule.commandHandler).thenReturn(commandHandler)
     when(appModule.uploadToQuarantine).thenReturn(uploadToQuarantine)
     when(appModule.createS3Key).thenReturn(createS3Key)

@@ -45,12 +45,13 @@ object NotifierRepository {
 
   def send(httpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wsClient: WSClient)
           (notification: Notification)
-          (implicit executionContext: ExecutionContext): Future[Result] = {
-    httpCall(wsClient
-      .url(s"$baseUrl/file-upload/commands/${ notification.eventType }")
-      .withBody(notification.event)
-      .withMethod("POST")
-      .withHeaders(userAgent)
+          (implicit executionContext: ExecutionContext): Future[Result] =
+    httpCall(
+      wsClient
+        .url(s"$baseUrl/file-upload/commands/${ notification.eventType }")
+        .withBody(notification.event)
+        .withMethod("POST")
+        .withHttpHeaders(userAgent)
     ).map {
       case Xor.Left(error) => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, 500, error.message))
       case Xor.Right(response) => response.status match {
@@ -58,6 +59,4 @@ object NotifierRepository {
         case _ => Xor.left(NotificationFailedError(notification.envelopeId, notification.fileId, response.status, response.body))
       }
     }
-  }
-
 }

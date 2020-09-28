@@ -30,12 +30,11 @@ object Repository {
   val userAgent = "User-Agent" -> "FU-frontend-transfer"
 
   def envelopeAvailable(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wSClient: WSClient)(envelopeId: EnvelopeId)
-                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
-
+                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] =
     auditedHttpCall(wSClient
       .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
       .withMethod("GET")
-      .withHeaders(userAgent)
+      .withHttpHeaders(userAgent)
     ).map {
       case Xor.Left(error) => Xor.left(EnvelopeAvailableServiceError(envelopeId, error.message))
       case Xor.Right(response) => response.status match {
@@ -44,16 +43,15 @@ object Repository {
         case _ => Xor.left(EnvelopeAvailableServiceError(envelopeId, response.body))
       }
     }
-  }
 
   def envelopeDetail(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]),
                      baseUrl: String, wSClient: WSClient)
                     (envelopeId: EnvelopeId)
-                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] = {
+                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] =
     auditedHttpCall(wSClient
       .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
       .withMethod("GET")
-      .withHeaders(userAgent)
+      .withHttpHeaders(userAgent)
     ).map {
       case Xor.Left(error) => Xor.left(EnvelopeDetailServiceError(envelopeId, error.message))
       case Xor.Right(response) => response.status match {
@@ -62,6 +60,4 @@ object Repository {
         case _ => Xor.left(EnvelopeDetailServiceError(envelopeId, response.body))
       }
     }
-  }
-
 }

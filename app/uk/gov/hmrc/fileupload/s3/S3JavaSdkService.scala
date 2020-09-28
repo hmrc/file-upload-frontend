@@ -250,19 +250,19 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     val (uploadFinished, md5Finished) =
       broadcast2(
         source = zipSource(envelopeId, files),
-        sink1  = FileIO.toPath(tempFile.file.toPath),
+        sink1  = FileIO.toPath(tempFile.path),
         sink2  = Md5Hash.md5HashSink
       ).run()
     (for {
-       _            <- Future.successful(Logger.debug(s"zipping $envelopeId to ${tempFile.file}"))
+       _            <- Future.successful(Logger.debug(s"zipping $envelopeId to ${tempFile.path}"))
        _            <- uploadFinished
        md5Hash      <- md5Finished
-       fileSize     =  tempFile.file.length
+       fileSize     =  tempFile.path.toFile.length
        _            =  Logger.debug(s"uploading $envelopeId to S3")
        uploadResult <- uploadFile(
                          bucketName = awsConfig.transientBucketName,
                          key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(fileName),
-                         file       = new java.io.FileInputStream(tempFile.file),
+                         file       = new java.io.FileInputStream(tempFile.path.toFile),
                          metadata   = { val om = new ObjectMetadata()
                                         om.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm)
                                         om.setContentLength(fileSize)

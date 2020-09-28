@@ -50,29 +50,26 @@ class TestOnlyController @Inject()(
   def createEnvelope() = Action.async(parse.json[CreateEnvelopeRequest]) { implicit request =>
     def extractEnvelopeId(response: WSResponse): String =
       response
-        .allHeaders
-        .get("Location")
-        .flatMap(_.headOption)
+        .header("Location")
         .map(l => l.substring(l.lastIndexOf("/") + 1))
         .getOrElse("missing/invalid")
 
     val payload = Json.toJson(request.body)
 
     wSClient.url(s"$baseUrl/file-upload/envelopes").post(payload).map { response =>
-      if (response.status >= 200 && response.status <= 299) {
+      if (response.status >= 200 && response.status <= 299)
         Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
-      } else {
+      else
         InternalServerError(
           Json.obj("upstream_status" -> response.status, "error_message" -> response.body)
         )
-      }
     }
   }
 
   def getEnvelope(envelopeId: String) = Action.async { implicit request =>
     wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId").get().map { response =>
       new Status(response.status)(response.body).withHeaders(
-        "Content-Type" -> response.allHeaders("Content-Type").head
+        "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
       )
     }
   }
@@ -97,19 +94,21 @@ class TestOnlyController @Inject()(
   def transferGetEnvelopes(destination: Option[String]) = Action.async { implicit request =>
     val transferUrl = s"$baseUrl/file-transfer/envelopes"
     val wsUrl = destination match {
-      case Some(d)  => wSClient.url(transferUrl).withQueryString(("destination", URLEncoder.encode(d, "UTF-8")))
+      case Some(d)  => wSClient.url(transferUrl).addQueryStringParameters(("destination", URLEncoder.encode(d, "UTF-8")))
       case None     => wSClient.url(transferUrl)
     }
     wsUrl.get().map { response =>
       val body = Json.parse(response.body)
-      if(response.status!=200) InternalServerError(body + s" backendStatus:${response.status}")
-      else Ok(body)
+      if (response.status != 200)
+        InternalServerError(body + s" backendStatus:${response.status}")
+      else
+        Ok(body)
     }
   }
 
   def transferDownloadEnvelope(envelopeId: String) = Action.async { implicit request =>
     wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").get().flatMap {
-      resultFromBackEnd ⇒ if (resultFromBackEnd.status == 200) {
+      resultFromBackEnd => if (resultFromBackEnd.status == 200) {
         Future.successful(Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
           "Content-Type" -> resultFromBackEnd.header("Content-Type").getOrElse("unknown"),
           "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
@@ -127,7 +126,7 @@ class TestOnlyController @Inject()(
   def getEvents(streamId: String) = Action.async { implicit request =>
     wSClient.url(s"$baseUrl/file-upload/events/$streamId").get().map { response =>
       new Status(response.status)(response.body).withHeaders {
-        "Content-Type" -> response.allHeaders("Content-Type").head
+        "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
       }
     }
   }
@@ -150,7 +149,7 @@ class TestOnlyController @Inject()(
         values.map(name -> _)
       }
       wSClient.url(s"$sdesStubBaseUrl/sdes-stub/configure/notification/fileready")
-        .withQueryString(params: _*)
+        .withQueryStringParameters(params: _*)
         .execute(POST)
         .map { response =>
           new Status(response.status)(response.body)

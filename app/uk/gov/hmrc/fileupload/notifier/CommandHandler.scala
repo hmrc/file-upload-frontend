@@ -38,11 +38,12 @@ class CommandHandlerImpl(httpCall: WSRequest => Future[Xor[PlayHttpError, WSResp
 
   def sendBackendCommand[T <: BackendCommand : Writes](command: T)(implicit ec: ExecutionContext): Future[NotifierRepository.Result] = {
 
-    httpCall(wsClient
-      .url(s"$baseUrl/file-upload/commands/${ command.commandType }")
-      .withBody(Json.toJson(command))
-      .withMethod("POST")
-      .withHeaders(userAgent)
+    httpCall(
+      wsClient
+        .url(s"$baseUrl/file-upload/commands/${ command.commandType }")
+        .withBody(Json.toJson(command))
+        .withMethod("POST")
+        .withHttpHeaders(userAgent)
     ).map {
       case Xor.Left(error) => Xor.left(NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Xor.Right(response) => response.status match {
@@ -81,5 +82,4 @@ class CommandHandlerImpl(httpCall: WSRequest => Future[Xor[PlayHttpError, WSResp
         Future.successful(notifySuccess)
     }
   }
-
 }
