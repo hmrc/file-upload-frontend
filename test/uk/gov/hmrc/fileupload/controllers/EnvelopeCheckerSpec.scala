@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import play.api.http.MimeTypes
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
@@ -27,12 +28,14 @@ import play.mvc.BodyParser.AnyContent
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeDetailNotFoundError, EnvelopeDetailServiceError}
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class EnvelopeCheckerSpec extends UnitSpec {
+class EnvelopeCheckerSpec
+  extends WordSpecLike
+     with Matchers
+     with OptionValues {
 
   import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
 

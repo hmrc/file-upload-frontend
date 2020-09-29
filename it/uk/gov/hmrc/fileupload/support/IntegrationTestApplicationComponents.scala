@@ -16,16 +16,17 @@
 
 package uk.gov.hmrc.fileupload.support
 
-import org.scalatest.Suite
+import org.scalatest.{Matchers, OptionValues, WordSpecLike, Suite}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.fileupload.virusscan.AvClient
-import uk.gov.hmrc.play.test.UnitSpec
 
 trait IntegrationTestApplicationComponents
-  extends UnitSpec
+  extends WordSpecLike
+     with Matchers
+     with OptionValues
      with GuiceOneServerPerSuite
      with FakeFileUploadBackend {
   this: Suite =>

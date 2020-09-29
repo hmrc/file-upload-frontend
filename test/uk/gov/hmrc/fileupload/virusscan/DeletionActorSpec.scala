@@ -18,17 +18,21 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.Matchers
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
 import uk.gov.hmrc.fileupload.notifier.{MarkFileAsClean, MarkFileAsInfected}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
-import uk.gov.hmrc.play.test.UnitSpec
 
-class DeletionActorSpec extends TestKit(ActorSystem("deletion")) with ImplicitSender with UnitSpec with Matchers with Eventually with StopSystemAfterAll {
-
-  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(2, Seconds)))
+class DeletionActorSpec
+  extends TestKit(ActorSystem("deletion"))
+     with ImplicitSender
+     with WordSpecLike
+     with Matchers
+     with OptionValues
+     with Eventually
+     with StopSystemAfterAll
+     with IntegrationPatience {
 
   "DeletionActor" should {
 

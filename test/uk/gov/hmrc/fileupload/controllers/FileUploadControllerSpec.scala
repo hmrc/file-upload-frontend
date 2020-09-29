@@ -18,6 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.mockito.Mockito.when
+import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
@@ -36,11 +37,16 @@ import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues}
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadControllerSpec extends UnitSpec with MockitoSugar with ScalaFutures with TestApplicationComponents {
+class FileUploadControllerSpec
+  extends WordSpecLike
+     with Matchers
+     with OptionValues
+     with MockitoSugar
+     with ScalaFutures
+     with TestApplicationComponents {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -51,7 +57,7 @@ class FileUploadControllerSpec extends UnitSpec with MockitoSugar with ScalaFutu
       def notify(command: AnyRef)(implicit ec: ExecutionContext) = Future.successful(Right(NotifySuccess))
     }
     val fakeCurrentTime = () => 10L
-    val uploadToQuarantine: UploadToQuarantine = (_,_,_) => new UploadResult()
+    val uploadToQuarantine: UploadToQuarantine = (_,_,_) => Future.successful(new UploadResult())
     val createS3Key: (EnvelopeId, FileId) => S3KeyName = (_,_) => S3KeyName("key")
     val configuration = Configuration.from(Map.empty)
     val loggerHelper = new LoggerHelper {

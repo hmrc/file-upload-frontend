@@ -17,12 +17,15 @@
 package uk.gov.hmrc.fileupload.utils
 
 import akka.util.ByteString
+import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import play.api.mvc.MultipartFormData
 import play.api.test.FakeRequest
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
-import uk.gov.hmrc.play.test.UnitSpec
 
-class LoggerHelperFileExtensionAndUserAgentSpec extends UnitSpec {
+class LoggerHelperFileExtensionAndUserAgentSpec
+  extends WordSpecLike
+     with Matchers
+     with OptionValues {
 
   "LoggerHelper" should {
     "correctly parse a file extension and user agents into strings when both are set" in {

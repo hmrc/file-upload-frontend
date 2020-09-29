@@ -20,33 +20,32 @@ private object AppDependencies {
 
   import play.core.PlayVersion
 
-  private val playBootstrapVersion = "1.16.0"
-  private val playPartialsVersion  = "6.11.0-play-26"
-  private val authClient           = "3.1.0-play-26"
-  private val hmrcTestVersion      = "3.9.0-play-26"
+  private val playBootstrapVersion = "2.25.0"
+  private val playPartialsVersion  = "6.11.0-play-27"
+  private val authClient           = "3.1.0-play-27"
+  private val hmrcTestVersion      = "3.9.0-play-27"
   private val clamAvClientVersion  = "7.0.0"
 
   val compile = Seq(
-    "uk.gov.hmrc"        %% "bootstrap-play-26"        % playBootstrapVersion,
-    "uk.gov.hmrc"        %% "play-partials"            % playPartialsVersion,
-    "uk.gov.hmrc"        %% "auth-client"              % authClient,
-    "uk.gov.hmrc"        %% "clamav-client"            % clamAvClientVersion,
-    "org.typelevel"      %% "cats"                     % "0.9.0",
-    "com.amazonaws"      %  "aws-java-sdk"             % "1.11.97",
-    "com.lightbend.akka" %% "akka-stream-alpakka-file" % "2.0.1",
+    "uk.gov.hmrc"        %% "bootstrap-frontend-play-27" % playBootstrapVersion,
+    "uk.gov.hmrc"        %% "play-partials"              % playPartialsVersion,
+    "uk.gov.hmrc"        %% "auth-client"                % authClient,
+    "uk.gov.hmrc"        %% "clamav-client"              % clamAvClientVersion,
+    "org.typelevel"      %% "cats"                       % "0.9.0",
+    "com.amazonaws"      %  "aws-java-sdk"               % "1.11.97",
+    "com.lightbend.akka" %% "akka-stream-alpakka-file"   % "2.0.1",
     "com.typesafe.play"  %% "play-iteratees-reactive-streams" % "2.6.1",
-    "com.typesafe.play"  %% "play-json-joda"           % "2.6.14",
+    "com.typesafe.play"  %% "play-json-joda"             % "2.6.14",
 
     // ensure all akka versions are the same
-    "com.typesafe.akka"  %% "akka-slf4j"               % "2.5.31"
+    "com.typesafe.akka"  %% "akka-slf4j"                 % "2.5.31"
   )
 
   val test = Seq(
-    "uk.gov.hmrc"            %% "hmrctest"                    % hmrcTestVersion     % "test,it",
     "org.scalatest"          %% "scalatest"                   % "3.0.5"             % "test,it",
     "org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"             % "test,it",
     "com.github.tomakehurst" %  "wiremock"                    % "1.58"              % "test,it",
-    "org.scalatestplus.play" %% "scalatestplus-play"          % "3.1.3"             % "test,it",
+    "org.scalatestplus.play" %% "scalatestplus-play"          % "4.0.3"             % "test,it",
     "org.mockito"            %  "mockito-core"                % "2.21.0"            % "test,it",
     "org.pegdown"            %  "pegdown"                     % "1.6.0"             % "test,it",
     "org.jsoup"              %  "jsoup"                       % "1.11.3"            % "test,it",

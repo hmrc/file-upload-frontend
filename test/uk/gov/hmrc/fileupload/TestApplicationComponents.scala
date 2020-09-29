@@ -16,13 +16,17 @@
 
 package uk.gov.hmrc.fileupload
 
-import org.scalatest.{BeforeAndAfterAll, Suite}
+import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, Suite, WordSpecLike}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.play.test.UnitSpec
 
-trait TestApplicationComponents extends UnitSpec with GuiceOneServerPerSuite with BeforeAndAfterAll {
+trait TestApplicationComponents
+  extends WordSpecLike
+     with Matchers
+     with OptionValues
+     with GuiceOneServerPerSuite
+     with BeforeAndAfterAll {
   this: Suite =>
 
   // creates a new application and sets the components

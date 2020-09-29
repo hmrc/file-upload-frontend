@@ -36,7 +36,7 @@ object InMemoryMultipartFileHandler {
   }
 
   def cacheFileInMemory(implicit ec: ExecutionContext): FilePartHandler[FileCachedInMemory] = {
-    case FileInfo(partName, filename, contentType) =>
+    case FileInfo(partName, filename, contentType, dispositionType) =>
       Accumulator(Sink.fold[ByteString, ByteString](ByteString.empty)(_ ++ _)).map { fullFile =>
         FilePart(partName, filename, contentType, FileCachedInMemory(fullFile))
       }
