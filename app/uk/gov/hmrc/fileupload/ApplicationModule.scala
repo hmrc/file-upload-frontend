@@ -133,10 +133,10 @@ class ApplicationModule @Inject()(
     fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine)(createS3Key) _
 
 
-  lazy val numberOfTimeoutAttempts: Int = configuration.getOptional[Int](s"${environment.mode}.clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
+  lazy val numberOfTimeoutAttempts: Int = configuration.getOptional[Int](s"clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
   lazy val scanner: AvScan = new VirusScanner(avClient).scan
   lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
-    val disableScanning = configuration.getOptional[Boolean](s"${environment.mode}.clam.antivirus.disableScanning").getOrElse(false)
+    val disableScanning = configuration.getOptional[Boolean](s"clam.antivirus.disableScanning").getOrElse(false)
     if (disableScanning) (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Right(ScanResultFileClean))
     else ScanningService.scanBinaryData(scanner, numberOfTimeoutAttempts, getFileFromQuarantine)(createS3Key)
   }

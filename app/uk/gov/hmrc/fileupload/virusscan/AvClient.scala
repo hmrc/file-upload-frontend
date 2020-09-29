@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.virusscan
 import java.io.InputStream
 
 import javax.inject.{Inject, Singleton}
-import play.api.{Configuration, Environment}
+import play.api.Configuration
 import uk.gov.hmrc.clamav.{ClamAntiVirus, ClamAntiVirusFactory}
 import uk.gov.hmrc.clamav.config.ClamAvConfig
 import uk.gov.hmrc.clamav.model.ScanningResult
@@ -28,8 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AvClient @Inject()(
-  configuration: Configuration,
-  environment: Environment
+  configuration: Configuration
 )(implicit
   ec: ExecutionContext
 ) {
@@ -42,9 +41,9 @@ class AvClient @Inject()(
         configuration.getOptional[Int](key).getOrElse(sys.error(s"No config for key `$key` defined"))
 
 
-      override val host   : String = getString(s"${environment.mode}.clam.antivirus.host")
-      override val port   : Int    = getInt(s"${environment.mode}.clam.antivirus.port")
-      override val timeout: Int    = getInt(s"${environment.mode}.clam.antivirus.timeout")
+      override val host   : String = getString(s"clam.antivirus.host")
+      override val port   : Int    = getInt(s"clam.antivirus.port")
+      override val timeout: Int    = getInt(s"clam.antivirus.timeout")
     }
 
   val clamAntiVirus: ClamAntiVirus = new ClamAntiVirusFactory(clamAvConfig).getClient

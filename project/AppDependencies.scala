@@ -51,7 +51,7 @@ private object AppDependencies {
     "org.jsoup"              %  "jsoup"                       % "1.11.3"            % "test,it",
     "com.typesafe.play"      %% "play-test"                   % PlayVersion.current % "test,it",
     "com.typesafe.akka"      %% "akka-testkit"                % "2.5.31"            % "test,it",
-    "io.findify"             %% "s3mock"                      % "0.2.5"             % "it"
+    "io.findify"             %% "s3mock"                      % "0.2.6"             % "it"
   )
 
   val dependencies = compile ++ test

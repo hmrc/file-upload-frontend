@@ -20,15 +20,16 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with Int
   lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
   lazy val backendPort: Int = backend.port()
 
-  lazy val workDir = s"/tmp/s3"
   // create and start S3 API mock
-  lazy val s3MockServer = S3Mock(port = 8001, dir = workDir)
+  lazy val s3Port = 8001
+  lazy val workDir = s"/tmp/s3"
+  lazy val s3MockServer = S3Mock(port = s3Port, dir = workDir)
 
   final lazy val fileUploadBackendBaseUrl = s"http://localhost:$backendPort"
 
   s3MockServer.start
-  s3MockServer.p.createBucket("file-upload-quarantine", new CreateBucketConfiguration(locationConstraint=None))
-  s3MockServer.p.createBucket("file-upload-transient", new CreateBucketConfiguration(locationConstraint=None))
+  s3MockServer.p.createBucket("file-upload-quarantine", new CreateBucketConfiguration(locationConstraint = None))
+  s3MockServer.p.createBucket("file-upload-transient", new CreateBucketConfiguration(locationConstraint = None))
 
   backend.start()
   backend.addStubMapping(

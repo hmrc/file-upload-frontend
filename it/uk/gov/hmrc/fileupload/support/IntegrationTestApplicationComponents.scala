@@ -37,16 +37,16 @@ trait IntegrationTestApplicationComponents
 
   val conf =
     Seq(
-      "auditing.enabled" -> "false",
-      "Test.clam.antivirus.runStub" -> "true",
-      "Test.clam.antivirus.disableScanning" -> disableAvScanning.toString,
-      "Test.clam.antivirus.numberOfTimeoutAttempts" -> numberOfTimeoutAttempts.toString,
-      "Test.microservice.services.file-upload-backend.port" -> backendPort.toString,
-      "aws.service_endpoint" -> "http://127.0.0.1:8001",
-      "aws.s3.bucket.upload.quarantine" -> "file-upload-quarantine",
-      "aws.s3.bucket.upload.transient" -> "file-upload-transient",
-      "aws.access.key.id" -> "ENTER YOUR KEY",
-      "aws.secret.access.key" -> "ENTER YOUR SECRET KEY"
+      "auditing.enabled"                               -> "false",
+      "clam.antivirus.runStub"                         -> "true",
+      "clam.antivirus.disableScanning"                 -> disableAvScanning.toString,
+      "clam.antivirus.numberOfTimeoutAttempts"         -> numberOfTimeoutAttempts.toString,
+      "microservice.services.file-upload-backend.port" -> backendPort.toString,
+      "aws.service_endpoint"                           -> s"http://127.0.0.1:$s3Port",
+      "aws.s3.bucket.upload.quarantine"                -> "file-upload-quarantine",
+      "aws.s3.bucket.upload.transient"                 -> "file-upload-transient",
+      "aws.access.key.id"                              -> "ENTER YOUR KEY",
+      "aws.secret.access.key"                          -> "ENTER YOUR SECRET KEY"
     )
 
   // creates a new application and sets the components
