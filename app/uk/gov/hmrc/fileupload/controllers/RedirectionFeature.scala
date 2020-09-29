@@ -27,7 +27,7 @@ import play.api.http.Status.{BAD_REQUEST, MOVED_PERMANENTLY}
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
 import play.api.mvc.Results.Status
-import play.api.mvc._
+import play.api.mvc.{EssentialAction, RequestHeader, Result, Results}
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}

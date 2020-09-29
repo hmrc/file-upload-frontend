@@ -18,9 +18,10 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import java.io.{FileInputStream, InputStream}
 
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
@@ -30,7 +31,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class ScanningServiceSpec
-  extends FlatSpec
+  extends AnyFlatSpec
      with Matchers
      with ScalaFutures
      with MockFactory

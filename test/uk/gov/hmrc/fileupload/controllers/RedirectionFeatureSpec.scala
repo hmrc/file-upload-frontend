@@ -16,8 +16,10 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.http.Status.INTERNAL_SERVER_ERROR
@@ -31,7 +33,7 @@ import uk.gov.hmrc.fileupload.utils.ErrorResponse
 import scala.concurrent.Future
 
 class RedirectionFeatureSpec
-  extends WordSpecLike
+  extends AnyWordSpecLike
      with Matchers
      with OptionValues
      with ScalaFutures

@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.fileupload.support
 
-import org.scalatest.{Matchers, OptionValues, WordSpecLike, Suite}
+import org.scalatest.{OptionValues, Suite}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.bind
@@ -24,7 +26,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.fileupload.virusscan.AvClient
 
 trait IntegrationTestApplicationComponents
-  extends WordSpecLike
+  extends AnyWordSpecLike
      with Matchers
      with OptionValues
      with GuiceOneServerPerSuite

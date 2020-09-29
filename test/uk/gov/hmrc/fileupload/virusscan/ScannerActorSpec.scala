@@ -18,9 +18,9 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
@@ -32,15 +32,13 @@ import scala.concurrent.{ExecutionContext, Future}
 class ScannerActorSpec
   extends TestKit(ActorSystem("scanner"))
      with ImplicitSender
-     with WordSpecLike
+     with AnyWordSpecLike
      with Matchers
-     with OptionValues
      with Eventually
+     with IntegrationPatience
      with StopSystemAfterAll {
 
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(2, Seconds)))
 
   "ScannerActor" should {
     "scan files and handle clean files correctly" in new ScanFixture {

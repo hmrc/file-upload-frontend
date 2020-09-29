@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.fileupload.errorHandle
 
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.{Configuration, Environment}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.fileupload.TestApplicationComponents
@@ -27,9 +28,8 @@ import uk.gov.hmrc.http.BadRequestException
 import scala.concurrent.ExecutionContext
 
 class ShowErrorAsJsonSpec
-  extends WordSpecLike
+  extends AnyWordSpecLike
      with Matchers
-     with OptionValues
      with ScalaFutures
      with TestApplicationComponents {
 

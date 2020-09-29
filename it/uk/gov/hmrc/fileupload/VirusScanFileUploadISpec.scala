@@ -3,7 +3,7 @@ package uk.gov.hmrc.fileupload
 import java.io.InputStream
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{times, verify, when}
+import org.mockito.MockitoSugar
 import org.scalatest.concurrent.{IntegrationPatience, Eventually}
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
@@ -16,6 +16,7 @@ class VirusScanFileUploadISpec
      with EnvelopeActions
      with Eventually
      with ITTestAppComponentsWithStubbedClamAV
+     with MockitoSugar
      with IntegrationPatience {
 
   "File upload front-end" should {
@@ -62,8 +63,10 @@ class VirusScanFileUploadISpec
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
       when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
-        .thenReturn(commandReadTimeout())
-        .thenReturn(cleanScan())
+        .thenReturn(
+          commandReadTimeout(),
+          cleanScan()
+        )
 
       val result = uploadDummyFile(envelopeId, fileId)
       result.status should be(200)
@@ -79,8 +82,10 @@ class VirusScanFileUploadISpec
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
       when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
-        .thenReturn(commandReadTimeout())
-        .thenReturn(scannerFailure())
+        .thenReturn(
+          commandReadTimeout(),
+          scannerFailure()
+        )
 
       val result = uploadDummyFile(envelopeId, fileId)
       result.status should be(200)
@@ -95,8 +100,10 @@ class VirusScanFileUploadISpec
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
       when(stubbedAvClient.sendAndCheck(any[InputStream], any[Int])(any[ExecutionContext]))
-        .thenReturn(commandReadTimeout())
-        .thenReturn(virusDetected())
+        .thenReturn(
+          commandReadTimeout(),
+          virusDetected()
+        )
 
       val result = uploadDummyFile(envelopeId, fileId)
       result.status should be(200)

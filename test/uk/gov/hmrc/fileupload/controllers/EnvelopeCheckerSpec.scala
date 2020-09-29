@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.http.MimeTypes
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
@@ -33,9 +34,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class EnvelopeCheckerSpec
-  extends WordSpecLike
-     with Matchers
-     with OptionValues {
+  extends AnyWordSpecLike
+     with Matchers {
 
   import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
 

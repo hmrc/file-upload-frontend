@@ -41,8 +41,8 @@ object UserAgent {
 
 class UserAgentRequestFilter(
   metricRegistry     : MetricRegistry,
-  userAgentAllowlist : Set[UserAgent] = UserAgent.allKnown,
-  userAgentIgnoreList: Set[UserAgent] = UserAgent.defaultIgnoreList
+  userAgentAllowlist : Set[UserAgent],
+  userAgentIgnoreList: Set[UserAgent]
 )(implicit
   val mat: Materializer,
   ec: ExecutionContext

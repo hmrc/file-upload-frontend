@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.fileupload.infrastructure
 
+import akka.stream.Materializer
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.http.Fault
-import org.scalatest.{BeforeAndAfterEach, Matchers, OptionValues, Suite, WordSpecLike}
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
-import play.api.{Configuration, Play}
-import play.api.Mode.Mode
+import org.scalatest.{BeforeAndAfterEach, EitherValues, OptionValues, Suite}
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.http.Status
 import play.api.libs.json.{JsSuccess, Json}
 import play.api.libs.ws.WSClient
@@ -36,15 +36,19 @@ import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
+import akka.stream.Materializer
+import play.api.inject.ApplicationLifecycle
 
 class PlayHttpSpec
-  extends WordSpecLike
+  extends AnyWordSpecLike
      with Matchers
      with OptionValues
+     with EitherValues
      with BeforeAndAfterEach
      with TestApplicationComponents
      with Eventually
-     with FakeAuditer {
+     with FakeAuditer
+     with IntegrationPatience {
   this: Suite =>
 
   private lazy val fakeDownstreamSystemConfig = wireMockConfig().dynamicPort()
@@ -55,18 +59,18 @@ class PlayHttpSpec
   private val testAppName = "test-app"
 
   object TestAuditConnector extends AuditConnector {
+    override def materializer: Materializer =
+      app.injector.instanceOf[Materializer]
+
+    override def lifecycle: ApplicationLifecycle =
+      app.injector.instanceOf[ApplicationLifecycle]
+
     override lazy val consumer = Consumer(BaseUri("localhost", fakeAuditer.port(), "http"))
     override lazy val auditingConfig = AuditingConfig(Some(consumer), enabled = true, auditSource = "test-app")
-
-    override protected def mode: Mode = Play.current.mode
-
-    override protected def runModeConfiguration: Configuration = Play.current.configuration
   }
 
-  private var loggedErrors = ListBuffer.empty[Throwable]
-  private val testExecute = PlayHttp.execute(TestAuditConnector, testAppName, Some(t => {
-    loggedErrors += t
-  })) _
+  private val loggedErrors = ListBuffer.empty[Throwable]
+  private val testExecute = PlayHttp.execute(TestAuditConnector, testAppName, Some { t => loggedErrors += t } ) _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -76,7 +80,6 @@ class PlayHttpSpec
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
-
     resetAuditRequests()
   }
 
@@ -98,11 +101,13 @@ class PlayHttpSpec
       fakeDownstreamSystem.addStubMapping(
         get(urlPathMatching(downstreamPath))
           .willReturn(new ResponseDefinitionBuilder()
-            .withStatus(statusCode).withBody("someResponseBody"))
-          .build())
+            .withStatus(statusCode).withBody("someResponseBody")
+          )
+          .build()
+      )
 
       val wsClient = app.injector.instanceOf[WSClient]
-      val response = await(testExecute(wsClient.url(downstreamUrl).withMethod("GET"))).valueOr(t => fail(t.message))
+      val response = testExecute(wsClient.url(downstreamUrl).withMethod("GET")).futureValue.right.value
 
       response.status shouldBe statusCode
       eventually {
@@ -123,16 +128,16 @@ class PlayHttpSpec
       fakeDownstreamSystem.addStubMapping(
         get(urlPathMatching(downstreamPath))
           .willReturn(new ResponseDefinitionBuilder()
-            .withFault(Fault.MALFORMED_RESPONSE_CHUNK))
-          .build())
+            .withFault(Fault.MALFORMED_RESPONSE_CHUNK)
+          )
+          .build()
+      )
 
       val wsClient = app.injector.instanceOf[WSClient]
-      val response = await(testExecute(wsClient.url(downstreamUrl).withMethod("GET")))
+      val response = testExecute(wsClient.url(downstreamUrl).withMethod("GET")).futureValue
 
       response shouldBe Left(PlayHttpError("Remotely closed"))
       loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely closed"
     }
   }
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(Span(5, Seconds))
 }

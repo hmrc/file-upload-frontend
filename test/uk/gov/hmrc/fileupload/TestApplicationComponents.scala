@@ -16,15 +16,16 @@
 
 package uk.gov.hmrc.fileupload
 
-import org.scalatest.{BeforeAndAfterAll, Matchers, OptionValues, Suite, WordSpecLike}
+import org.scalatest.{BeforeAndAfterAll, Suite}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 
 trait TestApplicationComponents
-  extends WordSpecLike
+  extends AnyWordSpecLike
      with Matchers
-     with OptionValues
      with GuiceOneServerPerSuite
      with BeforeAndAfterAll {
   this: Suite =>

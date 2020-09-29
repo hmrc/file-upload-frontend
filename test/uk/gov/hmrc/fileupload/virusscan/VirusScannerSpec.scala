@@ -21,8 +21,9 @@ import java.io.{ByteArrayInputStream, InputStream}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import org.scalatest.{Matchers, OptionValues, WordSpecLike}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
@@ -31,9 +32,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class VirusScannerSpec
-  extends WordSpecLike
+  extends AnyWordSpecLike
      with Matchers
-     with OptionValues
      with ScalaFutures
      with TestApplicationComponents
      with IntegrationPatience {

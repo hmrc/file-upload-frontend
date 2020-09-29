@@ -20,7 +20,7 @@ import play.api.http.Status
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsValue
 import play.api.mvc.Request
-import uk.gov.hmrc.fileupload._
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
 import uk.gov.hmrc.fileupload.s3.S3KeyName

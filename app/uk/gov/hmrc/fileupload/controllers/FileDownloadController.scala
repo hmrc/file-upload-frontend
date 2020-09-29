@@ -21,7 +21,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.libs.json.{__, Json, JsObject, JsSuccess, JsError, JsValue, Reads}
-import play.api.mvc._
+import play.api.mvc.{AnyContent, Action, MessagesControllerComponents, ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, ZipData}
 import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromBucket

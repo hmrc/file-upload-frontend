@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.fileupload.utils
 
-import play.api._
+import play.api.{Environment, Configuration, Logger}
 import play.api.http.DefaultHttpErrorHandler
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
 import play.api.mvc.Results._
-import play.api.mvc._
+import play.api.mvc.RequestHeader
 import play.api.routing.Router
 import play.core.SourceMapper
 import uk.gov.hmrc.http.{HttpException, Upstream4xxResponse, Upstream5xxResponse}

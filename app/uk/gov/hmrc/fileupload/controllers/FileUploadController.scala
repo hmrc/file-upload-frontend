@@ -21,11 +21,11 @@ import org.slf4j.MDC
 import play.api.Configuration
 import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
-import play.api.mvc._
+import play.api.mvc.{Action, EssentialAction, MessagesControllerComponents, MaxSizeExceeded, MultipartFormData, Result}
 import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
-import uk.gov.hmrc.fileupload.controllers.FileUploadController._
-import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
+import uk.gov.hmrc.fileupload.controllers.FileUploadController.metadataAsJson
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.getMaxFileSizeFromEnvelope
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{cacheFileInMemory, FileCachedInMemory}
@@ -80,14 +80,12 @@ class FileUploadController @Inject()(
           val fileIsEmpty = formData.files.headOption.map(_.ref.size)
 
           val failedRequirementsO =
-            if (formData.files.size != 1) Some(
-                BadRequest(errorAsJson(
-                  "Request must have exactly 1 file attached"
-              )))
-            else if (allowZeroLengthFiles.contains(false) && fileIsEmpty.contains(0)) Some(
-              BadRequest(errorAsJson("Envelope does not allow zero length files, and submitted file has length 0"))
-            )
-            else None
+            if (formData.files.size != 1)
+              Some(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
+            else if (allowZeroLengthFiles.contains(false) && fileIsEmpty.contains(0))
+              Some(BadRequest(errorAsJson("Envelope does not allow zero length files, and submitted file has length 0")))
+            else
+              None
 
           failedRequirementsO match {
             case Some(failure) =>
@@ -121,8 +119,7 @@ class FileUploadController @Inject()(
     }
   }
 
-  private def logFileExtensionData(upload: Future[Result])
-                                  (values: LoggerValues) =
+  private def logFileExtensionData(upload: Future[Result])(values: LoggerValues) =
     try {
       MDC.put("upload-file-extension", values.fileExtension)
       MDC.put("upload-user-agent", values.userAgent)

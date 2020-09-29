@@ -38,6 +38,7 @@ import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.codahale.metrics.MetricRegistry
+import javax.inject.{Inject, Singleton}
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder
 import play.api.Logger
 import play.api.libs.Files.SingletonTemporaryFileCreator
@@ -50,7 +51,11 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: MetricRegistry) extends S3Service {
+@Singleton
+class S3JavaSdkService @Inject()(
+  configuration: com.typesafe.config.Config,
+  metrics      : MetricRegistry
+) extends S3Service {
   private val logger = Logger(getClass)
 
   override val awsConfig = new AwsConfig(configuration)

@@ -22,15 +22,14 @@ import akka.actor.ActorRef
 import com.kenshoo.play.metrics.MetricsImpl
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
-import play.api._
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.Request
-import uk.gov.hmrc.fileupload.controllers._
+import uk.gov.hmrc.fileupload.controllers.{EnvelopeChecker, RedirectionFeature}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, CommandHandlerImpl}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
-import uk.gov.hmrc.fileupload.s3._
+import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3Key, S3KeyName}
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerHelperFileExtensionAndUserAgent, ShowErrorAsJson}
 import uk.gov.hmrc.fileupload.virusscan.{AvClient, DeletionActor, ScannerActor, ScanningService, VirusScanner}
@@ -80,23 +79,22 @@ class ApplicationModule @Inject()(
 
   lazy val fileUploadBackendBaseUrl = servicesConfig.baseUrl("file-upload-backend")
 
-  lazy val testOnlySdesStubIsEnabled = configuration.getOptional[Boolean]("sdes-stub.enabled").getOrElse(false)
+  lazy val testOnlySdesStubIsEnabled = servicesConfig.getConfBool("sdes-stub.enabled", defBool = false)
+
   lazy val optTestOnlySdesStubBaseUrl = if (testOnlySdesStubIsEnabled) Some(servicesConfig.baseUrl("sdes-stub")) else None
 
 
-  var subscribe: (ActorRef, Class[_]) => Boolean = _
-  var publish: (AnyRef) => Unit = _
-  val now: () => Long = () => System.currentTimeMillis()
+  val subscribe: (ActorRef, Class[_]) => Boolean = actorSystem.eventStream.subscribe
 
-  subscribe = actorSystem.eventStream.subscribe
-  publish = actorSystem.eventStream.publish
+  val publish: (AnyRef) => Unit = actorSystem.eventStream.publish
+
+  val now: () => Long = () => System.currentTimeMillis()
 
   lazy val commandHandler: CommandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
 
-  lazy val getFileLength = {
+  lazy val getFileLength =
     (envelopeId: EnvelopeId, fileId: FileId, version: FileRefId) =>
       s3Service.getFileLengthFromQuarantine(createS3Key(envelopeId, fileId), version.value)
-  }
 
   // scanner
   actorSystem.actorOf(ScannerActor.props(subscribe, scanBinaryData, commandHandler), "scannerActor")
@@ -106,13 +104,17 @@ class ApplicationModule @Inject()(
 
   //lazy val retrieveFileFromQuarantineBucket = s3Service.retrieveFileFromQuarantine _
   //TODO discuss alternative thread pools
-  lazy val ec = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(25))
-  lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(s3Service.retrieveFileFromQuarantine)(_: S3KeyName, _: String)(ec)
+  lazy val getFileFromQuarantine = {
+    lazy val ec = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(25))
+    QuarantineService.getFileFromQuarantine(s3Service.retrieveFileFromQuarantine)(_: S3KeyName, _: String)(ec)
+  }
 
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, "file-upload-frontend", Some(t => logger.warn(t.getMessage, t))) _
+
   lazy val auditF: (Boolean, Int, String) => (Request[_]) => Future[AuditResult] =
     PlayHttp.audit(auditConnector, "file-upload-frontend", Some(t => logger.warn(t.getMessage, t)))
+
   val auditedHttpBodyStreamer = (baseUrl: String, envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, request: Request[_]) =>
     new HttpStreamingBody(
       url = s"$baseUrl/file-upload/envelopes/${envelopeId.value}/files/${fileId.value}/${fileRefId.value}",
@@ -136,7 +138,9 @@ class ApplicationModule @Inject()(
 
 
   lazy val numberOfTimeoutAttempts: Int = configuration.getOptional[Int](s"clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
+
   lazy val scanner: AvScan = new VirusScanner(avClient).scan
+
   lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
     val disableScanning = configuration.getOptional[Boolean](s"clam.antivirus.disableScanning").getOrElse(false)
     if (disableScanning) (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Right(ScanResultFileClean))

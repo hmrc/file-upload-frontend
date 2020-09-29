@@ -31,7 +31,7 @@ private object AppDependencies {
     "uk.gov.hmrc"        %% "play-partials"              % playPartialsVersion,
     "uk.gov.hmrc"        %% "auth-client"                % authClient,
     "uk.gov.hmrc"        %% "clamav-client"              % clamAvClientVersion,
-    "org.typelevel"      %% "cats"                       % "0.9.0",
+    "org.typelevel"      %% "cats-core"                  % "2.2.0",
     "com.amazonaws"      %  "aws-java-sdk"               % "1.11.97",
     "com.lightbend.akka" %% "akka-stream-alpakka-file"   % "2.0.1",
     "com.typesafe.play"  %% "play-iteratees-reactive-streams" % "2.6.1",
@@ -42,12 +42,12 @@ private object AppDependencies {
   )
 
   val test = Seq(
-    "org.scalatest"          %% "scalatest"                   % "3.0.5"             % "test,it",
+    "org.scalatest"          %% "scalatest"                   % "3.1.2"             % "test,it",
     "org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"             % "test,it",
     "com.github.tomakehurst" %  "wiremock"                    % "1.58"              % "test,it",
     "org.scalatestplus.play" %% "scalatestplus-play"          % "4.0.3"             % "test,it",
-    "org.mockito"            %  "mockito-core"                % "2.21.0"            % "test,it",
-    "org.pegdown"            %  "pegdown"                     % "1.6.0"             % "test,it",
+    "org.mockito"            %% "mockito-scala"               % "1.10.0"            % "test,it",
+    "com.vladsch.flexmark"   %  "flexmark-all"                % "0.35.10"           % "test,it",
     "org.jsoup"              %  "jsoup"                       % "1.11.3"            % "test,it",
     "com.typesafe.play"      %% "play-test"                   % PlayVersion.current % "test,it",
     "com.typesafe.akka"      %% "akka-testkit"                % "2.5.31"            % "test,it",

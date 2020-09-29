@@ -37,7 +37,7 @@ trait S3TestController { self: FrontendController =>
 
   val s3Service: S3JavaSdkService
 
-  import s3Service.awsConfig._
+  import s3Service.awsConfig.{quarantineBucketName, transientBucketName}
 
   def filesInQuarantine() = listFilesInBucket(quarantineBucketName)
 
