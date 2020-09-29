@@ -30,9 +30,8 @@ trait LoggerHelper {
 
 class LoggerHelperFileExtensionAndUserAgent extends LoggerHelper {
   def getLoggerValues(formData: MultipartFormData.FilePart[InMemoryMultipartFileHandler.FileCachedInMemory],
-                      request: Request[_]): LoggerValues = {
+                      request: Request[_]): LoggerValues =
     LoggerValues(fileExtensionFromFileName(formData), userAgentFromRequest(request))
-  }
 
   private def fileExtensionFromFileName(file: MultipartFormData.FilePart[FileCachedInMemory]): String = {
     val parts = Option(file.filename).map(_.split("\\.").toList).getOrElse(Nil)

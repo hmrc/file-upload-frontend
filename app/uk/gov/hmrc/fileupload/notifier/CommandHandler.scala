@@ -33,10 +33,11 @@ trait CommandHandler {
 class CommandHandlerImpl(httpCall: WSRequest => Future[Either[PlayHttpError, WSResponse]],
                      baseUrl: String, wsClient: WSClient, publish: AnyRef => Unit) extends CommandHandler {
 
+  private val logger = Logger(getClass)
+
   val userAgent = "User-Agent" -> "FU-frontend-CH"
 
-  def sendBackendCommand[T <: BackendCommand : Writes](command: T)(implicit ec: ExecutionContext): Future[NotifierRepository.Result] = {
-
+  def sendBackendCommand[T <: BackendCommand : Writes](command: T)(implicit ec: ExecutionContext): Future[NotifierRepository.Result] =
     httpCall(
       wsClient
         .url(s"$baseUrl/file-upload/commands/${ command.commandType }")
@@ -50,14 +51,13 @@ class CommandHandlerImpl(httpCall: WSRequest => Future[Either[PlayHttpError, WSR
         case _ => Left(NotificationFailedError(command.id, command.fileId, response.status, response.body))
       }
     }
-  }
 
   private def sendNotification[T <: BackendCommand : Writes](c: T)
                               (implicit executionContext: ExecutionContext): Future[NotifierService.NotifyResult] =
     sendBackendCommand(c).map {
       case Right(_) => Right(NotifySuccess)
       case Left(e) =>
-        Logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
+        logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
         Left(NotifyError(e.statusCode, e.reason))
     }
 

@@ -27,10 +27,9 @@ import play.api.mvc._
 import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
 import uk.gov.hmrc.fileupload.testonly.CreateEnvelopeRequest.ContentTypes
-import uk.gov.hmrc.play.bootstrap.controller.FrontendController
+import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class TestOnlyController @Inject()(
@@ -38,6 +37,8 @@ class TestOnlyController @Inject()(
   wSClient     : WSClient,
   val s3Service: S3JavaSdkService,
   mcc          : MessagesControllerComponents
+)(implicit
+  val ec: ExecutionContext
 ) extends FrontendController(mcc)
      with S3TestController {
 

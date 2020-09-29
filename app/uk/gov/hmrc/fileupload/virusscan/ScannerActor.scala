@@ -33,6 +33,8 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
                    commandHandler: CommandHandler)
                   (implicit executionContext: ExecutionContext) extends Actor {
 
+  private val logger = Logger(getClass)
+
   private var outstandingScans = Queue.empty[Event]
   private var scanningEvent: Option[Event] = None
 
@@ -69,15 +71,15 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
           notify(hasVirus = true)
           scanNext()
         case Left(a: ScanError) =>
-          Logger.error(s"Scan of file ${executed.requestedFor} failed with ScanError: $a")
+          logger.error(s"Scan of file ${executed.requestedFor} failed with ScanError: $a")
           scanNext()
       }
     case e: Failure =>
-      Logger.error("Unknown Failure status.", e.cause)
+      logger.error("Unknown Failure status.", e.cause)
       scanNext()
 
     case default =>
-      Logger.error(s"Unknown message : $default")
+      logger.error(s"Unknown message : $default")
       scanNext()
   }
 
@@ -90,7 +92,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
         outstandingScans = newQueue
         scanningEvent = Some(e)
 
-        Logger.info(s"Scan $e")
+        logger.info(s"Scan $e")
         scanBinaryData(e.envelopeId, e.fileId, e.fileRefId)
           .map(ScanExecuted(e.fileRefId, _)) pipeTo self
 

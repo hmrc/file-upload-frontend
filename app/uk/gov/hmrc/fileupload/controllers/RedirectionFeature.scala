@@ -94,6 +94,8 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
 }
 
 object RedirectionFeature {
+  private val logger = Logger(getClass)
+
   val LOCAL_HOST = "localhost"
   val MAX_URL_LENGHT = 2000
 
@@ -102,7 +104,7 @@ object RedirectionFeature {
 
   def logUrlProblemAndReturn(statusCode: Int, problem: Throwable)
                             (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
-    Logger.warn(s"Request: $rh failed because: ${problem.toString}")
+    logger.warn(s"Request: $rh failed because: ${problem.toString}")
     Accumulator.done(new Status(statusCode).apply(Json.obj("message" -> "URL is invalid")))
   }
 

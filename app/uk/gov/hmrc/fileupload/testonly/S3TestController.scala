@@ -23,14 +23,17 @@ import play.api.http.HttpEntity
 import play.api.mvc.{ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.cacheFileInMemory
 import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3KeyName}
-import uk.gov.hmrc.play.bootstrap.controller.FrontendController
+import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 trait S3TestController { self: FrontendController =>
+
+  private val logger = Logger(getClass)
+
+  implicit val ec: ExecutionContext
 
   val s3Service: S3JavaSdkService
 
@@ -66,9 +69,8 @@ trait S3TestController { self: FrontendController =>
 
       s3Service.upload(bucketName, S3KeyName(fileName), uploadedFile.inputStream, uploadedFile.size)
         .map(r => Ok(formatResult(r)))
-    } else {
+    } else
      Future.successful(BadRequest("Expected exactly one file to be attached"))
-    }
   }
 
   def copyFromQtoT(fileName: String, versionId: String) = Action { _ =>
@@ -82,7 +84,7 @@ trait S3TestController { self: FrontendController =>
   def s3downloadFileT(fileName: String, version: Option[String]) = s3downloadFile(transientBucketName, fileName, version)
 
   def s3downloadFile(bucket: String, fileName: String, version: Option[String]) = Action { _ =>
-    Logger.info(s"downloading $fileName from bucket: $bucket, versionO: $version")
+    logger.info(s"downloading $fileName from bucket: $bucket, versionO: $version")
     val result = (version match {
       case Some(v) => s3Service.download(bucket, S3KeyName(fileName), v)
       case None => s3Service.download(bucket, S3KeyName(fileName))

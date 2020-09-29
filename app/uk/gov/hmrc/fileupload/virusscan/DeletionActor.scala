@@ -27,13 +27,15 @@ class DeletionActor(subscribe: (ActorRef, Class[_]) => Boolean,
                     createS3Key: (EnvelopeId, FileId) => S3KeyName
 ) extends Actor {
 
+  private val logger = Logger(getClass)
+
   override def preStart = {
     subscribe(self, classOf[MarkFileAsInfected])
   }
 
   override def receive: Receive = {
     case e: MarkFileAsInfected =>
-      Logger.info(s"MarkFileAsInfected received for envelopeId: ${e.id} and fileId: ${e.fileId} and version: ${e.fileRefId}")
+      logger.info(s"MarkFileAsInfected received for envelopeId: ${e.id} and fileId: ${e.fileId} and version: ${e.fileRefId}")
       deleteInfectedFile(e)
   }
 

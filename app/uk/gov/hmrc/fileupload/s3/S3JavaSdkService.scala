@@ -51,6 +51,8 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: MetricRegistry) extends S3Service {
+  private val logger = Logger(getClass)
+
   override val awsConfig = new AwsConfig(configuration)
 
   val credentials = new BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)
@@ -115,7 +117,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
   private def downloadByObject(s3Object: S3Object): StreamWithMetadata = {
     val meta = s3Object.getObjectMetadata
-    Logger.info(s"Downloading $s3Object from S3")
+    logger.info(s"Downloading $s3Object from S3")
     metricGetObjectContent.mark()
     metricGetObjectContentSize.inc(meta.getContentLength)
     StreamWithMetadata(
@@ -129,7 +131,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
   def objectByKeyVersion(bucketName: String, key: S3KeyName, versionId: String): Option[S3Object] =
     if (s3Client.doesObjectExist(bucketName, key.value)) {
-      Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $key and version: $versionId")
+      logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $key and version: $versionId")
       metricGetObjectByKeyVersion.mark()
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value, versionId)))
     }
@@ -137,7 +139,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
   def objectByKey(bucketName: String, key: S3KeyName): Option[S3Object] =
     if (s3Client.doesObjectExist(bucketName, key.value)) {
-      Logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $key)")
+      logger.info(s"Retrieving an existing S3 object from bucket: $bucketName with key: $key)")
       metricGetObjectByKey.mark()
       Some(s3Client.getObject(new GetObjectRequest(bucketName, key.value)))
     }
@@ -180,7 +182,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     Try(transferManager.upload(bucketName, key.value, file, metadata)) match {
       case Success(upload) =>
         val promise = Promise[UploadResult]
-        Logger.info(s"upload-s3 started: $fileInfo")
+        logger.info(s"upload-s3 started: $fileInfo")
         upload.addProgressListener(new ProgressListener {
           var events:List[ProgressEvent] = List.empty
           def progressChanged(progressEvent: ProgressEvent): Unit = Try {
@@ -189,15 +191,15 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
               uploadTime.stop()
               metricUploadCompletedSize.inc(metadata.getContentLength)
               val resultTry = Try(upload.waitForUploadResult())
-              Logger.info(s"upload-s3 completed: $fileInfo with success=${resultTry.isSuccess}")
+              logger.info(s"upload-s3 completed: $fileInfo with success=${resultTry.isSuccess}")
               promise.tryComplete(resultTry)
             } else if (progressEvent.getEventType == ProgressEventType.TRANSFER_FAILED_EVENT ||
               upload.getState == TransferState.Failed || upload.getState == TransferState.Canceled
             ) {
               metricUploadFailed.mark()
               val exception = upload.waitForException()
-              Logger.error(s"upload-s3 Transfer events: ${events.reverse.map(_.toString).mkString("\n")}")
-              Logger.error(s"upload-s3 error: transfer failed: $fileInfo", exception)
+              logger.error(s"upload-s3 Transfer events: ${events.reverse.map(_.toString).mkString("\n")}")
+              logger.error(s"upload-s3 error: transfer failed: $fileInfo", exception)
               promise.failure(new Exception("transfer failed", exception))
             }
           }
@@ -211,7 +213,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
     Source.fromIterator(() => new S3FilesIterator(s3Client, bucketName))
 
   override def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResult] = Try {
-    Logger.info(s"Copying a file key ${key.value} and version: $versionId")
+    logger.info(s"Copying a file key ${key.value} and version: $versionId")
     metricCopyFromQtoT.mark()
     val copyRequest = new CopyObjectRequest(awsConfig.quarantineBucketName, key.value, versionId, awsConfig.transientBucketName, key.value)
     copyRequest.setNewObjectMetadata(objectMetadataWithServerSideEncryption)
@@ -230,11 +232,11 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
     val objectDescription = ReflectionToStringBuilder.toString(s3Client.getObjectMetadata(bucketName, key.value))
 
-    Logger.info(s"Deleting object. Object ${key.value} from bucket $bucketName has ${summaries.size()} versions. Description: $objectDescription")
+    logger.info(s"Deleting object. Object ${key.value} from bucket $bucketName has ${summaries.size()} versions. Description: $objectDescription")
 
     for (summary: S3VersionSummary <- summaries.asScala) {
       val outcome = Try(s3Client.deleteVersion(bucketName, summary.getKey, summary.getVersionId))
-      Logger.info(s"Outcome of deleting ${key.value} / ${summary.getVersionId}: $outcome")
+      logger.info(s"Outcome of deleting ${key.value} / ${summary.getVersionId}: $outcome")
     }
   }
 
@@ -254,11 +256,11 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
         sink2  = Md5Hash.md5HashSink
       ).run()
     (for {
-       _            <- Future.successful(Logger.debug(s"zipping $envelopeId to ${tempFile.path}"))
+       _            <- Future.successful(logger.debug(s"zipping $envelopeId to ${tempFile.path}"))
        _            <- uploadFinished
        md5Hash      <- md5Finished
        fileSize     =  tempFile.path.toFile.length
-       _            =  Logger.debug(s"uploading $envelopeId to S3")
+       _            =  logger.debug(s"uploading $envelopeId to S3")
        uploadResult <- uploadFile(
                          bucketName = awsConfig.transientBucketName,
                          key        = S3Key.forZipSubdir(awsConfig.zipSubdir)(fileName),
@@ -271,7 +273,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
                                         om
                                       }
                        )
-       _            =  Logger.debug(s"presigning $envelopeId")
+       _            =  logger.debug(s"presigning $envelopeId")
        url          =  presign(
                          bucketName         = uploadResult.getBucketName,
                          key                = uploadResult.getKey,
@@ -335,7 +337,7 @@ class S3JavaSdkService(configuration: com.typesafe.config.Config, metrics: Metri
 
 class S3FilesIterator(s3Client: AmazonS3, bucketName: String) extends Iterator[Seq[S3ObjectSummary]] {
 
-  Logger.info(s"Listing objects from bucket $bucketName")
+  Logger(getClass).info(s"Listing objects from bucket $bucketName")
 
   var listing = s3Client.listObjects(bucketName)
   val summaries = listing.getObjectSummaries

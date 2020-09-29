@@ -48,6 +48,8 @@ class UserAgentRequestFilter(
   ec: ExecutionContext
 ) extends Filter {
 
+  private val logger = Logger(getClass)
+
   override def apply(nextFilter: (RequestHeader) => Future[Result])(rh: RequestHeader): Future[Result] = {
     def timeWith(userAgent: UserAgent): Future[Result] = {
       val timer = metricRegistry.timer(s"request.user-agent.${userAgent.value}")
@@ -66,7 +68,7 @@ class UserAgentRequestFilter(
         timeWith(ua)
 
       case Some(unknownUserAgent) =>
-        Logger.info(s"Agent $unknownUserAgent is not in UserAgentRequestFilter allowlist for ${rh.path}")
+        logger.info(s"Agent $unknownUserAgent is not in UserAgentRequestFilter allowlist for ${rh.path}")
         timeWith(UserAgent.unknownUserAgent)
 
       case None => timeWith(UserAgent.noUserAgent)

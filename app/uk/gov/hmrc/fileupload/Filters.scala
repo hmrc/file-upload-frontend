@@ -22,7 +22,7 @@ import akka.stream.Materializer
 import com.codahale.metrics.MetricRegistry
 import play.api.http.HttpFilters
 import play.api.mvc.EssentialFilter
-import uk.gov.hmrc.play.bootstrap.filters.FrontendFilters
+import uk.gov.hmrc.play.bootstrap.frontend.filters.FrontendFilters
 import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 
 import scala.concurrent.ExecutionContext

@@ -26,6 +26,9 @@ import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import scala.concurrent.{ExecutionContext, Future}
 
 class VirusScanner(avClient: AvClient) {
+
+  private val logger = Logger(getClass)
+
   private val commandReadTimedOutMessage = "COMMAND READ TIMED OUT"
 
   def scan(implicit ec: ExecutionContext): AvScan =
@@ -42,7 +45,7 @@ class VirusScanner(avClient: AvClient) {
       case Clean             => Right(ScanResultFileClean)
       case Infected(message) if message.contains(commandReadTimedOutMessage) =>
                                 Left(ScanReadCommandTimeOut)
-      case Infected(message) => Logger.warn(s"File is infected: [$message].")
+      case Infected(message) => logger.warn(s"File is infected: [$message].")
                                 Left(ScanResultVirusDetected)
     }.recover {
       case NonFatalWithLogging(ex) => Left(ScanResultError(ex))

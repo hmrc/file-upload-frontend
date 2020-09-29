@@ -25,7 +25,7 @@ import play.api.mvc._
 import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, ZipData}
 import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromBucket
-import uk.gov.hmrc.play.bootstrap.controller.FrontendController
+import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,6 +37,8 @@ class FileDownloadController @Inject()(
   executionContext: ExecutionContext
 ) extends FrontendController(mcc) {
 
+  private val logger = Logger(getClass)
+
   val downloadFromTransient : DownloadFromBucket                                              = appModule.downloadFromTransient
   val createS3Key           : (EnvelopeId, FileId) => S3KeyName                               = appModule.createS3Key
   val now                   : () => Long                                                      = appModule.now
@@ -44,12 +46,12 @@ class FileDownloadController @Inject()(
   val zipAndPresign         : (EnvelopeId, List[(FileId, Option[String])]) => Future[ZipData] = appModule.zipAndPresign
 
   def download(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
-    Logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
+    logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
     downloadFileFromBucket(downloadFromTransient)(envelopeId, fileId)
   }
 
   def illegalDownloadFromQuarantine(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
-    Logger.error(s"downloading a file from S3 QUARANTINE with envelopeId: $envelopeId fileId: $fileId")
+    logger.error(s"downloading a file from S3 QUARANTINE with envelopeId: $envelopeId fileId: $fileId")
     downloadFileFromBucket(downloadFromQuarantine)(envelopeId, fileId)
   }
 
@@ -57,8 +59,8 @@ class FileDownloadController @Inject()(
     val key = createS3Key(envelopeId, fileId)
     fromBucket(key) match {
       case Some(result) =>
-        Logger.info(s"download result: contentType: ${result.metadata.contentType} &  length: ${
-          result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")
+        logger.info(s"download result: contentType: ${result.metadata.contentType} & length: " +
+          s"${result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")
 
         Result(
           header = ResponseHeader(200, Map.empty),
@@ -75,7 +77,7 @@ class FileDownloadController @Inject()(
   }
 
   def zip(envelopeId: EnvelopeId): Action[JsValue] = Action.async(parse.json) { request =>
-    Logger.info(s"zipping files for envelopeId: $envelopeId")
+    logger.info(s"zipping files for envelopeId: $envelopeId")
     implicit val zrr = ZipRequest.reads
     request.body.validate[ZipRequest] match {
       case JsSuccess(zipRequest, _) =>

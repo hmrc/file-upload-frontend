@@ -32,7 +32,7 @@ import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{cacheFileInMemory
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
-import uk.gov.hmrc.play.bootstrap.controller.FrontendController
+import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,6 +44,8 @@ class FileUploadController @Inject()(
 )(implicit
   executionContext: ExecutionContext
 ) extends FrontendController(mcc) {
+
+  private val logger = Logger(getClass)
 
   val redirectionFeature: RedirectionFeature                = appModule.redirectionFeature
   val withValidEnvelope : WithValidEnvelope                 = appModule.withValidEnvelope
@@ -91,7 +93,7 @@ class FileUploadController @Inject()(
             case Some(failure) =>
               Future.successful(failure)
             case _ =>
-              Logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
+              logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
                 s"fileIsEmpty value is $fileIsEmpty.")
               val uploadResult = uploadTheProperFile(envelopeId, fileId, formData)
               if (logFileExtensions) {
@@ -120,17 +122,16 @@ class FileUploadController @Inject()(
   }
 
   private def logFileExtensionData(upload: Future[Result])
-                                  (values: LoggerValues) = {
+                                  (values: LoggerValues) =
     try {
       MDC.put("upload-file-extension", values.fileExtension)
       MDC.put("upload-user-agent", values.userAgent)
-      Logger.info(s"Uploading file with file extension: [${values.fileExtension}] and user agent: [${values.userAgent}]")
+      logger.info(s"Uploading file with file extension: [${values.fileExtension}] and user agent: [${values.userAgent}]")
       upload
     } finally {
       MDC.remove("upload-file-extension")
       MDC.remove("upload-user-agent")
     }
-  }
 }
 
 object FileUploadController {

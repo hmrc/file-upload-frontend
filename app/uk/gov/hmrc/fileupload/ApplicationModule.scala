@@ -21,7 +21,7 @@ import java.util.concurrent.Executors
 import akka.actor.ActorRef
 import com.kenshoo.play.metrics.MetricsImpl
 import javax.inject.{Inject, Singleton}
-import play.Logger
+import play.api.Logger
 import play.api._
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.Request
@@ -55,6 +55,8 @@ class ApplicationModule @Inject()(
   val executionContext: scala.concurrent.ExecutionContext,
   val materializer    : akka.stream.Materializer
 ) extends AhcWSComponents {
+
+  private val logger = Logger(getClass)
 
   lazy val httpErrorHandler = new ShowErrorAsJson(environment, configuration)
 
@@ -108,9 +110,9 @@ class ApplicationModule @Inject()(
   lazy val getFileFromQuarantine = QuarantineService.getFileFromQuarantine(s3Service.retrieveFileFromQuarantine)(_: S3KeyName, _: String)(ec)
 
   // auditing
-  lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, "file-upload-frontend", Some(t => Logger.warn(t.getMessage, t))) _
+  lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, "file-upload-frontend", Some(t => logger.warn(t.getMessage, t))) _
   lazy val auditF: (Boolean, Int, String) => (Request[_]) => Future[AuditResult] =
-    PlayHttp.audit(auditConnector, "file-upload-frontend", Some(t => Logger.warn(t.getMessage, t)))
+    PlayHttp.audit(auditConnector, "file-upload-frontend", Some(t => logger.warn(t.getMessage, t)))
   val auditedHttpBodyStreamer = (baseUrl: String, envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, request: Request[_]) =>
     new HttpStreamingBody(
       url = s"$baseUrl/file-upload/envelopes/${envelopeId.value}/files/${fileId.value}/${fileRefId.value}",

@@ -39,10 +39,12 @@ class ShowErrorAsJson(environment: Environment, configuration: Configuration,
                       sourceMapper: Option[SourceMapper] = None,
                       router: => Option[Router] = None) extends DefaultHttpErrorHandler(environment, configuration, sourceMapper, router) {
 
+  private val logger = Logger(getClass)
+
   implicit val erFormats = Json.format[ErrorResponse]
 
   override def onServerError(request: RequestHeader, ex: Throwable) = {
-    Logger.error(ex.getMessage, ex)
+    logger.error(ex.getMessage, ex)
     Future.successful {
       val (code, message) = ex match {
         case e: HttpException => (e.responseCode, e.getMessage)

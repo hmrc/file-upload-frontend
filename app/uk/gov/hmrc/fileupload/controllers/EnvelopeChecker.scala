@@ -36,6 +36,8 @@ object EnvelopeChecker {
   type ContentType = String
   type WithValidEnvelope = EnvelopeId => (Option[EnvelopeConstraints] => EssentialAction) => EssentialAction
 
+  private val logger = Logger(getClass)
+
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
@@ -88,7 +90,7 @@ object EnvelopeChecker {
 
   def logAndReturn(statusCode: Int, problem: String)
                   (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
-    Logger.warn(s"Request: $rh failed because: $problem")
+    logger.warn(s"Request: $rh failed because: $problem")
     Accumulator.done(new Status(statusCode).apply(Json.obj("message" -> problem)))
   }
 }

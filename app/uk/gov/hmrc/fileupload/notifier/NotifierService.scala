@@ -29,7 +29,7 @@ object NotifierService {
 
   case class NotifyError(statusCode: Int, reason: String)
 
-  val notifySuccess = Right(NotifySuccess)
+  private val logger = Logger(getClass)
 
   def notify(send: BackendCommand => Future[NotifierRepository.Result], publish: AnyRef => Unit)
             (command: AnyRef)
@@ -48,7 +48,7 @@ object NotifierService {
       case c: StoreFile => sendCommandToBackendAndPublish(c)
       case _ =>
         publish(command)
-        Future.successful(notifySuccess)
+        Future.successful(Right(NotifySuccess))
     }
   }
 
@@ -57,7 +57,7 @@ object NotifierService {
     send(c).map {
       case Right(_) => Right(NotifySuccess)
       case Left(e) =>
-        Logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
+        logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
         Left(NotifyError(e.statusCode, e.reason))
     }
 }

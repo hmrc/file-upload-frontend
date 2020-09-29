@@ -45,6 +45,8 @@ object ScanningService {
 
   type AvScan = (InputStream, Long) => Future[ScanResult]
 
+  private val logger = Logger(getClass)
+
   def scanBinaryData(scanner: AvScan,
                      scanTimeoutAttempts: Int,
                      getFile: (S3KeyName, String) => Future[QuarantineDownloadResult])
@@ -62,10 +64,10 @@ object ScanningService {
                      (implicit ec: ExecutionContext): Future[ScanResult] =
     scanResult.flatMap {
       case result if scansAttempted >= maximumScansAllowed =>
-        Logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($scansAttempted of $maximumScansAllowed)")
+        logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($scansAttempted of $maximumScansAllowed)")
         Future.successful(result)
       case Left(ScanReadCommandTimeOut) =>
-        Logger.error(s"Scan $scansAttempted of $maximumScansAllowed timed out for fileId $fileId")
+        logger.error(s"Scan $scansAttempted of $maximumScansAllowed timed out for fileId $fileId")
         retries(scanResult, fileId, maximumScansAllowed, scansAttempted + 1)
       case result => Future.successful(result)
     }

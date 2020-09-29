@@ -33,6 +33,8 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
                     getFileLength: (EnvelopeId, FileId, FileRefId) => Long,
                     transferFile: (S3KeyName, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) extends Actor {
 
+  private val logger = Logger(getClass)
+
   override def preStart = {
     subscribe(self, classOf[MarkFileAsClean])
     subscribe(self, classOf[TransferRequested])
@@ -40,11 +42,11 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   def receive = {
     case e: MarkFileAsClean =>
-      Logger.info(s"MarkFileAsClean received for envelopeId: ${e.id} and fileId: ${e.fileId} and version: ${e.fileRefId}")
+      logger.info(s"MarkFileAsClean received for envelopeId: ${e.id} and fileId: ${e.fileId} and version: ${e.fileRefId}")
       transfer(e.id, e.fileId, e.fileRefId)
 
     case e: TransferRequested =>
-      Logger.info(s"TransferRequested received for ${e.envelopeId} and ${e.fileId} and ${e.fileRefId}")
+      logger.info(s"TransferRequested received for ${e.envelopeId} and ${e.fileId} and ${e.fileRefId}")
       transfer(e.envelopeId, e.fileId, e.fileRefId)
   }
 
@@ -52,9 +54,9 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
     transferFile(createS3Key(envelopeId, fileId), fileRefId.value) match {
       case Success(_) =>
         commandHandler.notify(StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId))) // todo (konrad) missing length!!!
-        Logger.info(s"File successfully transferred for envelopeId: $envelopeId, fileId: $fileId and version: $fileRefId")
+        logger.info(s"File successfully transferred for envelopeId: $envelopeId, fileId: $fileId and version: $fileRefId")
       case Failure(NonFatal(ex)) =>
-        Logger.error(s"File not transferred for $envelopeId and $fileId and $fileRefId", ex)
+        logger.error(s"File not transferred for $envelopeId and $fileId and $fileRefId", ex)
     }
 }
 

@@ -43,12 +43,14 @@ class RedirectionFeatureSpec
   val redirectionFeature = new RedirectionFeature(allowedHosts, null)
   val redirectionWithExceptions = {
     new RedirectionFeature(allowedHosts, new HttpErrorHandler() {
+      private val logger = Logger(getClass)
+
       implicit val erFormats = Json.format[ErrorResponse]
 
       override def onClientError(request: RequestHeader, statusCode: Int, message: String) = ???
 
       override def onServerError(request: RequestHeader, ex: Throwable) = {
-        Logger.error(ex.getMessage, ex)
+        logger.error(ex.getMessage, ex)
         Future.successful {
           val (code, message) = ex match {
             case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
