@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import cats.data.Xor
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
@@ -49,7 +48,7 @@ class FileUploadControllerSpec extends UnitSpec with MockitoSugar with ScalaFutu
     val noEnvelopeValidation = null
     //val noParsingIsActuallyDoneHere = InMemoryMultipartFileHandler.parser
     val commandHandler = new CommandHandler {
-      def notify(command: AnyRef)(implicit ec: ExecutionContext) = Future.successful(Xor.right(NotifySuccess))
+      def notify(command: AnyRef)(implicit ec: ExecutionContext) = Future.successful(Right(NotifySuccess))
     }
     val fakeCurrentTime = () => 10L
     val uploadToQuarantine: UploadToQuarantine = (_,_,_) => new UploadResult()

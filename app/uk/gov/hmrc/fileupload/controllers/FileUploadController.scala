@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import cats.data.Xor
 import javax.inject.{Inject, Singleton}
 import org.slf4j.MDC
 import play.api.Configuration
@@ -114,8 +113,8 @@ class FileUploadController @Inject()(
       commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
         contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
         .map {
-          case Xor.Right(_) => Ok
-          case Xor.Left(e) => Status(e.statusCode)(e.reason)
+          case Right(_) => Ok
+          case Left(e) => Status(e.statusCode)(e.reason)
         }
     }
   }

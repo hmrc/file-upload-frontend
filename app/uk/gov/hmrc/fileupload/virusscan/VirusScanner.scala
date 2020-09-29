@@ -19,7 +19,6 @@ package uk.gov.hmrc.fileupload.virusscan
 import java.io.InputStream
 
 import akka.stream.Materializer
-import cats.data.Xor
 import play.api.Logger
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
@@ -42,13 +41,13 @@ class VirusScanner(avClient: AvClient) {
     materializer: Materializer
   ): Future[ScanResult] = {
     sendAndCheck(is, length.toInt).map {
-      case Clean             => Xor.right(ScanResultFileClean)
+      case Clean             => Right(ScanResultFileClean)
       case Infected(message) if message.contains(commandReadTimedOutMessage) =>
-                                Xor.left(ScanReadCommandTimeOut)
+                                Left(ScanReadCommandTimeOut)
       case Infected(message) => Logger.warn(s"File is infected: [$message].")
-                                Xor.left(ScanResultVirusDetected)
+                                Left(ScanResultVirusDetected)
     }.recover {
-      case NonFatalWithLogging(ex) => Xor.left(ScanResultError(ex))
+      case NonFatalWithLogging(ex) => Left(ScanResultError(ex))
     }
   }
 }

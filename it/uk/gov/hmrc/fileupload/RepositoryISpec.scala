@@ -18,27 +18,28 @@ package uk.gov.hmrc.fileupload
 
 import java.net.HttpURLConnection._
 
-import cats.data.Xor
 import play.api.libs.ws.WSClient
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.IntegrationTestApplicationComponents
 import uk.gov.hmrc.fileupload.transfer.Repository
 import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
+import scala.concurrent.ExecutionContext
 
 class RepositoryISpec extends IntegrationTestApplicationComponents {
+  import ExecutionContext.Implicits.global
 
   val wsClient = app.injector.instanceOf[WSClient]
 
   "When calling the envelope check" should {
 
-    val envelopeAvailable = Repository.envelopeAvailable(_.execute().map(response => Xor.Right(response)), fileUploadBackendBaseUrl, wsClient) _
+    val envelopeAvailable = Repository.envelopeAvailable(_.execute().map(response => Right(response)), fileUploadBackendBaseUrl, wsClient) _
 
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_OK)
 
-      envelopeAvailable(envelopeId).futureValue shouldBe Xor.right(envelopeId)
+      envelopeAvailable(envelopeId).futureValue shouldBe Right(envelopeId)
     }
 
     "if the ID is not known of return an error" in {
@@ -46,7 +47,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
-      envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeNotFoundError(envelopeId))
+      envelopeAvailable(envelopeId).futureValue shouldBe Left(EnvelopeNotFoundError(envelopeId))
     }
 
     "if an error occurs return an error" in {
@@ -55,11 +56,11 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
 
-      envelopeAvailable(envelopeId).futureValue shouldBe Xor.left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
+      envelopeAvailable(envelopeId).futureValue shouldBe Left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
   }
 
-  //  val transfer = Service.transfer(_.execute().map(response => Xor.Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
+  //  val transfer = Service.transfer(_.execute().map(response => Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
   //
   //  "When uploading a file" should {
   //    "be successful if file uploaded" in {
@@ -68,7 +69,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
   //
   //      responseToUpload(envelopeId, fileId, 200)
   //
-  //      transfer(anyFileFor(envelopeId, fileId)).futureValue shouldBe Xor.right(envelopeId)
+  //      transfer(anyFileFor(envelopeId, fileId)).futureValue shouldBe Right(envelopeId)
   //    }
   //
   //    "give an error if file uploaded" in {
@@ -77,7 +78,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
   //
   //      responseToUpload(envelopeId, fileId, 500, "SOME_ERROR")
   //
-  //      transfer(anyFileFor(envelopeId, fileId)).futureValue shouldBe Xor.left(TransferServiceError(envelopeId, "SOME_ERROR"))
+  //      transfer(anyFileFor(envelopeId, fileId)).futureValue shouldBe Left(TransferServiceError(envelopeId, "SOME_ERROR"))
   //    }
   //  }
 

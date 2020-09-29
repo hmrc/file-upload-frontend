@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload.infrastructure
 
-import cats.data.Xor
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
@@ -124,7 +123,7 @@ class PlayHttpSpec extends UnitSpec with BeforeAndAfterEach with TestApplication
       val wsClient = app.injector.instanceOf[WSClient]
       val response = await(testExecute(wsClient.url(downstreamUrl).withMethod("GET")))
 
-      response shouldBe Xor.Left(PlayHttpError("Remotely closed"))
+      response shouldBe Left(PlayHttpError("Remotely closed"))
       loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely closed"
     }
   }

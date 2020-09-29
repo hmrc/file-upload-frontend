@@ -19,7 +19,6 @@ package uk.gov.hmrc.fileupload.infrastructure
 import java.io.OutputStream
 import java.net.{HttpURLConnection, URL}
 
-import cats.data.Xor
 import play.api.libs.iteratee.{Done, Input, Iteratee, Step}
 import play.api.libs.ws.{WSRequest, WSResponse}
 import play.api.mvc.{Headers, Request}
@@ -53,7 +52,7 @@ object PlayHttp {
   case class PlayHttpError(message: String)
 
   def execute(connector: AuditConnector, appName: String, errorLogger: Option[(Throwable => Unit)])(request: WSRequest)
-             (implicit ec: ExecutionContext): Future[Xor[PlayHttpError, WSResponse]] = {
+             (implicit ec: ExecutionContext): Future[Either[PlayHttpError, WSResponse]] = {
     val hc = headerCarrier(request)
     val eventualResponse = request.execute()
 
@@ -66,11 +65,11 @@ object PlayHttp {
           detail = hc.toAuditDetails()))
       }
     }
-    eventualResponse.map(Xor.right)
+    eventualResponse.map(Right.apply)
       .recover {
         case NonFatal(t) =>
-          errorLogger.foreach(log => log(t))
-          Xor.left(PlayHttpError(t.getMessage))
+          errorLogger.foreach(_.apply(t))
+          Left(PlayHttpError(t.getMessage))
       }
   }
 

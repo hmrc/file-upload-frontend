@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKit}
-import cats.data.Xor
 import org.scalatest.Matchers
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
@@ -89,19 +88,19 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
     def scanBinaryDataClean(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
       collector = collector.::(fileRefId)
-      Future.successful(Xor.right(ScanResultFileClean))
+      Future.successful(Right(ScanResultFileClean))
     }
 
     def scanBinaryDataInfected(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
       collector = collector.::(fileRefId)
-      Future.successful(Xor.left(ScanResultVirusDetected))
+      Future.successful(Left(ScanResultVirusDetected))
     }
 
     val commandHandler = new CommandHandler {
       def notify(command: AnyRef)(implicit ec: ExecutionContext) = {
         collector = collector.::(command)
-        Future.successful(Xor.Right(NotifySuccess))
+        Future.successful(Right(NotifySuccess))
       }
     }
 

@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import java.io.InputStream
 
-import cats.data.Xor
 import play.api.Logger
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
@@ -28,7 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object ScanningService {
 
-  type ScanResult = Xor[ScanError, ScanResultFileClean.type]
+  type ScanResult = Either[ScanError, ScanResultFileClean.type]
 
   sealed trait ScanError
 
@@ -65,7 +64,7 @@ object ScanningService {
       case result if scansAttempted >= maximumScansAllowed =>
         Logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($scansAttempted of $maximumScansAllowed)")
         Future.successful(result)
-      case Xor.Left(ScanReadCommandTimeOut) =>
+      case Left(ScanReadCommandTimeOut) =>
         Logger.error(s"Scan $scansAttempted of $maximumScansAllowed timed out for fileId $fileId")
         retries(scanResult, fileId, maximumScansAllowed, scansAttempted + 1)
       case result => Future.successful(result)
@@ -75,7 +74,7 @@ object ScanningService {
                    file: Future[QuarantineDownloadResult])
                   (implicit ec: ExecutionContext): Future[ScanResult] =
     file.flatMap {
-      case Xor.Right(file) => scanner(file.data, file.length)
-      case Xor.Left(e) => Future.successful(Xor.Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
+      case Right(file) => scanner(file.data, file.length)
+      case Left(e) => Future.successful(Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
     }
 }

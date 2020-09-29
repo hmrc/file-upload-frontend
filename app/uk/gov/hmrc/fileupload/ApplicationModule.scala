@@ -20,7 +20,6 @@ import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 
 import akka.actor.ActorRef
-import cats.data.Xor
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
 import com.codahale.metrics.{MetricFilter, SharedMetricRegistries}
 import com.kenshoo.play.metrics.{MetricsController, MetricsImpl}
@@ -147,7 +146,7 @@ class ApplicationModule @Inject()(
   lazy val scanner: AvScan = new VirusScanner(avClient).scan
   lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
     val disableScanning = configuration.getOptional[Boolean](s"${environment.mode}.clam.antivirus.disableScanning").getOrElse(false)
-    if (disableScanning) (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Xor.right(ScanResultFileClean))
+    if (disableScanning) (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Right(ScanResultFileClean))
     else ScanningService.scanBinaryData(scanner, numberOfTimeoutAttempts, getFileFromQuarantine)(createS3Key)
   }
 

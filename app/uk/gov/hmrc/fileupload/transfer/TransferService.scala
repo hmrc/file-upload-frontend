@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
-import cats.data.Xor
 import play.api.http.Status
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsValue
@@ -29,18 +28,18 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object TransferService {
 
-  type EnvelopeAvailableResult = Xor[EnvelopeAvailableError, EnvelopeId]
+  type EnvelopeAvailableResult = Either[EnvelopeAvailableError, EnvelopeId]
 
   sealed trait EnvelopeAvailableError
   case class EnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
   case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
 
-  type TransferResult = Xor[TransferError, EnvelopeId]
+  type TransferResult = Either[TransferError, EnvelopeId]
 
   sealed trait TransferError
   case class TransferServiceError(id: EnvelopeId, message: String) extends TransferError
 
-  type EnvelopeDetailResult = Xor[EnvelopeError, JsValue]
+  type EnvelopeDetailResult = Either[EnvelopeError, JsValue]
   sealed trait EnvelopeError
   case class EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeError
   case class EnvelopeDetailServiceError(id: EnvelopeId, message: String) extends EnvelopeError
@@ -62,22 +61,21 @@ object TransferService {
             (envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId)
             (implicit executionContext: ExecutionContext): Future[TransferResult] = {
     val appendedKey = s3KeyAppender(envelopeId, fileId)
-    getFile(appendedKey, fileRefId.value) flatMap {
-      case Xor.Right(file) =>
+    getFile(appendedKey, fileRefId.value).flatMap {
+      case Right(file) =>
         // TODO check request
         val iterator = toHttpBodyStreamer(baseUrl, envelopeId, fileId, fileRefId, null)
 
         (Enumerator.fromStream(file.data) |>>> iterator).map(r =>
           r.status match {
             case Status.OK =>
-              Xor.Right(envelopeId)
+              Right(envelopeId)
             case _ =>
-              Xor.Left(TransferServiceError(envelopeId, r.response))
+              Left(TransferServiceError(envelopeId, r.response))
           })
 
-      case Xor.Left(QuarantineDownloadFileNotFound) =>
+      case Left(QuarantineDownloadFileNotFound) =>
         Future.failed(throw new Exception(s"File not found in quarantine (fileRefId: $fileRefId, envelopeId: $envelopeId"))
     }
-
   }
 }

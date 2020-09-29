@@ -17,7 +17,6 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import akka.util.ByteString
-import cats.data.Xor
 import play.api.Logger
 import play.api.http.Status._
 import play.api.mvc.Results._
@@ -49,7 +48,7 @@ object EnvelopeChecker {
     EssentialAction { implicit rh =>
       Accumulator.flatten {
         checkEnvelopeDetails(envelopeId).map {
-          case Xor.Right(envelope) =>
+          case Right(envelope) =>
             val envelopeDetails = extractEnvelopeDetails(envelope)
             val status = envelopeDetails.status.getOrElse("")
             status match {
@@ -59,9 +58,9 @@ object EnvelopeChecker {
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
-          case Xor.Left(EnvelopeDetailNotFoundError(_)) =>
+          case Left(EnvelopeDetailNotFoundError(_)) =>
             logAndReturn(NOT_FOUND, s"Unable to upload to nonexistent envelope: $envelopeId")
-          case Xor.Left(error) =>
+          case Left(error) =>
             logAndReturn(INTERNAL_SERVER_ERROR, error.toString)
         }
       }

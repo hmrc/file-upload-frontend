@@ -19,7 +19,6 @@ package uk.gov.hmrc.fileupload.virusscan
 import akka.actor.Status.Failure
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.pipe
-import cats.data.Xor
 import play.api.Logger
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
@@ -63,13 +62,13 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
     case executed: ScanExecuted =>
       executed.result match {
-        case Xor.Right(ScanResultFileClean) =>
+        case Right(ScanResultFileClean) =>
           notify(hasVirus = false)
           scanNext()
-        case Xor.Left(ScanResultVirusDetected) =>
+        case Left(ScanResultVirusDetected) =>
           notify(hasVirus = true)
           scanNext()
-        case Xor.Left(a: ScanError) =>
+        case Left(a: ScanError) =>
           Logger.error(s"Scan of file ${executed.requestedFor} failed with ScanError: $a")
           scanNext()
       }

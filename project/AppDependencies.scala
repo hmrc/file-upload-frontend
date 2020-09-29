@@ -24,14 +24,14 @@ private object AppDependencies {
   private val playPartialsVersion  = "6.11.0-play-26"
   private val authClient           = "3.1.0-play-26"
   private val hmrcTestVersion      = "3.9.0-play-26"
-  private val clamAvClientVersion  = "6.9.0"
+  private val clamAvClientVersion  = "7.0.0"
 
   val compile = Seq(
     "uk.gov.hmrc"        %% "bootstrap-play-26"        % playBootstrapVersion,
     "uk.gov.hmrc"        %% "play-partials"            % playPartialsVersion,
     "uk.gov.hmrc"        %% "auth-client"              % authClient,
     "uk.gov.hmrc"        %% "clamav-client"            % clamAvClientVersion,
-    "org.typelevel"      %% "cats"                     % "0.6.0",
+    "org.typelevel"      %% "cats"                     % "0.9.0",
     "com.amazonaws"      %  "aws-java-sdk"             % "1.11.97",
     "com.lightbend.akka" %% "akka-stream-alpakka-file" % "2.0.1",
     "com.typesafe.play"  %% "play-iteratees-reactive-streams" % "2.6.1",
@@ -51,7 +51,7 @@ private object AppDependencies {
     "org.pegdown"            %  "pegdown"                     % "1.6.0"             % "test,it",
     "org.jsoup"              %  "jsoup"                       % "1.11.3"            % "test,it",
     "com.typesafe.play"      %% "play-test"                   % PlayVersion.current % "test,it",
-    "com.typesafe.akka"      %% "akka-testkit"                % "2.3.2"             % "test,it",
+    "com.typesafe.akka"      %% "akka-testkit"                % "2.5.31"            % "test,it",
     "io.findify"             %% "s3mock"                      % "0.2.5"             % "it"
   )
 

@@ -7,20 +7,19 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import io.findify.s3mock.S3Mock
 import io.findify.s3mock.request.CreateBucketConfiguration
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.http.Status
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.ExecutionContext
 
-trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
+trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with IntegrationPatience {
   this: Suite =>
 
-  implicit override val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(10, Seconds), interval = Span(200, Millis))
-  implicit val executionContext: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global
+  import ExecutionContext.Implicits.global
 
   lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
   lazy val backendPort: Int = backend.port()
@@ -37,14 +36,20 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures {
 
   backend.start()
   backend.addStubMapping(
-    post(urlPathMatching("/file-upload/events/*"))
-      .willReturn(aResponse().withStatus(Status.OK))
-      .build())
+    post(
+      urlPathMatching("/file-upload/events/*"))
+        .willReturn(aResponse().withStatus(Status.OK)
+    )
+    .build()
+  )
 
   backend.addStubMapping(
-    post(urlPathMatching("/file-upload/commands/*"))
-      .willReturn(aResponse().withStatus(Status.OK))
-      .build())
+    post(
+      urlPathMatching("/file-upload/commands/*"))
+        .willReturn(aResponse().withStatus(Status.OK)
+    )
+    .build()
+  )
 
   override def afterAll(): Unit = {
     super.afterAll()
