@@ -1,6 +1,5 @@
 package uk.gov.hmrc.fileupload.support
 
-import play.api.{Configuration, Environment}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.{BeforeAndAfterEach, Suite}
 import org.mockito.Mockito.reset

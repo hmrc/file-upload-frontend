@@ -44,13 +44,10 @@ object TransferService {
   case class EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeError
   case class EnvelopeDetailServiceError(id: EnvelopeId, message: String) extends EnvelopeError
 
-  def envelopeAvailable(isEnvelopeAvailable: (EnvelopeId) => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId)
-                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] =
+  def envelopeAvailable(isEnvelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId): Future[EnvelopeAvailableResult] =
     isEnvelopeAvailable(envelopeId)
 
-  def envelopeResult(result: (EnvelopeId) => Future[EnvelopeDetailResult])
-                    (envelopeId: EnvelopeId)
-                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] =
+  def envelopeResult(result: EnvelopeId => Future[EnvelopeDetailResult])(envelopeId: EnvelopeId): Future[EnvelopeDetailResult] =
     result(envelopeId)
 
   def stream(baseUrl: String,

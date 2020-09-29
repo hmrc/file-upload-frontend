@@ -18,13 +18,9 @@ package uk.gov.hmrc.fileupload.support
 
 import org.scalatest.Suite
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import org.scalatestplus.play.OneServerPerSuite
-import play.api.ApplicationLoader.Context
-import play.api._
+import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.mvc.EssentialFilter
-import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.fileupload.virusscan.AvClient
 import uk.gov.hmrc.play.test.UnitSpec
 

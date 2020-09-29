@@ -28,13 +28,13 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
-import uk.gov.hmrc.fileupload.s3.{InMemoryMultipartFileHandler, S3KeyName}
-import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
-import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
+import uk.gov.hmrc.fileupload.s3.S3KeyName
+import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues}
 import uk.gov.hmrc.play.test.UnitSpec
 

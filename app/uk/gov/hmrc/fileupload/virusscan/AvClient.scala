@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import java.io.InputStream
 
-import javax.inject.{Inject, Provider, Singleton}
+import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.clamav.{ClamAntiVirus, ClamAntiVirusFactory}
 import uk.gov.hmrc.clamav.config.ClamAvConfig

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import javax.inject.{Inject, Singleton}
-import play.api.mvc.{Action, Controller, MessagesControllerComponents}
+import play.api.mvc.MessagesControllerComponents
 import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.transfer.TransferRequested

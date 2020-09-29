@@ -18,10 +18,8 @@ package uk.gov.hmrc.fileupload
 
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.ApplicationLoader.Context
-import play.api._
+import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.mvc.EssentialFilter
 import uk.gov.hmrc.play.test.UnitSpec
 
 trait TestApplicationComponents extends UnitSpec with GuiceOneServerPerSuite with BeforeAndAfterAll {

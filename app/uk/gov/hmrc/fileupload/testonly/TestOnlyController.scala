@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.testonly
 
 import java.net.URLEncoder
 
-import akka.util.ByteString
 import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.http.HttpVerbs.POST
@@ -27,13 +26,11 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc._
 import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
-import uk.gov.hmrc.fileupload.testonly.CreateEnvelopeRequest.{ByteStream, ContentTypes}
+import uk.gov.hmrc.fileupload.testonly.CreateEnvelopeRequest.ContentTypes
 import uk.gov.hmrc.play.bootstrap.controller.FrontendController
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
 
 @Singleton
 class TestOnlyController @Inject()(
@@ -66,7 +63,7 @@ class TestOnlyController @Inject()(
     }
   }
 
-  def getEnvelope(envelopeId: String) = Action.async { implicit request =>
+  def getEnvelope(envelopeId: String) = Action.async {
     wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId").get().map { response =>
       new Status(response.status)(response.body).withHeaders(
         "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
@@ -74,7 +71,7 @@ class TestOnlyController @Inject()(
     }
   }
 
-  def downloadFile(envelopeId: String, fileId: String) = Action.async { implicit request =>
+  def downloadFile(envelopeId: String, fileId: String) = Action.async {
     wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").get().map {
       resultFromBackEnd => if (resultFromBackEnd.status == 200) {
         Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
@@ -91,7 +88,7 @@ class TestOnlyController @Inject()(
     }
   }
 
-  def transferGetEnvelopes(destination: Option[String]) = Action.async { implicit request =>
+  def transferGetEnvelopes(destination: Option[String]) = Action.async {
     val transferUrl = s"$baseUrl/file-transfer/envelopes"
     val wsUrl = destination match {
       case Some(d)  => wSClient.url(transferUrl).addQueryStringParameters(("destination", URLEncoder.encode(d, "UTF-8")))
@@ -106,7 +103,7 @@ class TestOnlyController @Inject()(
     }
   }
 
-  def transferDownloadEnvelope(envelopeId: String) = Action.async { implicit request =>
+  def transferDownloadEnvelope(envelopeId: String) = Action.async {
     wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").get().flatMap {
       resultFromBackEnd => if (resultFromBackEnd.status == 200) {
         Future.successful(Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
@@ -117,13 +114,13 @@ class TestOnlyController @Inject()(
     }
   }
 
-  def transferDeleteEnvelope(envelopeId: String) = Action.async { implicit request =>
+  def transferDeleteEnvelope(envelopeId: String) = Action.async {
     wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").delete().map { response =>
       new Status(response.status)(response.body)
     }
   }
 
-  def getEvents(streamId: String) = Action.async { implicit request =>
+  def getEvents(streamId: String) = Action.async {
     wSClient.url(s"$baseUrl/file-upload/events/$streamId").get().map { response =>
       new Status(response.status)(response.body).withHeaders {
         "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
@@ -131,7 +128,7 @@ class TestOnlyController @Inject()(
     }
   }
 
-  def filesInProgress() = Action.async { implicit request =>
+  def filesInProgress() = Action.async {
     wSClient.url(s"$baseUrl/file-upload/files/inprogress").get().map { response =>
       Ok(Json.parse(response.body))
     }

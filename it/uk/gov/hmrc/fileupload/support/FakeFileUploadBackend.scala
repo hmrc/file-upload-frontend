@@ -8,18 +8,14 @@ import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import io.findify.s3mock.S3Mock
 import io.findify.s3mock.request.CreateBucketConfiguration
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.http.Status
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
 
 trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with IntegrationPatience {
   this: Suite =>
-
-  import ExecutionContext.Implicits.global
 
   lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
   lazy val backendPort: Int = backend.port()
@@ -76,45 +72,49 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with Int
 
   object Wiremock {
 
-    def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = Status.OK, body: String = ENVELOPE_OPEN_RESPONSE) = {
+    def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = Status.OK, body: String = ENVELOPE_OPEN_RESPONSE) =
       backend.addStubMapping(
-        get(urlPathMatching(s"/file-upload/envelopes/${ envelopeId.value }"))
+        get(urlPathMatching(s"/file-upload/envelopes/${envelopeId.value}"))
           .willReturn(
             aResponse()
               .withBody(body)
-              .withStatus(status))
-          .build())
-    }
+              .withStatus(status)
+          )
+          .build()
+      )
 
-    def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = Status.OK, body: String = "") = {
+    def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = Status.OK, body: String = "") =
       backend.addStubMapping(
         put(urlPathMatching(fileContentUrl(envelopeId, fileId)))
           .willReturn(
             aResponse()
               .withBody(body)
-              .withStatus(status))
-          .build())
-    }
+              .withStatus(status)
+          )
+          .build()
+      )
 
-    def respondToCreateEnvelope(envelopeIdOfCreated: EnvelopeId) = {
+    def respondToCreateEnvelope(envelopeIdOfCreated: EnvelopeId) =
       backend.addStubMapping(
         post(urlPathMatching(s"/file-upload/envelopes"))
           .willReturn(
             aResponse()
-              .withHeader("Location", s"$fileUploadBackendBaseUrl/file-upload/envelopes/${ envelopeIdOfCreated.value }")
-              .withStatus(Status.CREATED))
-          .build())
-    }
+              .withHeader("Location", s"$fileUploadBackendBaseUrl/file-upload/envelopes/${envelopeIdOfCreated.value}")
+              .withStatus(Status.CREATED)
+          )
+          .build()
+      )
 
-    def responseToDownloadFile(envelopeId: EnvelopeId, fileId: FileId, textBody: String = "", status: Int = Status.OK) = {
+    def responseToDownloadFile(envelopeId: EnvelopeId, fileId: FileId, textBody: String = "", status: Int = Status.OK) =
       backend.addStubMapping(
         get(urlPathMatching(fileContentUrl(envelopeId, fileId)))
           .willReturn(
             aResponse()
               .withBody(textBody)
-              .withStatus(status))
-          .build())
-    }
+              .withStatus(status)
+          )
+          .build()
+      )
 
     def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] =
       backend.findAll(putRequestedFor(urlPathMatching(fileContentUrl(envelopeId, fileId)))).asScala.headOption
@@ -128,13 +128,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with Int
     def markFileAsInfectedTriggered() =
       backend.verify(postRequestedFor(urlEqualTo("/file-upload/commands/mark-file-as-infected")))
 
-    private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) = {
+    private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) =
       s"/file-upload/envelopes/$envelopeId/files/$fileId"
-    }
-
-    private def metadataContentUrl(envelopId: EnvelopeId, fileId: FileId) = {
-      s"/file-upload/envelopes/$envelopId/files/$fileId/metadata"
-    }
-
   }
 }

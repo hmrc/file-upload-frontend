@@ -20,7 +20,6 @@ import akka.util.ByteString
 import play.api.Logger
 import play.api.http.Status._
 import play.api.mvc.Results._
-import play.api.libs.iteratee.Done
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.Accumulator
 import play.api.mvc.{EssentialAction, MultipartFormData, RequestHeader, Result}

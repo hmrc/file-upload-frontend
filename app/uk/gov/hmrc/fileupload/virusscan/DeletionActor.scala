@@ -22,13 +22,10 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.notifier.MarkFileAsInfected
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 
-import scala.concurrent.ExecutionContext
-
 class DeletionActor(subscribe: (ActorRef, Class[_]) => Boolean,
                     deleteObjectFromQuarantineBucket: S3Service.DeleteFileFromQuarantineBucket,
-                    createS3Key: (EnvelopeId, FileId) => S3KeyName)
-                   (implicit executionContext: ExecutionContext) extends Actor {
-
+                    createS3Key: (EnvelopeId, FileId) => S3KeyName
+) extends Actor {
 
   override def preStart = {
     subscribe(self, classOf[MarkFileAsInfected])
@@ -49,7 +46,6 @@ class DeletionActor(subscribe: (ActorRef, Class[_]) => Boolean,
 object DeletionActor {
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
             deleteObjectFromQuarantineBucket: S3Service.DeleteFileFromQuarantineBucket,
-            createS3Key: (EnvelopeId, FileId) => S3KeyName)
-           (implicit executionContext: ExecutionContext) =
+            createS3Key: (EnvelopeId, FileId) => S3KeyName) =
     Props(new DeletionActor(subscribe, deleteObjectFromQuarantineBucket, createS3Key))
 }

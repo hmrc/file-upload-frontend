@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import java.io.InputStream
 
-import akka.stream.Materializer
 import play.api.Logger
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
@@ -29,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class VirusScanner(avClient: AvClient) {
   private val commandReadTimedOutMessage = "COMMAND READ TIMED OUT"
 
-  def scan(implicit ec: ExecutionContext, materializer: Materializer): AvScan =
+  def scan(implicit ec: ExecutionContext): AvScan =
     scanWith(avClient.sendAndCheck)
 
   private[virusscan] def scanWith(
@@ -37,8 +36,7 @@ class VirusScanner(avClient: AvClient) {
   )(is    : InputStream,
     length: Long
   )(implicit
-    ec: ExecutionContext,
-    materializer: Materializer
+    ec: ExecutionContext
   ): Future[ScanResult] = {
     sendAndCheck(is, length.toInt).map {
       case Clean             => Right(ScanResultFileClean)

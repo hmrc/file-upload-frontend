@@ -16,30 +16,21 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.net.InetSocketAddress
 import java.util.concurrent.Executors
 
 import akka.actor.ActorRef
-import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
-import com.codahale.metrics.{MetricFilter, SharedMetricRegistries}
-import com.kenshoo.play.metrics.{MetricsController, MetricsImpl}
-import com.typesafe.config.Config
-import javax.inject.{Inject, Provider, Singleton}
-import net.ceedubs.ficus.Ficus._
+import com.kenshoo.play.metrics.MetricsImpl
+import javax.inject.{Inject, Singleton}
 import play.Logger
-import play.api.ApplicationLoader.Context
-import play.api.Mode.Mode
 import play.api._
 import play.api.libs.ws.ahc.AhcWSComponents
-import play.api.mvc.{EssentialFilter, Request}
+import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.controllers._
-import uk.gov.hmrc.fileupload.filters.{UserAgent, UserAgentRequestFilter}
 import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, CommandHandlerImpl}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.s3._
-import uk.gov.hmrc.fileupload.testonly.TestOnlyController
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerHelperFileExtensionAndUserAgent, ShowErrorAsJson}
 import uk.gov.hmrc.fileupload.virusscan.{AvClient, DeletionActor, ScannerActor, ScanningService, VirusScanner}

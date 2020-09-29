@@ -17,11 +17,10 @@
 package uk.gov.hmrc.fileupload.testonly
 
 import akka.stream.scaladsl.Source
-import com.amazonaws.services.s3.model.CopyObjectResult
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import play.api.Logger
 import play.api.http.HttpEntity
-import play.api.mvc.{Action, Controller, ResponseHeader, Result}
+import play.api.mvc.{ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.cacheFileInMemory
 import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3KeyName}
 import uk.gov.hmrc.play.bootstrap.controller.FrontendController

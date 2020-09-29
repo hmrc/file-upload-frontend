@@ -28,8 +28,6 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 class DeletionActorSpec extends TestKit(ActorSystem("deletion")) with ImplicitSender with UnitSpec with Matchers with Eventually with StopSystemAfterAll {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(2, Seconds)))
 
   "DeletionActor" should {

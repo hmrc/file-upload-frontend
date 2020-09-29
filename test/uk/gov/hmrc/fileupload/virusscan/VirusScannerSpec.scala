@@ -23,7 +23,6 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.Matchers
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import play.api.{Configuration, Environment}
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._

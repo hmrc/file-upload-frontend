@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import java.net.URL
-
 import akka.util.ByteString
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
@@ -55,7 +53,7 @@ class FileDownloadController @Inject()(
     downloadFileFromBucket(downloadFromQuarantine)(envelopeId, fileId)
   }
 
-  def downloadFileFromBucket(fromBucket: DownloadFromBucket)(envelopeId: EnvelopeId, fileId: FileId) = Action { implicit request =>
+  def downloadFileFromBucket(fromBucket: DownloadFromBucket)(envelopeId: EnvelopeId, fileId: FileId) = Action {
     val key = createS3Key(envelopeId, fileId)
     fromBucket(key) match {
       case Some(result) =>
@@ -95,7 +93,6 @@ case class ZipRequest(
 )
 
 object ZipRequest {
-  import play.api.libs.functional.syntax._
   val reads: Reads[ZipRequest] =
     Reads.at[JsObject](__ \ "files")
       .map(_.fieldSet.map { case (k, v) => FileId(k) -> v.asOpt[String] }.toList)
