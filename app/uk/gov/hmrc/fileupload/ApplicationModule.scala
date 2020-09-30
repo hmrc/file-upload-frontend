@@ -22,6 +22,7 @@ import akka.actor.ActorRef
 import com.kenshoo.play.metrics.MetricsImpl
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
+import play.api.http.HttpErrorHandler
 import play.api.libs.ws.ahc.AhcWSComponents
 import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.controllers.{EnvelopeChecker, RedirectionFeature}
@@ -31,7 +32,7 @@ import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3Key, S3KeyName}
 import uk.gov.hmrc.fileupload.transfer.TransferActor
-import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerHelperFileExtensionAndUserAgent, ShowErrorAsJson}
+import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerHelperFileExtensionAndUserAgent}
 import uk.gov.hmrc.fileupload.virusscan.{AvClient, DeletionActor, ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScan, ScanResult, ScanResultFileClean}
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
@@ -46,6 +47,7 @@ class ApplicationModule @Inject()(
   auditConnector          : AuditConnector,
   metrics                 : MetricsImpl,
   avClient                : AvClient,
+  httpErrorHandler        : HttpErrorHandler,
   actorSystem             : akka.actor.ActorSystem,
   val applicationLifecycle: play.api.inject.ApplicationLifecycle,
   val configuration       : play.api.Configuration,
@@ -56,8 +58,6 @@ class ApplicationModule @Inject()(
 ) extends AhcWSComponents {
 
   private val logger = Logger(getClass)
-
-  lazy val httpErrorHandler = new ShowErrorAsJson(environment, configuration)
 
   lazy val s3Service = new S3JavaSdkService(configuration.underlying, metrics.defaultRegistry)
 
