@@ -16,14 +16,14 @@ trait EnvelopeActions extends ActionsSupport {
   def createEnvelope(data: String): WSResponse = createEnvelope(data.getBytes())
 
   def createEnvelope(data: Array[Byte]): WSResponse =
-    client
+    wsClient
       .url(s"$url/envelope")
-      .withHeaders("Content-Type" -> "application/json")
+      .withHttpHeaders("Content-Type" -> "application/json")
       .post(data)
       .futureValue
 
   def getEnvelopeFor(id: EnvelopeId): WSResponse =
-    client
+    wsClient
       .url(s"$url/envelopes/$id")
       .get()
       .futureValue
@@ -40,9 +40,8 @@ trait EnvelopeActions extends ActionsSupport {
   }
 
   def deleteEnvelopFor(id: EnvelopeId): WSResponse =
-    client
+    wsClient
       .url(s"$url/envelopes/$id")
       .delete()
       .futureValue
-
 }

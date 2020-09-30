@@ -40,12 +40,13 @@ lazy val scoverageSettings =
 
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin)
+  .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(majorVersion := 1)
   .settings(PlayKeys.playDefaultPort := 8899)
   .settings(scoverageSettings: _*)
   .settings(SbtDistributablesPlugin.publishingSettings: _*)
   .settings(
-    scalaVersion := "2.11.8",
+    scalaVersion := "2.12.12",
     libraryDependencies ++= AppDependencies.dependencies,
     parallelExecution in Test := false,
     retrieveManaged := true,

@@ -18,8 +18,6 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import java.io.InputStream
 
-import akka.stream.Materializer
-import cats.data.Xor
 import play.api.Logger
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
@@ -28,9 +26,12 @@ import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import scala.concurrent.{ExecutionContext, Future}
 
 class VirusScanner(avClient: AvClient) {
+
+  private val logger = Logger(getClass)
+
   private val commandReadTimedOutMessage = "COMMAND READ TIMED OUT"
 
-  def scan(implicit ec: ExecutionContext, materializer: Materializer): AvScan =
+  def scan(implicit ec: ExecutionContext): AvScan =
     scanWith(avClient.sendAndCheck)
 
   private[virusscan] def scanWith(
@@ -38,17 +39,16 @@ class VirusScanner(avClient: AvClient) {
   )(is    : InputStream,
     length: Long
   )(implicit
-    ec: ExecutionContext,
-    materializer: Materializer
+    ec: ExecutionContext
   ): Future[ScanResult] = {
     sendAndCheck(is, length.toInt).map {
-      case Clean             => Xor.right(ScanResultFileClean)
+      case Clean             => Right(ScanResultFileClean)
       case Infected(message) if message.contains(commandReadTimedOutMessage) =>
-                                Xor.left(ScanReadCommandTimeOut)
-      case Infected(message) => Logger.warn(s"File is infected: [$message].")
-                                Xor.left(ScanResultVirusDetected)
+                                Left(ScanReadCommandTimeOut)
+      case Infected(message) => logger.warn(s"File is infected: [$message].")
+                                Left(ScanResultVirusDetected)
     }.recover {
-      case NonFatalWithLogging(ex) => Xor.left(ScanResultError(ex))
+      case NonFatalWithLogging(ex) => Left(ScanResultError(ex))
     }
   }
 }

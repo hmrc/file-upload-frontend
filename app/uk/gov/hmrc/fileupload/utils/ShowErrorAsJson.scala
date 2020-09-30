@@ -16,14 +16,13 @@
 
 package uk.gov.hmrc.fileupload.utils
 
-import play.api._
+import javax.inject.{Inject, Singleton}
+import play.api.{Environment, Configuration, Logger}
 import play.api.http.DefaultHttpErrorHandler
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
 import play.api.mvc.Results._
-import play.api.mvc._
-import play.api.routing.Router
-import play.core.SourceMapper
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.http.{HttpException, Upstream4xxResponse, Upstream5xxResponse}
 
 import scala.concurrent.Future
@@ -35,14 +34,23 @@ import scala.concurrent.Future
 
 case class ErrorResponse(statusCode: Int, message: String, xStatusCode: Option[String] = None, requested: Option[String] = None)
 
-class ShowErrorAsJson(environment: Environment, configuration: Configuration,
-                      sourceMapper: Option[SourceMapper] = None,
-                      router: => Option[Router] = None) extends DefaultHttpErrorHandler(environment, configuration, sourceMapper, router) {
+@Singleton
+class ShowErrorAsJson @Inject()(
+  environment  : Environment,
+  configuration: Configuration
+) extends DefaultHttpErrorHandler(
+  environment,
+  configuration,
+  sourceMapper = None,
+  router       = None
+) {
+
+  private val logger = Logger(getClass)
 
   implicit val erFormats = Json.format[ErrorResponse]
 
   override def onServerError(request: RequestHeader, ex: Throwable) = {
-    Logger.error(ex.getMessage, ex)
+    logger.error(ex.getMessage, ex)
     Future.successful {
       val (code, message) = ex match {
         case e: HttpException => (e.responseCode, e.getMessage)
@@ -57,18 +65,15 @@ class ShowErrorAsJson(environment: Environment, configuration: Configuration,
     }
   }
 
-  override def onNotFound(request: RequestHeader, message: String)= {
+  override def onNotFound(request: RequestHeader, message: String) =
     Future.successful {
       val er = ErrorResponse(NOT_FOUND, "URI not found " + message, requested = Some(request.path))
       NotFound(Json.toJson(er))
     }
-  }
 
-  override def onBadRequest(request: RequestHeader, error: String) = {
+  override def onBadRequest(request: RequestHeader, error: String) =
     Future.successful {
       val er = ErrorResponse(BAD_REQUEST, error)
       BadRequest(Json.toJson(er))
     }
-  }
-
 }

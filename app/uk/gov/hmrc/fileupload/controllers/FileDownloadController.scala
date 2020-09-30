@@ -16,43 +16,51 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import java.net.URL
-
 import akka.util.ByteString
+import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.libs.json.{__, Json, JsObject, JsSuccess, JsError, JsValue, Reads}
-import play.api.mvc._
+import play.api.mvc.{AnyContent, Action, MessagesControllerComponents, ResponseHeader, Result}
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, ZipData}
 import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromBucket
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileDownloadController(
-  downloadFromTransient : DownloadFromBucket,
-  createS3Key           : (EnvelopeId, FileId) => S3KeyName,
-  now                   : () => Long,
-  downloadFromQuarantine: DownloadFromBucket,
-  zipAndPresign         : (EnvelopeId, List[(FileId, Option[String])]) => Future[ZipData]
-)(implicit executionContext: ExecutionContext) extends Controller {
+@Singleton
+class FileDownloadController @Inject()(
+  appModule: ApplicationModule,
+  mcc      : MessagesControllerComponents
+)(implicit
+  executionContext: ExecutionContext
+) extends FrontendController(mcc) {
+
+  private val logger = Logger(getClass)
+
+  val downloadFromTransient : DownloadFromBucket                                              = appModule.downloadFromTransient
+  val createS3Key           : (EnvelopeId, FileId) => S3KeyName                               = appModule.createS3Key
+  val now                   : () => Long                                                      = appModule.now
+  val downloadFromQuarantine: DownloadFromBucket                                              = appModule.downloadFromQuarantine
+  val zipAndPresign         : (EnvelopeId, List[(FileId, Option[String])]) => Future[ZipData] = appModule.zipAndPresign
 
   def download(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
-    Logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
+    logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
     downloadFileFromBucket(downloadFromTransient)(envelopeId, fileId)
   }
 
   def illegalDownloadFromQuarantine(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
-    Logger.error(s"downloading a file from S3 QUARANTINE with envelopeId: $envelopeId fileId: $fileId")
+    logger.error(s"downloading a file from S3 QUARANTINE with envelopeId: $envelopeId fileId: $fileId")
     downloadFileFromBucket(downloadFromQuarantine)(envelopeId, fileId)
   }
 
-  def downloadFileFromBucket(fromBucket: DownloadFromBucket)(envelopeId: EnvelopeId, fileId: FileId) = Action { implicit request =>
+  def downloadFileFromBucket(fromBucket: DownloadFromBucket)(envelopeId: EnvelopeId, fileId: FileId) = Action {
     val key = createS3Key(envelopeId, fileId)
     fromBucket(key) match {
       case Some(result) =>
-        Logger.info(s"download result: contentType: ${result.metadata.contentType} &  length: ${
-          result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")
+        logger.info(s"download result: contentType: ${result.metadata.contentType} & length: " +
+          s"${result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")
 
         Result(
           header = ResponseHeader(200, Map.empty),
@@ -69,7 +77,7 @@ class FileDownloadController(
   }
 
   def zip(envelopeId: EnvelopeId): Action[JsValue] = Action.async(parse.json) { request =>
-    Logger.info(s"zipping files for envelopeId: $envelopeId")
+    logger.info(s"zipping files for envelopeId: $envelopeId")
     implicit val zrr = ZipRequest.reads
     request.body.validate[ZipRequest] match {
       case JsSuccess(zipRequest, _) =>
@@ -87,7 +95,6 @@ case class ZipRequest(
 )
 
 object ZipRequest {
-  import play.api.libs.functional.syntax._
   val reads: Reads[ZipRequest] =
     Reads.at[JsObject](__ \ "files")
       .map(_.fieldSet.map { case (k, v) => FileId(k) -> v.asOpt[String] }.toList)

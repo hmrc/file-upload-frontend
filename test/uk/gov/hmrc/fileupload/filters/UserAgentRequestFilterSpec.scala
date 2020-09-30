@@ -21,8 +21,10 @@ import java.util.UUID
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.codahale.metrics.MetricRegistry
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import play.api.http.HeaderNames
 import play.api.mvc.Action
 import play.api.mvc.Results.Ok
@@ -32,7 +34,11 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class UserAgentRequestFilterSpec extends FunSuite with BeforeAndAfterAll with Matchers with Eventually {
+class UserAgentRequestFilterSpec
+  extends AnyFunSuite
+     with BeforeAndAfterAll
+     with Matchers
+     with Eventually {
 
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()

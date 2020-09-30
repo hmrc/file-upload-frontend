@@ -17,18 +17,23 @@
 package uk.gov.hmrc.fileupload.errorHandle
 
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.test.FakeRequest
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.utils.ShowErrorAsJson
 import uk.gov.hmrc.http.BadRequestException
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
 
-class ShowErrorAsJsonSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
+class ShowErrorAsJsonSpec
+  extends AnyWordSpecLike
+     with Matchers
+     with ScalaFutures
+     with TestApplicationComponents {
 
   implicit val ec = ExecutionContext.global
-  val errorHandler = new ShowErrorAsJson(components.environment, components.configuration)
+  val errorHandler = app.injector.instanceOf[ShowErrorAsJson]
 
   "Error Handler For the Controllers" should {
 

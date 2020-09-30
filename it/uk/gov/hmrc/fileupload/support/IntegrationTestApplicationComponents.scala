@@ -16,55 +16,48 @@
 
 package uk.gov.hmrc.fileupload.support
 
-import org.scalatest.Suite
-import org.scalatestplus.play.OneServerPerSuite
-import play.api.ApplicationLoader.Context
-import play.api._
-import play.api.mvc.EssentialFilter
-import uk.gov.hmrc.fileupload.ApplicationModule
+import org.scalatest.{OptionValues, Suite}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
+import play.api.Application
+import play.api.inject.bind
+import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.fileupload.virusscan.AvClient
-import uk.gov.hmrc.play.test.UnitSpec
 
-trait IntegrationTestApplicationComponents extends UnitSpec with OneServerPerSuite
-                                                            with FakeFileUploadBackend {
+trait IntegrationTestApplicationComponents
+  extends AnyWordSpecLike
+     with Matchers
+     with OptionValues
+     with GuiceOneServerPerSuite
+     with FakeFileUploadBackend {
   this: Suite =>
 
-  override implicit lazy val app: Application = components.application
-
-  override lazy val port: Int = 9000
-
-  lazy val mkAvClient: ((Configuration, Environment)) => AvClient = (AvClient.apply _).tupled
+  lazy val avClient: Option[AvClient] = None
   lazy val disableAvScanning: Boolean = true
   lazy val numberOfTimeoutAttempts: Int = 1
 
-  // accessed to get the components in tests
-  lazy val components: ApplicationModule =
-    new IntegrationTestApplicationModule(context, mkAvClient)
+  val conf =
+    Seq(
+      "auditing.enabled"                               -> "false",
+      "clam.antivirus.runStub"                         -> "true",
+      "clam.antivirus.disableScanning"                 -> disableAvScanning.toString,
+      "clam.antivirus.numberOfTimeoutAttempts"         -> numberOfTimeoutAttempts.toString,
+      "microservice.services.file-upload-backend.port" -> backendPort.toString,
+      "aws.service_endpoint"                           -> s"http://127.0.0.1:$s3Port",
+      "aws.s3.bucket.upload.quarantine"                -> "file-upload-quarantine",
+      "aws.s3.bucket.upload.transient"                 -> "file-upload-transient",
+      "aws.access.key.id"                              -> "ENTER YOUR KEY",
+      "aws.secret.access.key"                          -> "ENTER YOUR SECRET KEY"
+    )
 
-  lazy val context: ApplicationLoader.Context = {
-    val classLoader = ApplicationLoader.getClass.getClassLoader
-    val env = new Environment(new java.io.File("."), classLoader, Mode.Test)
-    ApplicationLoader.createContext(env, initialSettings = Map(
-      "auditing.enabled" -> "false",
-      "Test.clam.antivirus.runStub" -> "true",
-      "Test.clam.antivirus.disableScanning" -> disableAvScanning.toString,
-      "Test.clam.antivirus.numberOfTimeoutAttempts" -> numberOfTimeoutAttempts.toString,
-      "Test.microservice.services.file-upload-backend.port" -> backendPort.toString,
-      "aws.service_endpoint" -> "http://127.0.0.1:8001",
-      "aws.s3.bucket.upload.quarantine" -> "file-upload-quarantine",
-      "aws.s3.bucket.upload.transient" -> "file-upload-transient",
-      "aws.access.key.id" -> "ENTER YOUR KEY",
-      "aws.secret.access.key" -> "ENTER YOUR SECRET KEY"
-    ))
+  // creates a new application and sets the components
+  implicit override lazy val app: Application = {
+    val builder =
+      new GuiceApplicationBuilder()
+        .configure(conf: _*)
+    avClient
+      .fold(builder)(avClient => builder.overrides(bind(classOf[AvClient]).toInstance(avClient)))
+      .build()
   }
-}
-
-class IntegrationTestApplicationModule(
-  context: Context,
-  mkAvClient: ((Configuration, Environment)) => AvClient
-) extends ApplicationModule(context = context) {
-  override lazy val avClient: AvClient =
-    mkAvClient((context.initialConfiguration, context.environment))
-
-  override lazy val httpFilters: Seq[EssentialFilter] = Seq()
 }

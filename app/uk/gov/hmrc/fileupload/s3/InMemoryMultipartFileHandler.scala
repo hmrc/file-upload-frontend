@@ -22,13 +22,12 @@ import akka.stream.scaladsl.Sink
 import akka.util.ByteString
 import play.api.libs.streams.Accumulator
 import play.api.mvc.MultipartFormData.FilePart
-import play.api.mvc.{BodyParser, BodyParsers, MultipartFormData}
+import play.api.mvc.{BodyParser, MultipartFormData}
 import play.core.parsers.Multipart.{FileInfo, FilePartHandler}
 
 import scala.concurrent.ExecutionContext
 
 object InMemoryMultipartFileHandler {
-
   type InMemoryMultiPartBodyParser = () => BodyParser[MultipartFormData[FileCachedInMemory]]
 
   case class FileCachedInMemory(data: ByteString) {
@@ -37,14 +36,9 @@ object InMemoryMultipartFileHandler {
   }
 
   def cacheFileInMemory(implicit ec: ExecutionContext): FilePartHandler[FileCachedInMemory] = {
-    case FileInfo(partName, filename, contentType) =>
+    case FileInfo(partName, filename, contentType, dispositionType) =>
       Accumulator(Sink.fold[ByteString, ByteString](ByteString.empty)(_ ++ _)).map { fullFile =>
         FilePart(partName, filename, contentType, FileCachedInMemory(fullFile))
       }
   }
-
-  def parser(implicit ec: ExecutionContext): InMemoryMultiPartBodyParser = {
-    () => BodyParsers.parse.multipartFormData(cacheFileInMemory)
-  }
-
 }

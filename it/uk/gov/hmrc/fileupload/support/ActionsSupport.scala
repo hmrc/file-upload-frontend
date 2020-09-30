@@ -7,7 +7,7 @@ import play.api.libs.ws.WSClient
 trait ActionsSupport extends IntegrationTestApplicationComponents {
   this: Suite =>
 
-  val url = "http://localhost:9000/file-upload"
-  val internalUrl = "http://localhost:9000/internal-file-upload"
-  val client: WSClient = components.wsClient
+  val url = s"http://localhost:$port/file-upload"
+  val internalUrl = s"http://localhost:$port/internal-file-upload"
+  val wsClient = app.injector.instanceOf[WSClient]
 }

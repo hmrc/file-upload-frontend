@@ -18,11 +18,12 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import java.io.{FileInputStream, InputStream}
 
-import cats.data.Xor
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
+import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import uk.gov.hmrc.fileupload.{DomainFixtures, EnvelopeId, File, FileId, FileRefId}
 
@@ -30,7 +31,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class ScanningServiceSpec
-  extends FlatSpec
+  extends AnyFlatSpec
      with Matchers
      with ScalaFutures
      with MockFactory
@@ -40,38 +41,38 @@ class ScanningServiceSpec
 
   private val timeoutAttempts = 3
 
-  "A successful scan" should behave like scanWithNumberOfAttempts(Xor.Right(ScanResultFileClean), 1)
+  "A successful scan" should behave like scanWithNumberOfAttempts(Right(ScanResultFileClean), 1)
 
-  "A successful scan with 0 scanTimeoutAttempts" should behave like scanWithNumberOfAttempts(Xor.Right(ScanResultFileClean), 1, 0)
+  "A successful scan with 0 scanTimeoutAttempts" should behave like scanWithNumberOfAttempts(Right(ScanResultFileClean), 1, 0)
 
-  "A successful scan with -1 scanTimeoutAttempts" should behave like scanWithNumberOfAttempts(Xor.Right(ScanResultFileClean), 1, -1)
+  "A successful scan with -1 scanTimeoutAttempts" should behave like scanWithNumberOfAttempts(Right(ScanResultFileClean), 1, -1)
 
-  "A scan with a virus" should behave like scanWithNumberOfAttempts(Xor.Left(ScanResultVirusDetected), 1)
+  "A scan with a virus" should behave like scanWithNumberOfAttempts(Left(ScanResultVirusDetected), 1)
 
-  "A scan with a failure sending chunks" should behave like scanWithNumberOfAttempts(Xor.Left(ScanResultFailureSendingChunks(exception)), 1)
+  "A scan with a failure sending chunks" should behave like scanWithNumberOfAttempts(Left(ScanResultFailureSendingChunks(exception)), 1)
 
-  "A scan with an unexpected result" should behave like scanWithNumberOfAttempts(Xor.Left(ScanResultUnexpectedResult), 1)
+  "A scan with an unexpected result" should behave like scanWithNumberOfAttempts(Left(ScanResultUnexpectedResult), 1)
 
-  "A scan with an error result" should behave like scanWithNumberOfAttempts(Xor.Left(ScanResultError(exception)), 1)
+  "A scan with an error result" should behave like scanWithNumberOfAttempts(Left(ScanResultError(exception)), 1)
 
-  "A scan with multiple timeouts" should behave like scanWithNumberOfAttempts(Xor.Left(ScanReadCommandTimeOut), timeoutAttempts)
+  "A scan with multiple timeouts" should behave like scanWithNumberOfAttempts(Left(ScanReadCommandTimeOut), timeoutAttempts)
 
-  "A scan with a timeout" should behave like timeoutFollowedByNonTimeout(Xor.Right(ScanResultFileClean), "clean", 2)
+  "A scan with a timeout" should behave like timeoutFollowedByNonTimeout(Right(ScanResultFileClean), "clean", 2)
 
-  it should behave like timeoutFollowedByNonTimeout(Xor.Left(ScanResultVirusDetected), "virus", 2)
-  it should behave like timeoutFollowedByNonTimeout(Xor.Left(ScanResultFailureSendingChunks(exception)), "chunk failure", 2)
-  it should behave like timeoutFollowedByNonTimeout(Xor.Left(ScanResultUnexpectedResult), "unexpected", 2)
-  it should behave like timeoutFollowedByNonTimeout(Xor.Left(ScanResultError(exception)), "error", 2)
-  it should behave like timeoutFollowedByNonTimeout(Xor.Left(ScanReadCommandTimeOut), "timeout", 3)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanResultVirusDetected), "virus", 2)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanResultFailureSendingChunks(exception)), "chunk failure", 2)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanResultUnexpectedResult), "unexpected", 2)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanResultError(exception)), "error", 2)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanReadCommandTimeOut), "timeout", 3)
 
   def timeoutFollowedByNonTimeout(scanResult: ScanResult, scanResultType: String, attempts: Int) {
     it should s"make exactly $attempts when followed by a $scanResultType scan result" in {
       val scanner = stubFunction[InputStream, Long, Future[ScanResult]]
 
-      scanner.when(*, *).returns(Future.successful(Xor.left(ScanReadCommandTimeOut))).noMoreThanOnce()
+      scanner.when(*, *).returns(Future.successful(Left(ScanReadCommandTimeOut))).noMoreThanOnce()
       scanner.when(*, *).returns(Future.successful(scanResult))
 
-      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = timeoutAttempts, getFile = (_, _) => file)((_, _) => "some-key")(EnvelopeId(), FileId(), FileRefId()).futureValue
+      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = timeoutAttempts, getFile = (_, _) => file)((_, _) => S3KeyName("some-key"))(EnvelopeId(), FileId(), FileRefId()).futureValue
 
       result shouldBe scanResult
 
@@ -85,7 +86,7 @@ class ScanningServiceSpec
 
       scanner.when(*, *).returns(Future.successful(scanResult))
 
-      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = maxNumberOfAttemps, getFile = (_, _) => file)((_, _) => "some-key")(EnvelopeId(), FileId(), FileRefId()).futureValue
+      val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = maxNumberOfAttemps, getFile = (_, _) => file)((_, _) => S3KeyName("some-key"))(EnvelopeId(), FileId(), FileRefId()).futureValue
 
       result shouldBe scanResult
 
@@ -95,6 +96,6 @@ class ScanningServiceSpec
 
   private def file: Future[QuarantineDownloadResult] = {
     val tempFile = DomainFixtures.temporaryFile("file", Some("hello world"))
-    Future.successful(Xor.right(File(new FileInputStream(tempFile), 0, tempFile.getName, None)))
+    Future.successful(Right(File(new FileInputStream(tempFile), 0, tempFile.getName, None)))
   }
 }

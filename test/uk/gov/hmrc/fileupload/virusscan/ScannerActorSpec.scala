@@ -18,24 +18,27 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKit}
-import cats.data.Xor
-import org.scalatest.Matchers
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSender with UnitSpec with Matchers with Eventually with StopSystemAfterAll {
+class ScannerActorSpec
+  extends TestKit(ActorSystem("scanner"))
+     with ImplicitSender
+     with AnyWordSpecLike
+     with Matchers
+     with Eventually
+     with IntegrationPatience
+     with StopSystemAfterAll {
 
   import scala.concurrent.ExecutionContext.Implicits.global
-
-  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(2, Seconds)))
 
   "ScannerActor" should {
     "scan files and handle clean files correctly" in new ScanFixture {
@@ -89,19 +92,19 @@ class ScannerActorSpec extends TestKit(ActorSystem("scanner")) with ImplicitSend
     def scanBinaryDataClean(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
       collector = collector.::(fileRefId)
-      Future.successful(Xor.right(ScanResultFileClean))
+      Future.successful(Right(ScanResultFileClean))
     }
 
     def scanBinaryDataInfected(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
       collector = collector.::(fileRefId)
-      Future.successful(Xor.left(ScanResultVirusDetected))
+      Future.successful(Left(ScanResultVirusDetected))
     }
 
     val commandHandler = new CommandHandler {
       def notify(command: AnyRef)(implicit ec: ExecutionContext) = {
         collector = collector.::(command)
-        Future.successful(Xor.Right(NotifySuccess))
+        Future.successful(Right(NotifySuccess))
       }
     }
 

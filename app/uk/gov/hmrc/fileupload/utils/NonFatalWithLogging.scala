@@ -21,10 +21,13 @@ import play.api.Logger
 import scala.util.control.NonFatal
 
 object NonFatalWithLogging {
+
+  private val logger = Logger(getClass)
+
   def unapply(t: Throwable) = {
     val result = NonFatal.unapply(t)
     result.foreach { _ =>
-      Logger.warn(t.getMessage, t)
+      logger.warn(t.getMessage, t)
     }
     result
   }

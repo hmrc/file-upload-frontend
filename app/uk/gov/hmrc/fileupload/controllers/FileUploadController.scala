@@ -16,45 +16,53 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import cats.data.Xor
+import javax.inject.{Inject, Singleton}
 import org.slf4j.MDC
+import play.api.Configuration
 import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
-import play.api.mvc._
-import play.api.Configuration
+import play.api.mvc.{Action, EssentialAction, MessagesControllerComponents, MaxSizeExceeded, MultipartFormData, Result}
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
-import uk.gov.hmrc.fileupload.controllers.FileUploadController._
-import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
+import uk.gov.hmrc.fileupload.controllers.FileUploadController.metadataAsJson
+import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.getMaxFileSizeFromEnvelope
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
-import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{FileCachedInMemory, InMemoryMultiPartBodyParser}
-import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
+import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{cacheFileInMemory, FileCachedInMemory}
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
+import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadController( redirectionFeature: RedirectionFeature,
-                            withValidEnvelope: WithValidEnvelope,
-                            uploadParser: InMemoryMultiPartBodyParser,
-                            commandHandler: CommandHandler,
-                            uploadToQuarantine: UploadToQuarantine,
-                            createS3Key: (EnvelopeId, FileId) => String,
-                            now: () => Long,
-                            config: Configuration,
-                            loggerHelper: LoggerHelper
-                          )
-                          (implicit executionContext: ExecutionContext) extends Controller {
+@Singleton
+class FileUploadController @Inject()(
+  appModule: ApplicationModule,
+  config   : Configuration,
+  mcc      : MessagesControllerComponents
+)(implicit
+  executionContext: ExecutionContext
+) extends FrontendController(mcc) {
 
-  private val logFileExtensions: Boolean = config.getBoolean("flags.log-file-extensions").getOrElse(false)
+  private val logger = Logger(getClass)
+
+  val redirectionFeature: RedirectionFeature                = appModule.redirectionFeature
+  val withValidEnvelope : WithValidEnvelope                 = appModule.withValidEnvelope
+  val commandHandler    : CommandHandler                    = appModule.commandHandler
+  val uploadToQuarantine: S3Service.UploadToQuarantine      = appModule.uploadToQuarantine
+  val createS3Key       : (EnvelopeId, FileId) => S3KeyName = appModule.createS3Key
+  val now               : () => Long                        = appModule.now
+  val loggerHelper      : LoggerHelper                      = appModule.loggerHelper
+
+  private lazy val logFileExtensions: Boolean =
+    config.getOptional[Boolean]("flags.log-file-extensions").getOrElse(false)
 
   def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
-                            `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction = {
+                            `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction =
     redirectionFeature.redirect(`redirect-success-url`, `redirect-error-url`) {
       uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
     }
-  }
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId): EssentialAction =
     withValidEnvelope(envelopeId) {
@@ -64,7 +72,7 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
   def upload(constraints: Option[EnvelopeConstraints])
             (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
     val maxSize = getMaxFileSizeFromEnvelope(constraints)
-    Action.async(parse.maxLength(maxSize, uploadParser())) { implicit request =>
+    Action.async(parse.maxLength(maxSize, parse.multipartFormData(cacheFileInMemory))) { implicit request =>
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
@@ -72,20 +80,18 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
           val fileIsEmpty = formData.files.headOption.map(_.ref.size)
 
           val failedRequirementsO =
-            if(formData.files.size != 1) Some(
-                BadRequest(errorAsJson(
-                  "Request must have exactly 1 file attached"
-              )))
-            else if (allowZeroLengthFiles.contains(false) && fileIsEmpty.contains(0)) Some(
-              BadRequest(errorAsJson("Envelope does not allow zero length files, and submitted file has length 0"))
-            )
-            else None
+            if (formData.files.size != 1)
+              Some(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
+            else if (allowZeroLengthFiles.contains(false) && fileIsEmpty.contains(0))
+              Some(BadRequest(errorAsJson("Envelope does not allow zero length files, and submitted file has length 0")))
+            else
+              None
 
           failedRequirementsO match {
             case Some(failure) =>
               Future.successful(failure)
             case _ =>
-              Logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
+              logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
                 s"fileIsEmpty value is $fileIsEmpty.")
               val uploadResult = uploadTheProperFile(envelopeId, fileId, formData)
               if (logFileExtensions) {
@@ -107,24 +113,22 @@ class FileUploadController( redirectionFeature: RedirectionFeature,
       commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
         contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
         .map {
-          case Xor.Right(_) => Ok
-          case Xor.Left(e) => Status(e.statusCode)(e.reason)
+          case Right(_) => Ok
+          case Left(e) => Status(e.statusCode)(e.reason)
         }
     }
   }
 
-  private def logFileExtensionData(upload: Future[Result])
-                                  (values: LoggerValues) = {
+  private def logFileExtensionData(upload: Future[Result])(values: LoggerValues) =
     try {
       MDC.put("upload-file-extension", values.fileExtension)
       MDC.put("upload-user-agent", values.userAgent)
-      Logger.info(s"Uploading file with file extension: [${values.fileExtension}] and user agent: [${values.userAgent}]")
+      logger.info(s"Uploading file with file extension: [${values.fileExtension}] and user agent: [${values.userAgent}]")
       upload
     } finally {
       MDC.remove("upload-file-extension")
       MDC.remove("upload-user-agent")
     }
-  }
 }
 
 object FileUploadController {

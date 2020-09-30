@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
-import cats.data.Xor
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
@@ -29,39 +28,35 @@ object Repository {
 
   val userAgent = "User-Agent" -> "FU-frontend-transfer"
 
-  def envelopeAvailable(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]), baseUrl: String, wSClient: WSClient)(envelopeId: EnvelopeId)
-                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] = {
-
+  def envelopeAvailable(auditedHttpCall: (WSRequest => Future[Either[PlayHttpError, WSResponse]]), baseUrl: String, wSClient: WSClient)(envelopeId: EnvelopeId)
+                       (implicit executionContext: ExecutionContext): Future[EnvelopeAvailableResult] =
     auditedHttpCall(wSClient
       .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
       .withMethod("GET")
-      .withHeaders(userAgent)
+      .withHttpHeaders(userAgent)
     ).map {
-      case Xor.Left(error) => Xor.left(EnvelopeAvailableServiceError(envelopeId, error.message))
-      case Xor.Right(response) => response.status match {
-        case Status.OK => Xor.right(envelopeId)
-        case Status.NOT_FOUND => Xor.left(EnvelopeNotFoundError(envelopeId))
-        case _ => Xor.left(EnvelopeAvailableServiceError(envelopeId, response.body))
+      case Left(error) => Left(EnvelopeAvailableServiceError(envelopeId, error.message))
+      case Right(response) => response.status match {
+        case Status.OK => Right(envelopeId)
+        case Status.NOT_FOUND => Left(EnvelopeNotFoundError(envelopeId))
+        case _ => Left(EnvelopeAvailableServiceError(envelopeId, response.body))
       }
     }
-  }
 
-  def envelopeDetail(auditedHttpCall: (WSRequest => Future[Xor[PlayHttpError, WSResponse]]),
+  def envelopeDetail(auditedHttpCall: (WSRequest => Future[Either[PlayHttpError, WSResponse]]),
                      baseUrl: String, wSClient: WSClient)
                     (envelopeId: EnvelopeId)
-                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] = {
+                    (implicit executionContext: ExecutionContext): Future[EnvelopeDetailResult] =
     auditedHttpCall(wSClient
       .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
       .withMethod("GET")
-      .withHeaders(userAgent)
+      .withHttpHeaders(userAgent)
     ).map {
-      case Xor.Left(error) => Xor.left(EnvelopeDetailServiceError(envelopeId, error.message))
-      case Xor.Right(response) => response.status match {
-        case Status.OK => Xor.right(Json.parse(response.body))
-        case Status.NOT_FOUND => Xor.left(EnvelopeDetailNotFoundError(envelopeId))
-        case _ => Xor.left(EnvelopeDetailServiceError(envelopeId, response.body))
+      case Left(error) => Left(EnvelopeDetailServiceError(envelopeId, error.message))
+      case Right(response) => response.status match {
+        case Status.OK => Right(Json.parse(response.body))
+        case Status.NOT_FOUND => Left(EnvelopeDetailNotFoundError(envelopeId))
+        case _ => Left(EnvelopeDetailServiceError(envelopeId, response.body))
       }
     }
-  }
-
 }

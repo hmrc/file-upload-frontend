@@ -40,9 +40,9 @@ trait S3Service {
 
   def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata]
 
-  def retrieveFileFromQuarantine(key: String, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]]
+  def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]]
 
-  def upload(bucketName: String, key: String, file: InputStream, fileSize: Int): Future[UploadResult]
+  def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[UploadResult]
 
   def uploadToQuarantine: UploadToQuarantine =
     upload(awsConfig.quarantineBucketName, _, _, _)
@@ -61,9 +61,9 @@ trait S3Service {
   def listFilesInTransient: Source[Seq[S3ObjectSummary], NotUsed] =
     listFilesInBucket(awsConfig.transientBucketName)
 
-  def copyFromQtoT(key: String, versionId: String): Try[CopyObjectResult]
+  def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResult]
 
-  def getFileLengthFromQuarantine(key: String, versionId: String): Long
+  def getFileLengthFromQuarantine(key: S3KeyName, versionId: String): Long
 
   def getBucketProperties(bucketName: String): JsValue
 
@@ -73,9 +73,9 @@ trait S3Service {
   def getTransientBucketProperties =
     getBucketProperties(awsConfig.transientBucketName)
 
-  def deleteObjectFromBucket(bucketName: String, key: String): Unit
+  def deleteObjectFromBucket(bucketName: String, key: S3KeyName): Unit
 
-  def deleteObjectFromTransient: String => Unit =
+  def deleteObjectFromTransient: S3KeyName => Unit =
     deleteObjectFromBucket(awsConfig.transientBucketName, _)
 
   def deleteObjectFromQuarantine: DeleteFileFromQuarantineBucket =
@@ -87,11 +87,11 @@ trait S3Service {
 object S3Service {
   type StreamResult = Source[ByteString, Future[IOResult]]
 
-  type UploadToQuarantine = (String, InputStream, Int) => Future[UploadResult]
+  type UploadToQuarantine = (S3KeyName, InputStream, Int) => Future[UploadResult]
 
-  type DownloadFromBucket = (S3KeyName) => Option[StreamWithMetadata]
+  type DownloadFromBucket = S3KeyName => Option[StreamWithMetadata]
 
-  type DeleteFileFromQuarantineBucket = (String) => Unit
+  type DeleteFileFromQuarantineBucket = S3KeyName => Unit
 }
 
 case class Metadata(

@@ -21,19 +21,18 @@ import java.io.{ByteArrayInputStream, InputStream}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import cats.data.Xor
-import org.scalatest.Matchers
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class VirusScannerSpec
-  extends UnitSpec
+  extends AnyWordSpecLike
      with Matchers
      with ScalaFutures
      with TestApplicationComponents
@@ -51,35 +50,35 @@ class VirusScannerSpec
   def commandTimeout(inputstream: InputStream, length: Int) = Future.successful(Infected("COMMAND READ TIMED OUT"))
   def failWith(exception: Exception)(inputStream: InputStream, length: Int): Future[ScanningResult] = Future.failed(exception)
 
-  val virusScanner = new VirusScanner(AvClient(components.configuration, components.environment))
+  val virusScanner = new VirusScanner(app.injector.instanceOf[AvClient])
 
   "VirusScanner" should {
     s"return $ScanResultFileClean result if input did not contain a virus" in {
       val result = virusScanner.scanWith(sendAndCheck = clean)(fileSource, fileLength).futureValue
-      result shouldBe Xor.Right(ScanResultFileClean)
+      result shouldBe Right(ScanResultFileClean)
     }
 
     s"return $ScanResultVirusDetected result if input contained a virus" in {
       val result = virusScanner.scanWith(sendAndCheck = virusDetected)(fileSource, fileLength).futureValue
-      result shouldBe Xor.left(ScanResultVirusDetected)
+      result shouldBe Left(ScanResultVirusDetected)
     }
 
     //clamav client unfortunately returns this as an Infection
     s"return $ScanReadCommandTimeOut result if exception indicates command read timeout" in {
       val result = virusScanner.scanWith(sendAndCheck = commandTimeout)(fileSource, fileLength).futureValue
-      result shouldBe Xor.left(ScanReadCommandTimeOut)
+      result shouldBe Left(ScanReadCommandTimeOut)
     }
 
     s"return $ScanResultError result if ClamAntiVirus returned an unanticipated error" in {
       val exception = new RuntimeException("av-client error")
       val result = virusScanner.scanWith(sendAndCheck = failWith(exception))(fileSource, fileLength).futureValue
-      result shouldBe Xor.left(ScanResultError(exception))
+      result shouldBe Left(ScanResultError(exception))
     }
 
     s"return $ScanResultError result if calling checkForVirus failed (e.g. network issue)" in {
       val exception = new SocketException("failed to connect to clam av")
       val result = virusScanner.scanWith(sendAndCheck = failWith(exception))(fileSource, fileLength).futureValue
-      result shouldBe Xor.left(ScanResultError(exception))
+      result shouldBe Left(ScanResultError(exception))
     }
   }
 }

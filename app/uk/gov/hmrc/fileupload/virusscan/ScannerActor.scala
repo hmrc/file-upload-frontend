@@ -19,7 +19,6 @@ package uk.gov.hmrc.fileupload.virusscan
 import akka.actor.Status.Failure
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.pipe
-import cats.data.Xor
 import play.api.Logger
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
@@ -33,6 +32,8 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
                    scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
                    commandHandler: CommandHandler)
                   (implicit executionContext: ExecutionContext) extends Actor {
+
+  private val logger = Logger(getClass)
 
   private var outstandingScans = Queue.empty[Event]
   private var scanningEvent: Option[Event] = None
@@ -63,22 +64,22 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
     case executed: ScanExecuted =>
       executed.result match {
-        case Xor.Right(ScanResultFileClean) =>
+        case Right(ScanResultFileClean) =>
           notify(hasVirus = false)
           scanNext()
-        case Xor.Left(ScanResultVirusDetected) =>
+        case Left(ScanResultVirusDetected) =>
           notify(hasVirus = true)
           scanNext()
-        case Xor.Left(a: ScanError) =>
-          Logger.error(s"Scan of file ${executed.requestedFor} failed with ScanError: $a")
+        case Left(a: ScanError) =>
+          logger.error(s"Scan of file ${executed.requestedFor} failed with ScanError: $a")
           scanNext()
       }
     case e: Failure =>
-      Logger.error("Unknown Failure status.", e.cause)
+      logger.error("Unknown Failure status.", e.cause)
       scanNext()
 
     case default =>
-      Logger.error(s"Unknown message : $default")
+      logger.error(s"Unknown message : $default")
       scanNext()
   }
 
@@ -91,7 +92,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
         outstandingScans = newQueue
         scanningEvent = Some(e)
 
-        Logger.info(s"Scan $e")
+        logger.info(s"Scan $e")
         scanBinaryData(e.envelopeId, e.fileId, e.fileRefId)
           .map(ScanExecuted(e.fileRefId, _)) pipeTo self
 

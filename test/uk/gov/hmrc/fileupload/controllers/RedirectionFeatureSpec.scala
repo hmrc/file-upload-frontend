@@ -16,22 +16,28 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.libs.json.Json
 import play.api.mvc.Results._
-import play.api.mvc.{Action, EssentialAction, RequestHeader, Result}
+import play.api.mvc.{Action, EssentialAction, RequestHeader}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload._
 import uk.gov.hmrc.fileupload.utils.ErrorResponse
-import uk.gov.hmrc.play.test.UnitSpec
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
-class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplicationComponents {
+class RedirectionFeatureSpec
+  extends AnyWordSpecLike
+     with Matchers
+     with OptionValues
+     with ScalaFutures
+     with TestApplicationComponents {
 
   private val allowedHosts = Seq[String]("gov.uk","localhost")
   private val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
@@ -39,12 +45,14 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
   val redirectionFeature = new RedirectionFeature(allowedHosts, null)
   val redirectionWithExceptions = {
     new RedirectionFeature(allowedHosts, new HttpErrorHandler() {
+      private val logger = Logger(getClass)
+
       implicit val erFormats = Json.format[ErrorResponse]
 
       override def onClientError(request: RequestHeader, statusCode: Int, message: String) = ???
 
       override def onServerError(request: RequestHeader, ex: Throwable) = {
-        Logger.error(ex.getMessage, ex)
+        logger.error(ex.getMessage, ex)
         Future.successful {
           val (code, message) = ex match {
             case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
@@ -89,53 +97,53 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
 
     "redirect on success" in {
       val redirectA = redirect(Some(OK_URL_ALLOWED), None)(okAction)
-      val resultF = call(redirectA, request)
+      val result = call(redirectA, request)
 
-      status(resultF) shouldEqual MOVED_PERMANENTLY
-      getResultLocation(resultF) shouldEqual OK_URL_ALLOWED
+      status(result) shouldEqual MOVED_PERMANENTLY
+      header(LOCATION, result).value shouldEqual OK_URL_ALLOWED
     }
 
     "redirect with right domain base" in {
       val redirectA = redirect(Some(OK_URL_ALLOWED_EXTENDED), None)(okAction)
-      val resultF = call(redirectA, request)
+      val result = call(redirectA, request)
 
-      status(resultF) shouldEqual MOVED_PERMANENTLY
+      status(result) shouldEqual MOVED_PERMANENTLY
     }
 
     "redirect on failure with simple msg error" in {
       val errorMsg = "simple error"
       val badAction: EssentialAction = Action ( _ => NotFound(errorMsg) )
       val redirectA = redirect(None, Some(OK_URL_ALLOWED))(badAction)
-      val resultF = call(redirectA, request)
+      val result = call(redirectA, request)
 
-      status(resultF) shouldEqual MOVED_PERMANENTLY
+      status(result) shouldEqual MOVED_PERMANENTLY
 
-      getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode=404&reason=" + errorMsg)
+      header(LOCATION, result).value shouldEqual (OK_URL_ALLOWED + s"?errorCode=404&reason=" + errorMsg)
     }
 
     "redirect on failure with exception thrown" in {
       val errorMsg = "Anything can be thrown"
       val badAction: EssentialAction = Action ( _ => throw new RuntimeException("Anything can be thrown"))
       val redirectA = redirectionWithExceptions.redirect(None, Some(OK_URL_ALLOWED))(badAction)
-      val resultF = call(redirectA, request)
+      val result = call(redirectA, request)
 
-      status(resultF) shouldEqual MOVED_PERMANENTLY
+      status(result) shouldEqual MOVED_PERMANENTLY
 
-
-      (getResultLocation(resultF).length <= 2000) shouldBe true
-      getResultLocation(resultF).contains(OK_URL_ALLOWED + s"?errorCode=500&reason=") shouldBe true
-      getResultLocation(resultF).contains(errorMsg) shouldBe true
+      val location = header(LOCATION, result).value
+      (location.length <= 2000) shouldBe true
+      location.contains(OK_URL_ALLOWED + s"?errorCode=500&reason=") shouldBe true
+      location.contains(errorMsg) shouldBe true
     }
 
     "redirect on failure with complex msg error" in {
       val errorMsg = """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
       val badAction: EssentialAction = Action (_ => NotFound(errorMsg))
       val redirectA = redirect(None, Some(OK_URL_ALLOWED))(badAction)
-      val resultF = call(redirectA, request)
+      val result = call(redirectA, request)
 
-      status(resultF) shouldEqual MOVED_PERMANENTLY
+      status(result) shouldEqual MOVED_PERMANENTLY
 
-      getResultLocation(resultF) shouldEqual (OK_URL_ALLOWED + s"?errorCode=404&reason=" + errorMsg)
+      header(LOCATION, result).value shouldEqual (OK_URL_ALLOWED + s"?errorCode=404&reason=" + errorMsg)
     }
 
     "block not allowed domains" in {
@@ -154,6 +162,4 @@ class RedirectionFeatureSpec extends UnitSpec with ScalaFutures with TestApplica
       status(result) shouldEqual OK
     }
   }
-  def getResultLocation(resultF: Future[Result] )(implicit timeout: Duration): String =
-    Await.result(resultF, timeout).header.headers("location")
 }

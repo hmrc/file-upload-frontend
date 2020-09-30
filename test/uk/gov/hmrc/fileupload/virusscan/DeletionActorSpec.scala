@@ -18,19 +18,21 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.Matchers
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Seconds, Span}
-import uk.gov.hmrc.fileupload.notifier.{MarkFileAsClean, MarkFileAsInfected}
-import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.fileupload.notifier.{MarkFileAsClean, MarkFileAsInfected}
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 
-class DeletionActorSpec extends TestKit(ActorSystem("deletion")) with ImplicitSender with UnitSpec with Matchers with Eventually with StopSystemAfterAll {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(2, Seconds)))
+class DeletionActorSpec
+  extends TestKit(ActorSystem("deletion"))
+     with ImplicitSender
+     with AnyWordSpecLike
+     with Matchers
+     with Eventually
+     with StopSystemAfterAll
+     with IntegrationPatience {
 
   "DeletionActor" should {
 
@@ -46,17 +48,15 @@ class DeletionActorSpec extends TestKit(ActorSystem("deletion")) with ImplicitSe
         MarkFileAsInfected(EnvelopeId(), FileId(), FileRefId())
       }
 
-      val deletion: DeleteFileFromQuarantineBucket = { (s3Key: String) =>
+      val deletion: S3Service.DeleteFileFromQuarantineBucket = { (s3Key: S3KeyName) =>
         Thread.sleep(100)
-        collector = collector :+ s3Key
+        collector = collector :+ s3Key.value
       }
 
-      val s3Key: (EnvelopeId, FileId) => String =
-      { (e: EnvelopeId, f: FileId) =>
-        {f.value}
-      }
+      val createS3Key: (EnvelopeId, FileId) => S3KeyName =
+        (e: EnvelopeId, f: FileId) => S3KeyName(f.value)
 
-      val actor = system.actorOf(DeletionActor.props((_: ActorRef, _: Class[_]) => true, deletion, s3Key))
+      val actor = system.actorOf(DeletionActor.props((_: ActorRef, _: Class[_]) => true, deletion, createS3Key))
 
       sendToActor(actor, infectedEventsToSend)
 

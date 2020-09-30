@@ -19,8 +19,8 @@ package uk.gov.hmrc.fileupload.quarantine
 import java.io.InputStream
 
 import org.joda.time.DateTime
-import play.api.libs.json._
-import uk.gov.hmrc.fileupload._
+import play.api.libs.json.{Format, Json, JsObject, JsString, OFormat, Reads, Writes}
+import uk.gov.hmrc.fileupload.EnvelopeId
 
 case class FileData(
   length     : Long,
@@ -41,9 +41,11 @@ case class EnvelopeReport(id: Option[EnvelopeId] = None,
                           files: Option[Seq[JsObject]] = None)
 
 object EnvelopeReport{
-  implicit val readsJodaLocalDateTime = Reads[DateTime](js =>
-    js.validate[String].map[DateTime](dtString => new DateTime(dtString)))
-  implicit val envelopeFormat: OFormat[EnvelopeReport] = Json.format[EnvelopeReport]
+  implicit val envelopeFormat: OFormat[EnvelopeReport] = {
+    implicit val dtr = Reads[DateTime](_.validate[String].map[DateTime](dtString => new DateTime(dtString)))
+    implicit val dtw = Writes[DateTime](dt => JsString(dt.toString))
+    Json.format[EnvelopeReport]
+  }
 }
 
 

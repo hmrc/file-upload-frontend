@@ -17,19 +17,16 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import akka.util.ByteString
-import cats.data.Xor
 import play.api.Logger
 import play.api.http.Status._
 import play.api.mvc.Results._
-import play.api.libs.iteratee.Done
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.Accumulator
 import play.api.mvc.{EssentialAction, MultipartFormData, RequestHeader, Result}
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.quarantine.{EnvelopeConstraints, EnvelopeReport}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
-import uk.gov.hmrc.fileupload.transfer.TransferService._
-import uk.gov.hmrc.fileupload.utils.StreamsConverter
+import uk.gov.hmrc.fileupload.transfer.TransferService
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,21 +34,22 @@ object EnvelopeChecker {
 
   type FileSize = Long
   type ContentType = String
-  type WithValidEnvelope =
-  EnvelopeId => (Option[EnvelopeConstraints] => EssentialAction) => EssentialAction
+  type WithValidEnvelope = EnvelopeId => (Option[EnvelopeConstraints] => EssentialAction) => EssentialAction
+
+  private val logger = Logger(getClass)
 
   import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
 
-  def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[EnvelopeDetailResult])
+  def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[TransferService.EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
                        (action: Option[EnvelopeConstraints] => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
       Accumulator.flatten {
         checkEnvelopeDetails(envelopeId).map {
-          case Xor.Right(envelope) =>
+          case Right(envelope) =>
             val envelopeDetails = extractEnvelopeDetails(envelope)
             val status = envelopeDetails.status.getOrElse("")
             status match {
@@ -61,9 +59,9 @@ object EnvelopeChecker {
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
-          case Xor.Left(EnvelopeDetailNotFoundError(_)) =>
+          case Left(TransferService.EnvelopeDetailNotFoundError(_)) =>
             logAndReturn(NOT_FOUND, s"Unable to upload to nonexistent envelope: $envelopeId")
-          case Xor.Left(error) =>
+          case Left(error) =>
             logAndReturn(INTERNAL_SERVER_ERROR, error.toString)
         }
       }
@@ -84,16 +82,14 @@ object EnvelopeChecker {
     }).getOrElse(defaultFileSize)
   }
 
-  def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType = {
+  def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType =
     getFormContentType.files
       .flatMap(_.contentType)
       .headOption.getOrElse("")
-  }
 
   def logAndReturn(statusCode: Int, problem: String)
                   (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
-    Logger.warn(s"Request: $rh failed because: $problem")
-    val iteratee = Done[Array[Byte], Result](new Status(statusCode).apply(Json.obj("message" -> problem)))
-    StreamsConverter.iterateeToAccumulator(iteratee)
+    logger.warn(s"Request: $rh failed because: $problem")
+    Accumulator.done(new Status(statusCode).apply(Json.obj("message" -> problem)))
   }
 }

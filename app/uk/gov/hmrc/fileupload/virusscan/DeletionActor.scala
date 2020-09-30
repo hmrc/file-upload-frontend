@@ -18,17 +18,16 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import akka.actor.{Actor, ActorRef, Props}
 import play.api.Logger
-import uk.gov.hmrc.fileupload.notifier.MarkFileAsInfected
-import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
-
-import scala.concurrent.ExecutionContext
+import uk.gov.hmrc.fileupload.notifier.MarkFileAsInfected
+import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 
 class DeletionActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                    deleteObjectFromQuarantineBucket: DeleteFileFromQuarantineBucket,
-                    createS3Key: (EnvelopeId, FileId) => String)
-                   (implicit executionContext: ExecutionContext) extends Actor {
+                    deleteObjectFromQuarantineBucket: S3Service.DeleteFileFromQuarantineBucket,
+                    createS3Key: (EnvelopeId, FileId) => S3KeyName
+) extends Actor {
 
+  private val logger = Logger(getClass)
 
   override def preStart = {
     subscribe(self, classOf[MarkFileAsInfected])
@@ -36,7 +35,7 @@ class DeletionActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   override def receive: Receive = {
     case e: MarkFileAsInfected =>
-      Logger.info(s"BMarkFileAsInfected received for envelopeId: ${e.id} and fileId: ${e.fileId} and version: ${e.fileRefId}")
+      logger.info(s"MarkFileAsInfected received for envelopeId: ${e.id} and fileId: ${e.fileId} and version: ${e.fileRefId}")
       deleteInfectedFile(e)
   }
 
@@ -48,8 +47,7 @@ class DeletionActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
 object DeletionActor {
   def props(subscribe: (ActorRef, Class[_]) => Boolean,
-            deleteObjectFromQuarantineBucket: DeleteFileFromQuarantineBucket,
-            createS3Key: (EnvelopeId, FileId) => String)
-           (implicit executionContext: ExecutionContext) =
+            deleteObjectFromQuarantineBucket: S3Service.DeleteFileFromQuarantineBucket,
+            createS3Key: (EnvelopeId, FileId) => S3KeyName) =
     Props(new DeletionActor(subscribe, deleteObjectFromQuarantineBucket, createS3Key))
 }

@@ -18,17 +18,6 @@ package uk.gov.hmrc.fileupload.utils
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
-import akka.util.ByteString
-import play.api.libs.iteratee.Iteratee
-import play.api.libs.streams.{Accumulator, Streams}
-import uk.gov.hmrc.fileupload.fileupload.ByteStream
-
-object StreamsConverter {
-  def iterateeToAccumulator[T](iteratee: Iteratee[ByteStream, T]): Accumulator[ByteString, T] = {
-    val sink = Streams.iterateeToAccumulator(iteratee).toSink
-    Accumulator(sink.contramap[ByteString](_.toArray[Byte]))
-  }
-}
 
 object StreamImplicits {
   implicit val system = ActorSystem()

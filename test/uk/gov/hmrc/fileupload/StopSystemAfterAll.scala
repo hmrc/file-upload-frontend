@@ -17,12 +17,12 @@
 package uk.gov.hmrc.fileupload
 
 import org.scalatest.{BeforeAndAfterAll, Suite}
+import uk.gov.hmrc.fileupload.utils.StreamImplicits
 
 trait StopSystemAfterAll extends BeforeAndAfterAll {
   this: Suite =>
   override protected def afterAll() {
-    import uk.gov.hmrc.fileupload.utils.StreamImplicits._
     super.afterAll()
-    system.terminate()
+    StreamImplicits.system.terminate()
   }
 }
