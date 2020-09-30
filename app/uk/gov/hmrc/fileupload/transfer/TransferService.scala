@@ -16,15 +16,9 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
-import play.api.http.Status
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.JsValue
-import play.api.mvc.Request
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
-import uk.gov.hmrc.fileupload.infrastructure.HttpStreamingBody
-import uk.gov.hmrc.fileupload.quarantine.QuarantineService.{QuarantineDownloadFileNotFound, _}
-import uk.gov.hmrc.fileupload.s3.S3KeyName
-import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.fileupload.EnvelopeId
+import scala.concurrent.Future
 
 object TransferService {
 
@@ -49,30 +43,4 @@ object TransferService {
 
   def envelopeResult(result: EnvelopeId => Future[EnvelopeDetailResult])(envelopeId: EnvelopeId): Future[EnvelopeDetailResult] =
     result(envelopeId)
-
-  def stream(baseUrl: String,
-             publish: (AnyRef) => Unit,
-             toHttpBodyStreamer: (String, EnvelopeId, FileId, FileRefId, Request[_]) => Iteratee[Array[Byte], HttpStreamingBody.Result],
-             getFile: (S3KeyName, String) => Future[QuarantineDownloadResult])
-            (s3KeyAppender: (EnvelopeId, FileId) => S3KeyName)
-            (envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId)
-            (implicit executionContext: ExecutionContext): Future[TransferResult] = {
-    val appendedKey = s3KeyAppender(envelopeId, fileId)
-    getFile(appendedKey, fileRefId.value).flatMap {
-      case Right(file) =>
-        // TODO check request
-        val iterator = toHttpBodyStreamer(baseUrl, envelopeId, fileId, fileRefId, null)
-
-        (Enumerator.fromStream(file.data) |>>> iterator).map(r =>
-          r.status match {
-            case Status.OK =>
-              Right(envelopeId)
-            case _ =>
-              Left(TransferServiceError(envelopeId, r.response))
-          })
-
-      case Left(QuarantineDownloadFileNotFound) =>
-        Future.failed(throw new Exception(s"File not found in quarantine (fileRefId: $fileRefId, envelopeId: $envelopeId"))
-    }
-  }
 }

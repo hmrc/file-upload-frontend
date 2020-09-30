@@ -34,7 +34,6 @@ private object AppDependencies {
     "org.typelevel"      %% "cats-core"                  % "2.2.0",
     "com.amazonaws"      %  "aws-java-sdk"               % "1.11.97",
     "com.lightbend.akka" %% "akka-stream-alpakka-file"   % "2.0.1",
-    "com.typesafe.play"  %% "play-iteratees-reactive-streams" % "2.6.1",
     "com.typesafe.play"  %% "play-json-joda"             % "2.6.14",
 
     // ensure all akka versions are the same

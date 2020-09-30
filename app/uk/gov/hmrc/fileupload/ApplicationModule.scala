@@ -24,9 +24,8 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.libs.ws.ahc.AhcWSComponents
-import play.api.mvc.Request
 import uk.gov.hmrc.fileupload.controllers.{EnvelopeChecker, RedirectionFeature}
-import uk.gov.hmrc.fileupload.infrastructure.{HttpStreamingBody, PlayHttp}
+import uk.gov.hmrc.fileupload.infrastructure.PlayHttp
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, CommandHandlerImpl}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
 import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
@@ -35,7 +34,7 @@ import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerHelperFileExtensionAndUserAgent}
 import uk.gov.hmrc.fileupload.virusscan.{AvClient, DeletionActor, ScannerActor, ScanningService, VirusScanner}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScan, ScanResult, ScanResultFileClean}
-import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -112,30 +111,12 @@ class ApplicationModule @Inject()(
   // auditing
   lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, "file-upload-frontend", Some(t => logger.warn(t.getMessage, t))) _
 
-  lazy val auditF: (Boolean, Int, String) => (Request[_]) => Future[AuditResult] =
-    PlayHttp.audit(auditConnector, "file-upload-frontend", Some(t => logger.warn(t.getMessage, t)))
-
-  val auditedHttpBodyStreamer = (baseUrl: String, envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, request: Request[_]) =>
-    new HttpStreamingBody(
-      url = s"$baseUrl/file-upload/envelopes/${envelopeId.value}/files/${fileId.value}/${fileRefId.value}",
-      contentType = "application/octet-stream",
-      method = "PUT",
-      auditer = auditF,
-      request,
-      contentLength = None,
-      debug = true
-    )
-
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
   lazy val envelopeJsonResult = transfer.Repository.envelopeDetail(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
   lazy val envelopeResult = transfer.TransferService.envelopeResult(envelopeJsonResult) _
-
-  lazy val streamTransferCall = transfer.TransferService.stream(
-    fileUploadBackendBaseUrl, publish, auditedHttpBodyStreamer, getFileFromQuarantine)(createS3Key) _
-
 
   lazy val numberOfTimeoutAttempts: Int = configuration.getOptional[Int](s"clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
 
