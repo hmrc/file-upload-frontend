@@ -20,6 +20,7 @@ import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
+import uk.gov.hmrc.fileupload.RequestId
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.notifier.NotifierRepository.NotificationFailedError
 import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyError, NotifyResult, NotifySuccess}
@@ -27,7 +28,7 @@ import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyError, NotifyResul
 import scala.concurrent.{ExecutionContext, Future}
 
 trait CommandHandler {
-  def notify(command: AnyRef)(implicit ec: ExecutionContext): Future[NotifyResult]
+  def notify(command: AnyRef, requestId: Option[RequestId])(implicit ec: ExecutionContext): Future[NotifyResult]
 }
 
 class CommandHandlerImpl(httpCall: WSRequest => Future[Either[PlayHttpError, WSResponse]],
@@ -37,13 +38,18 @@ class CommandHandlerImpl(httpCall: WSRequest => Future[Either[PlayHttpError, WSR
 
   val userAgent = "User-Agent" -> "FU-frontend-CH"
 
-  def sendBackendCommand[T <: BackendCommand : Writes](command: T)(implicit ec: ExecutionContext): Future[NotifierRepository.Result] =
+  def sendBackendCommand[T <: BackendCommand : Writes](
+    command  : T,
+    requestId: Option[RequestId]
+  )(implicit
+    ec: ExecutionContext
+  ): Future[NotifierRepository.Result] =
     httpCall(
       wsClient
         .url(s"$baseUrl/file-upload/commands/${ command.commandType }")
         .withBody(Json.toJson(command))
         .withMethod("POST")
-        .withHttpHeaders(userAgent)
+        .withHttpHeaders(userAgent +: requestId.map("X-Request-ID" -> _.value).toSeq :_ *)
     ).map {
       case Left(error) => Left(NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Right(response) => response.status match {
@@ -52,9 +58,13 @@ class CommandHandlerImpl(httpCall: WSRequest => Future[Either[PlayHttpError, WSR
       }
     }
 
-  private def sendNotification[T <: BackendCommand : Writes](c: T)
-                              (implicit executionContext: ExecutionContext): Future[NotifierService.NotifyResult] =
-    sendBackendCommand(c).map {
+  private def sendNotification[T <: BackendCommand : Writes](
+    c: T,
+    requestId: Option[RequestId]
+  )(implicit
+    ec: ExecutionContext
+  ): Future[NotifierService.NotifyResult] =
+    sendBackendCommand(c, requestId).map {
       case Right(_) => Right(NotifySuccess)
       case Left(e) =>
         logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
@@ -63,22 +73,21 @@ class CommandHandlerImpl(httpCall: WSRequest => Future[Either[PlayHttpError, WSR
 
   val notifySuccess = Right(NotifySuccess)
 
-  def notify(command: AnyRef)(implicit ec: ExecutionContext): Future[NotifyResult] = {
+  def notify(command: AnyRef, requestId: Option[RequestId])(implicit ec: ExecutionContext): Future[NotifyResult] = {
 
-    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T) = {
-      val result = sendNotification(backendCommand)
+    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T, reqestId: Option[RequestId]) = {
+      val result = sendNotification(backendCommand, reqestId)
       result.map(_.right.foreach(_ => publish(command)))
       result
     }
 
     command match {
-      case c: QuarantineFile => sendCommandToBackendAndPublish(c)
-      case c: MarkFileAsClean => sendCommandToBackendAndPublish(c)
-      case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c)
-      case c: StoreFile => sendCommandToBackendAndPublish(c)
-      case _ =>
-        publish(command)
-        Future.successful(notifySuccess)
+      case c: QuarantineFile     => sendCommandToBackendAndPublish(c, requestId)
+      case c: MarkFileAsClean    => sendCommandToBackendAndPublish(c, requestId)
+      case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c, requestId)
+      case c: StoreFile          => sendCommandToBackendAndPublish(c, requestId)
+      case _                     => publish(command)
+                                    Future.successful(notifySuccess)
     }
   }
 }

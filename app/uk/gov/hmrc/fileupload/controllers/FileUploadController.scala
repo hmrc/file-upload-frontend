@@ -22,7 +22,7 @@ import play.api.Configuration
 import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.{Action, EssentialAction, MessagesControllerComponents, MaxSizeExceeded, MultipartFormData, Result}
-import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId, RequestId}
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.controllers.FileUploadController.metadataAsJson
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.getMaxFileSizeFromEnvelope
@@ -97,7 +97,7 @@ class FileUploadController @Inject()(
             case _ =>
               logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
                 s"fileIsEmpty value is $fileIsEmpty.")
-              val uploadResult = uploadTheProperFile(envelopeId, fileId, formData)
+              val uploadResult = uploadTheProperFile(envelopeId, fileId, formData, request.headers.get("X-Request-Id").map(RequestId))
               if (logFileExtensions) {
                 val loggerValues = loggerHelper.getLoggerValues(formData.files.head, request)
                 logFileExtensionData(uploadResult)(loggerValues)
@@ -109,17 +109,32 @@ class FileUploadController @Inject()(
     }
   }
 
-  private def uploadTheProperFile(envelopeId: EnvelopeId, fileId: FileId, formData: MultipartFormData[FileCachedInMemory]) = {
+  private def uploadTheProperFile(
+    envelopeId: EnvelopeId,
+    fileId    : FileId,
+    formData  : MultipartFormData[FileCachedInMemory],
+    requestId : Option[RequestId]
+  ) = {
     val file = formData.files.head
     val key = createS3Key(envelopeId, fileId)
     uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
       val fileRefId = FileRefId(uploadResult.getVersionId)
-      commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
-        contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
-        .map {
-          case Right(_) => Ok
-          case Left(e) => Status(e.statusCode)(e.reason)
-        }
+      commandHandler.notify(
+        command = QuarantineFile(
+                    id          = envelopeId, fileId,
+                    fileRefId   = fileRefId,
+                    created     = now(),
+                    name        = file.filename,
+                    contentType = file.contentType.getOrElse(""),
+                    length      = file.ref.size,
+                    metadata    = metadataAsJson(formData)
+                  ),
+        requestId = requestId
+      )
+      .map {
+        case Right(_) => Ok
+        case Left(e) => Status(e.statusCode)(e.reason)
+      }
     }
   }
 

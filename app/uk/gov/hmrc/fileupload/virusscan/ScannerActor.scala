@@ -104,12 +104,12 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   def notify(hasVirus: Boolean): Unit =
     scanningEvent.foreach { e =>
-      val command = if(hasVirus) {
-        MarkFileAsInfected(e.envelopeId, e.fileId, e.fileRefId)
-      } else {
-        MarkFileAsClean(e.envelopeId, e.fileId, e.fileRefId)
-      }
-      commandHandler.notify(command)
+      val command =
+        if (hasVirus)
+          MarkFileAsInfected(e.envelopeId, e.fileId, e.fileRefId)
+        else
+          MarkFileAsClean(e.envelopeId, e.fileId, e.fileRefId)
+      commandHandler.notify(command, requestId = None)
     }
 }
 
