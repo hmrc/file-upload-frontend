@@ -31,7 +31,7 @@ object NotifierService {
 
   private val logger = Logger(getClass)
 
-  def notify(send: BackendCommand => Future[NotifierRepository.Result], publish: AnyRef => Unit)
+  def notify(send: BackendCommand => Future[CommandHandler.NotificationResult], publish: AnyRef => Unit)
             (command: AnyRef)
             (implicit executionContext: ExecutionContext): Future[NotifyResult] = {
 
@@ -52,7 +52,7 @@ object NotifierService {
     }
   }
 
-  private def sendNotification(send: BackendCommand => Future[NotifierRepository.Result], c: BackendCommand)
+  private def sendNotification(send: BackendCommand => Future[CommandHandler.NotificationResult], c: BackendCommand)
                               (implicit executionContext: ExecutionContext): Future[NotifyResult] =
     send(c).map {
       case Right(_) => Right(NotifySuccess)

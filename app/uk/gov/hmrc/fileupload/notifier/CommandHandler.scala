@@ -20,9 +20,8 @@ import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
-import uk.gov.hmrc.fileupload.RequestId
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, RequestId}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
-import uk.gov.hmrc.fileupload.notifier.NotifierRepository.NotificationFailedError
 import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyError, NotifyResult, NotifySuccess}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,8 +30,32 @@ trait CommandHandler {
   def notify(command: AnyRef, requestId: Option[RequestId])(implicit ec: ExecutionContext): Future[NotifyResult]
 }
 
-class CommandHandlerImpl(httpCall: WSRequest => Future[Either[PlayHttpError, WSResponse]],
-                     baseUrl: String, wsClient: WSClient, publish: AnyRef => Unit) extends CommandHandler {
+object CommandHandler {
+
+  type NotificationResult = Either[NotificationError, EnvelopeId]
+
+  sealed trait NotificationError {
+    def statusCode: Int
+    def reason    : String
+  }
+
+  object NotificationError {
+    case class NotificationFailedError(
+      envelopeId: EnvelopeId,
+      fileId    : FileId,
+      override val statusCode: Int,
+      override val reason    : String
+    ) extends NotificationError
+  }
+}
+
+class CommandHandlerImpl(
+  httpCall: WSRequest => Future[Either[PlayHttpError, WSResponse]],
+  baseUrl : String,
+  wsClient: WSClient,
+  publish : AnyRef => Unit
+) extends CommandHandler {
+  import CommandHandler._
 
   private val logger = Logger(getClass)
 
@@ -43,18 +66,18 @@ class CommandHandlerImpl(httpCall: WSRequest => Future[Either[PlayHttpError, WSR
     requestId: Option[RequestId]
   )(implicit
     ec: ExecutionContext
-  ): Future[NotifierRepository.Result] =
+  ): Future[NotificationResult] =
     httpCall(
       wsClient
-        .url(s"$baseUrl/file-upload/commands/${ command.commandType }")
+        .url(s"$baseUrl/file-upload/commands/${command.commandType}")
         .withBody(Json.toJson(command))
         .withMethod("POST")
         .withHttpHeaders(userAgent +: requestId.map("X-Request-ID" -> _.value).toSeq :_ *)
     ).map {
-      case Left(error) => Left(NotificationFailedError(command.id, command.fileId, 500, error.message))
+      case Left(error)     => Left(NotificationError.NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Right(response) => response.status match {
         case Status.OK => Right(command.id)
-        case _ => Left(NotificationFailedError(command.id, command.fileId, response.status, response.body))
+        case _         => Left(NotificationError.NotificationFailedError(command.id, command.fileId, response.status, response.body))
       }
     }
 
