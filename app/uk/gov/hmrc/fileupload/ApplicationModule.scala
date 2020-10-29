@@ -114,9 +114,7 @@ class ApplicationModule @Inject()(
   // transfer
   lazy val isEnvelopeAvailable = transfer.Repository.envelopeAvailable(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
-  lazy val envelopeJsonResult = transfer.Repository.envelopeDetail(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
-
-  lazy val envelopeResult = transfer.TransferService.envelopeResult(envelopeJsonResult) _
+  lazy val envelopeResult = transfer.Repository.envelopeDetail(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
   lazy val numberOfTimeoutAttempts: Int = configuration.getOptional[Int](s"clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
 

@@ -18,7 +18,6 @@ package uk.gov.hmrc.fileupload.transfer
 
 import play.api.libs.json.JsValue
 import uk.gov.hmrc.fileupload.EnvelopeId
-import scala.concurrent.Future
 
 object TransferService {
 
@@ -37,10 +36,4 @@ object TransferService {
   sealed trait EnvelopeError
   case class EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeError
   case class EnvelopeDetailServiceError(id: EnvelopeId, message: String) extends EnvelopeError
-
-  def envelopeAvailable(isEnvelopeAvailable: EnvelopeId => Future[EnvelopeAvailableResult])(envelopeId: EnvelopeId): Future[EnvelopeAvailableResult] =
-    isEnvelopeAvailable(envelopeId)
-
-  def envelopeResult(result: EnvelopeId => Future[EnvelopeDetailResult])(envelopeId: EnvelopeId): Future[EnvelopeDetailResult] =
-    result(envelopeId)
 }

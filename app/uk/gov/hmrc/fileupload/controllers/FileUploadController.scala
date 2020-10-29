@@ -58,8 +58,12 @@ class FileUploadController @Inject()(
   private lazy val logFileExtensions: Boolean =
     config.getOptional[Boolean]("flags.log-file-extensions").getOrElse(false)
 
-  def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
-                            `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction =
+  def uploadWithRedirection(
+    envelopeId            : EnvelopeId,
+    fileId                : FileId,
+    `redirect-success-url`: Option[String],
+    `redirect-error-url`  : Option[String],
+  ): EssentialAction =
     redirectionFeature.redirect(`redirect-success-url`, `redirect-error-url`) {
       uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
     }

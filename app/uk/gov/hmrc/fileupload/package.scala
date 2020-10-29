@@ -101,3 +101,5 @@ class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(implicit m: 
 
   def unbind(key: String, value: T): String = unbind(value)
 }
+
+case class RequestId(value: String) extends AnyVal
