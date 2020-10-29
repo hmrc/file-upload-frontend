@@ -22,7 +22,7 @@ import play.api.libs.ws.WSClient
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.IntegrationTestApplicationComponents
 import uk.gov.hmrc.fileupload.transfer.Repository
-import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeAvailableServiceError, EnvelopeNotFoundError}
+import uk.gov.hmrc.fileupload.transfer.Repository.EnvelopeAvailableError
 import scala.concurrent.ExecutionContext
 
 class RepositoryISpec extends IntegrationTestApplicationComponents {
@@ -47,7 +47,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
-      envelopeAvailable(envelopeId, None).futureValue shouldBe Left(EnvelopeNotFoundError(envelopeId))
+      envelopeAvailable(envelopeId, None).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeNotFoundError(envelopeId))
     }
 
     "if an error occurs return an error" in {
@@ -56,30 +56,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
 
-      envelopeAvailable(envelopeId, None).futureValue shouldBe Left(EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
+      envelopeAvailable(envelopeId, None).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
   }
-
-  //  val transfer = Service.transfer(_.execute().map(response => Right(response)), ServiceConfig.fileUploadBackendBaseUrl) _
-  //
-  //  "When uploading a file" should {
-  //    "be successful if file uploaded" in {
-  //      val envelopeId = anyEnvelopeId
-  //      val fileId = anyFileId
-  //
-  //      responseToUpload(envelopeId, fileId, 200)
-  //
-  //      transfer(anyFileFor(envelopeId, fileId)).futureValue shouldBe Right(envelopeId)
-  //    }
-  //
-  //    "give an error if file uploaded" in {
-  //      val envelopeId = anyEnvelopeId
-  //      val fileId = anyFileId
-  //
-  //      responseToUpload(envelopeId, fileId, 500, "SOME_ERROR")
-  //
-  //      transfer(anyFileFor(envelopeId, fileId)).futureValue shouldBe Left(TransferServiceError(envelopeId, "SOME_ERROR"))
-  //    }
-  //  }
-
 }
