@@ -23,7 +23,8 @@ import play.api.Logger
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
-import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId, HeaderCarrier}
+import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.collection.immutable.Queue
 import scala.concurrent.{ExecutionContext, Future}
@@ -103,7 +104,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
   }
 
   def notify(hasVirus: Boolean): Unit = {
-    implicit val hc = HeaderCarrier.empty
+    implicit val hc = HeaderCarrier()
     scanningEvent.foreach { e =>
       val command =
         if (hasVirus)

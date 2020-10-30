@@ -101,24 +101,3 @@ class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(implicit m: 
 
   def unbind(key: String, value: T): String = unbind(value)
 }
-
-case class RequestId(value: String) extends AnyVal
-
-case class HeaderCarrier(
-  requestId: Option[RequestId]
-) {
-  def forwardedHeaders: Seq[(String, String)] =
-    requestId.map("X-Request-ID" -> _.value).toSeq
-}
-
-object HeaderCarrier {
-  def fromRequestHeader(rh: play.api.mvc.RequestHeader): HeaderCarrier =
-    HeaderCarrier(
-      requestId = rh.headers.get("X-Request-Id").map(RequestId)
-    )
-
-  def empty: HeaderCarrier =
-    HeaderCarrier(
-      requestId = None
-    )
-}

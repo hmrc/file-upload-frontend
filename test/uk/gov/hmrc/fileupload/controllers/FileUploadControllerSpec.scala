@@ -37,6 +37,7 @@ import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 

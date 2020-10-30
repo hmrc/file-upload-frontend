@@ -19,9 +19,10 @@ package uk.gov.hmrc.fileupload.transfer
 import play.api.http.Status
 import play.api.libs.json.{Json, JsValue}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
-import uk.gov.hmrc.fileupload.{EnvelopeId, HeaderCarrier}
+import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.http.HeaderCarrier
 
 object Repository {
 
@@ -36,16 +37,17 @@ object Repository {
   def envelopeAvailable(
     auditedHttpCall : (WSRequest => Future[Either[PlayHttpError, WSResponse]]),
     baseUrl         : String,
-    wSClient        : WSClient
+    wsClient        : WSClient
   )(envelopeId      : EnvelopeId,
-    headerCarrier   : HeaderCarrier
+    hc              : HeaderCarrier
   )(implicit
-    executionContext: ExecutionContext
+    ec              : ExecutionContext
   ): Future[Either[EnvelopeAvailableError, EnvelopeId]] =
-    auditedHttpCall(wSClient
-      .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
-      .withMethod("GET")
-      .withHttpHeaders(userAgent +: headerCarrier.forwardedHeaders :_ *)
+    auditedHttpCall(
+      wsClient
+        .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
+        .withMethod("GET")
+        .withHttpHeaders(userAgent +: hc.headers :_ *)
     ).map {
       case Left(error)     => Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, error.message))
       case Right(response) => response.status match {
@@ -64,16 +66,17 @@ object Repository {
   def envelopeDetail(
     auditedHttpCall : (WSRequest => Future[Either[PlayHttpError, WSResponse]]),
     baseUrl         : String,
-    wSClient        : WSClient
+    wsClient        : WSClient
   )(envelopeId      : EnvelopeId,
-    headerCarrier   : HeaderCarrier
+    hc              : HeaderCarrier
   )(implicit
-    executionContext: ExecutionContext
+    ec              : ExecutionContext
   ): Future[Either[EnvelopeDetailError, JsValue]] =
-    auditedHttpCall(wSClient
-      .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
-      .withMethod("GET")
-      .withHttpHeaders(userAgent +: headerCarrier.forwardedHeaders :_ *)
+    auditedHttpCall(
+      wsClient
+        .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
+        .withMethod("GET")
+        .withHttpHeaders(userAgent +: hc.headers :_ *)
     ).map {
       case Left(error)     => Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, error.message))
       case Right(response) => response.status match {

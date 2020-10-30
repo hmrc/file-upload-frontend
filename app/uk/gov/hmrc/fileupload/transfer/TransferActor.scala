@@ -19,9 +19,10 @@ package uk.gov.hmrc.fileupload.transfer
 import akka.actor.{Actor, ActorRef, Props}
 import com.amazonaws.services.s3.model.CopyObjectResult
 import play.api.Logger
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, HeaderCarrier}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, StoreFile}
 import uk.gov.hmrc.fileupload.s3.S3KeyName
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
@@ -53,7 +54,7 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
   private def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId): Unit =
     transferFile(createS3Key(envelopeId, fileId), fileRefId.value) match {
       case Success(_) =>
-        implicit val hc = HeaderCarrier.empty
+        implicit val hc = HeaderCarrier()
         commandHandler.notify(
           StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId))
         )

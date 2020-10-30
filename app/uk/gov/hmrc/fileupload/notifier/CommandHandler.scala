@@ -20,9 +20,10 @@ import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, HeaderCarrier}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyError, NotifyResult, NotifySuccess}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -50,10 +51,10 @@ object CommandHandler {
 }
 
 class CommandHandlerImpl(
-  httpCall: WSRequest => Future[Either[PlayHttpError, WSResponse]],
-  baseUrl : String,
-  wsClient: WSClient,
-  publish : AnyRef => Unit
+  auditedHttpCall: WSRequest => Future[Either[PlayHttpError, WSResponse]],
+  baseUrl        : String,
+  wsClient       : WSClient,
+  publish        : AnyRef => Unit
 ) extends CommandHandler {
   import CommandHandler._
 
@@ -67,12 +68,12 @@ class CommandHandlerImpl(
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[NotificationResult] =
-    httpCall(
+    auditedHttpCall(
       wsClient
         .url(s"$baseUrl/file-upload/commands/${command.commandType}")
         .withBody(Json.toJson(command))
         .withMethod("POST")
-        .withHttpHeaders(userAgent +: hc.forwardedHeaders :_ *)
+        .withHttpHeaders(userAgent +: hc.headers :_ *)
     ).map {
       case Left(error)     => Left(NotificationError.NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Right(response) => response.status match {

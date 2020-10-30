@@ -26,9 +26,10 @@ import play.api.mvc.{Action, BodyParser}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.mvc.BodyParser.AnyContent
-import uk.gov.hmrc.fileupload.{EnvelopeId, HeaderCarrier}
+import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
 import uk.gov.hmrc.fileupload.transfer.Repository.EnvelopeDetailError
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

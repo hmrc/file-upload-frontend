@@ -23,6 +23,8 @@ import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.IntegrationTestApplicationComponents
 import uk.gov.hmrc.fileupload.transfer.Repository
 import uk.gov.hmrc.fileupload.transfer.Repository.EnvelopeAvailableError
+import uk.gov.hmrc.http.HeaderCarrier
+
 import scala.concurrent.ExecutionContext
 
 class RepositoryISpec extends IntegrationTestApplicationComponents {
@@ -39,7 +41,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_OK)
 
-      envelopeAvailable(envelopeId, HeaderCarrier.empty).futureValue shouldBe Right(envelopeId)
+      envelopeAvailable(envelopeId, HeaderCarrier()).futureValue shouldBe Right(envelopeId)
     }
 
     "if the ID is not known of return an error" in {
@@ -47,7 +49,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
-      envelopeAvailable(envelopeId, HeaderCarrier.empty).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeNotFoundError(envelopeId))
+      envelopeAvailable(envelopeId, HeaderCarrier()).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeNotFoundError(envelopeId))
     }
 
     "if an error occurs return an error" in {
@@ -56,7 +58,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
 
-      envelopeAvailable(envelopeId, HeaderCarrier.empty).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
+      envelopeAvailable(envelopeId, HeaderCarrier()).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
   }
 }

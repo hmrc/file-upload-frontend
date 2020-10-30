@@ -25,7 +25,8 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultVirusDetected}
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, HeaderCarrier, StopSystemAfterAll}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -23,10 +23,12 @@ import play.api.mvc.Results._
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.Accumulator
 import play.api.mvc.{EssentialAction, MultipartFormData, RequestHeader, Result}
-import uk.gov.hmrc.fileupload.{EnvelopeId, HeaderCarrier}
+import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.quarantine.{EnvelopeConstraints, EnvelopeReport}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.transfer.Repository.EnvelopeDetailError
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.HeaderCarrierConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -47,7 +49,7 @@ object EnvelopeChecker {
                        (action: Option[EnvelopeConstraints] => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
-      implicit val hc = HeaderCarrier.fromRequestHeader(rh)
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(rh.headers, None)
       Accumulator.flatten {
         checkEnvelopeDetails(envelopeId, hc).map {
           case Right(envelope) =>
