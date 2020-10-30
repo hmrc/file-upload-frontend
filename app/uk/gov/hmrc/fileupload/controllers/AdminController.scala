@@ -39,8 +39,7 @@ class AdminController @Inject()(
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     implicit val hc = HeaderCarrier.fromRequestHeader(request)
     commandHandler.notify(
-      command       = VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId),
-      headerCarrier = hc
+      VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId)
     )
     Future.successful(Ok)
   }
@@ -48,8 +47,7 @@ class AdminController @Inject()(
   def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
     implicit val hc = HeaderCarrier.fromRequestHeader(request)
     commandHandler.notify(
-      command       = TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId),
-      headerCarrier = hc
+      TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId)
     )
     Future.successful(Ok)
   }

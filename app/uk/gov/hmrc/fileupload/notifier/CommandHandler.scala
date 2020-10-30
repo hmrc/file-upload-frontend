@@ -27,7 +27,7 @@ import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyError, NotifyResul
 import scala.concurrent.{ExecutionContext, Future}
 
 trait CommandHandler {
-  def notify(command: AnyRef, headerCarrier: HeaderCarrier)(implicit ec: ExecutionContext): Future[NotifyResult]
+  def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[NotifyResult]
 }
 
 object CommandHandler {
@@ -62,17 +62,17 @@ class CommandHandlerImpl(
   val userAgent = "User-Agent" -> "FU-frontend-CH"
 
   def sendBackendCommand[T <: BackendCommand : Writes](
-    command      : T,
-    headerCarrier: HeaderCarrier
+    command: T
   )(implicit
-    ec: ExecutionContext
+    ec: ExecutionContext,
+    hc: HeaderCarrier
   ): Future[NotificationResult] =
     httpCall(
       wsClient
         .url(s"$baseUrl/file-upload/commands/${command.commandType}")
         .withBody(Json.toJson(command))
         .withMethod("POST")
-        .withHttpHeaders(userAgent +: headerCarrier.forwardedHeaders :_ *)
+        .withHttpHeaders(userAgent +: hc.forwardedHeaders :_ *)
     ).map {
       case Left(error)     => Left(NotificationError.NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Right(response) => response.status match {
@@ -82,12 +82,12 @@ class CommandHandlerImpl(
     }
 
   private def sendNotification[T <: BackendCommand : Writes](
-    c            : T,
-    headerCarrier: HeaderCarrier
+    c: T
   )(implicit
-    ec: ExecutionContext
+    ec: ExecutionContext,
+    hc: HeaderCarrier
   ): Future[NotifierService.NotifyResult] =
-    sendBackendCommand(c, headerCarrier).map {
+    sendBackendCommand(c).map {
       case Right(_) => Right(NotifySuccess)
       case Left(e) =>
         logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
@@ -96,19 +96,19 @@ class CommandHandlerImpl(
 
   val notifySuccess = Right(NotifySuccess)
 
-  def notify(command: AnyRef, headerCarrier: HeaderCarrier)(implicit ec: ExecutionContext): Future[NotifyResult] = {
+  def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[NotifyResult] = {
 
-    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T, headerCarrier: HeaderCarrier) = {
-      val result = sendNotification(backendCommand, headerCarrier)
+    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T)(implicit hc: HeaderCarrier) = {
+      val result = sendNotification(backendCommand)
       result.map(_.right.foreach(_ => publish(command)))
       result
     }
 
     command match {
-      case c: QuarantineFile     => sendCommandToBackendAndPublish(c, headerCarrier)
-      case c: MarkFileAsClean    => sendCommandToBackendAndPublish(c, headerCarrier)
-      case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c, headerCarrier)
-      case c: StoreFile          => sendCommandToBackendAndPublish(c, headerCarrier)
+      case c: QuarantineFile     => sendCommandToBackendAndPublish(c)
+      case c: MarkFileAsClean    => sendCommandToBackendAndPublish(c)
+      case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c)
+      case c: StoreFile          => sendCommandToBackendAndPublish(c)
       case _                     => publish(command)
                                     Future.successful(notifySuccess)
     }

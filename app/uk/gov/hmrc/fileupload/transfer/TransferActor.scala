@@ -53,9 +53,9 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
   private def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId): Unit =
     transferFile(createS3Key(envelopeId, fileId), fileRefId.value) match {
       case Success(_) =>
+        implicit val hc = HeaderCarrier.empty
         commandHandler.notify(
-          command       = StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId)),
-          headerCarrier = HeaderCarrier.empty
+          StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId))
         )
         logger.info(s"File successfully transferred for envelopeId: $envelopeId, fileId: $fileId and version: $fileRefId")
       case Failure(NonFatal(ex)) =>

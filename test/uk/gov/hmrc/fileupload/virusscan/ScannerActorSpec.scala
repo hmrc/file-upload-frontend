@@ -102,7 +102,7 @@ class ScannerActorSpec
     }
 
     val commandHandler = new CommandHandler {
-      def notify(command: AnyRef, headerCarrier: HeaderCarrier)(implicit ec: ExecutionContext) = {
+      def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier) = {
         collector = command :: collector
         Future.successful(Right(NotifySuccess))
       }

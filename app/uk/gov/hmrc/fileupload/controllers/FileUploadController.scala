@@ -98,7 +98,7 @@ class FileUploadController @Inject()(
             case _ =>
               logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
                 s"fileIsEmpty value is $fileIsEmpty.")
-              val uploadResult = uploadTheProperFile(envelopeId, fileId, formData, hc)
+              val uploadResult = uploadTheProperFile(envelopeId, fileId, formData)
               if (logFileExtensions) {
                 val loggerValues = loggerHelper.getLoggerValues(formData.files.head, request)
                 logFileExtensionData(uploadResult)(loggerValues)
@@ -113,24 +113,24 @@ class FileUploadController @Inject()(
   private def uploadTheProperFile(
     envelopeId   : EnvelopeId,
     fileId       : FileId,
-    formData     : MultipartFormData[FileCachedInMemory],
-    headerCarrier: HeaderCarrier
+    formData     : MultipartFormData[FileCachedInMemory]
+  )(implicit
+    hc: HeaderCarrier
   ) = {
     val file = formData.files.head
     val key = createS3Key(envelopeId, fileId)
     uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
       val fileRefId = FileRefId(uploadResult.getVersionId)
       commandHandler.notify(
-        command       = QuarantineFile(
-                          id          = envelopeId, fileId,
-                          fileRefId   = fileRefId,
-                          created     = now(),
-                          name        = file.filename,
-                          contentType = file.contentType.getOrElse(""),
-                          length      = file.ref.size,
-                          metadata    = metadataAsJson(formData)
-                        ),
-        headerCarrier = headerCarrier
+        QuarantineFile(
+          id          = envelopeId, fileId,
+          fileRefId   = fileRefId,
+          created     = now(),
+          name        = file.filename,
+          contentType = file.contentType.getOrElse(""),
+          length      = file.ref.size,
+          metadata    = metadataAsJson(formData)
+        )
       )
       .map {
         case Right(_) => Ok
