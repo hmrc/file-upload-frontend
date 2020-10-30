@@ -28,40 +28,13 @@ object Repository {
 
   val userAgent = "User-Agent" -> "FU-frontend-transfer"
 
-  sealed trait EnvelopeAvailableError
-  object EnvelopeAvailableError {
-    case class EnvelopeNotFoundError(id: EnvelopeId) extends EnvelopeAvailableError
-    case class EnvelopeAvailableServiceError(id: EnvelopeId, message: String) extends EnvelopeAvailableError
-  }
-
-  def envelopeAvailable(
-    auditedHttpCall : (WSRequest => Future[Either[PlayHttpError, WSResponse]]),
-    baseUrl         : String,
-    wsClient        : WSClient
-  )(envelopeId      : EnvelopeId,
-    hc              : HeaderCarrier
-  )(implicit
-    ec              : ExecutionContext
-  ): Future[Either[EnvelopeAvailableError, EnvelopeId]] =
-    auditedHttpCall(
-      wsClient
-        .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
-        .withMethod("GET")
-        .withHttpHeaders(userAgent +: hc.headers :_ *)
-    ).map {
-      case Left(error)     => Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, error.message))
-      case Right(response) => response.status match {
-        case Status.OK        => Right(envelopeId)
-        case Status.NOT_FOUND => Left(EnvelopeAvailableError.EnvelopeNotFoundError(envelopeId))
-        case _                => Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, response.body))
-      }
-    }
-
   sealed trait EnvelopeDetailError
   object EnvelopeDetailError {
     case class EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeDetailError
     case class EnvelopeDetailServiceError(id: EnvelopeId, message: String) extends EnvelopeDetailError
   }
+
+  type EnvelopeDetailResult = Either[EnvelopeDetailError, JsValue]
 
   def envelopeDetail(
     auditedHttpCall : (WSRequest => Future[Either[PlayHttpError, WSResponse]]),
@@ -71,7 +44,7 @@ object Repository {
     hc              : HeaderCarrier
   )(implicit
     ec              : ExecutionContext
-  ): Future[Either[EnvelopeDetailError, JsValue]] =
+  ): Future[EnvelopeDetailResult] =
     auditedHttpCall(
       wsClient
         .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")

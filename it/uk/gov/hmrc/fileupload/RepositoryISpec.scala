@@ -18,11 +18,12 @@ package uk.gov.hmrc.fileupload
 
 import java.net.HttpURLConnection._
 
-import play.api.libs.ws.WSClient
+import play.api.libs.json.Json
+import play.api.libs.ws.{WSClient, WSRequest}
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support.IntegrationTestApplicationComponents
 import uk.gov.hmrc.fileupload.transfer.Repository
-import uk.gov.hmrc.fileupload.transfer.Repository.EnvelopeAvailableError
+import uk.gov.hmrc.fileupload.transfer.Repository.EnvelopeDetailError
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext
@@ -34,14 +35,16 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
   "When calling the envelope check" should {
 
-    val envelopeAvailable = Repository.envelopeAvailable(_.execute().map(response => Right(response)), fileUploadBackendBaseUrl, wsClient) _
+    val auditedHttpCall = (request: WSRequest) => request.execute().map(Right.apply)
+    val envelopeDetail = Repository.envelopeDetail(auditedHttpCall, fileUploadBackendBaseUrl, wsClient) _
 
     "if the ID is known of return a success" in {
       val envelopeId = anyEnvelopeId
+      val response = Json.parse(ENVELOPE_OPEN_RESPONSE)
 
-      Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_OK)
+      Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_OK, body = response.toString)
 
-      envelopeAvailable(envelopeId, HeaderCarrier()).futureValue shouldBe Right(envelopeId)
+      envelopeDetail(envelopeId, HeaderCarrier()).futureValue shouldBe Right(response)
     }
 
     "if the ID is not known of return an error" in {
@@ -49,7 +52,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
-      envelopeAvailable(envelopeId, HeaderCarrier()).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeNotFoundError(envelopeId))
+      envelopeDetail(envelopeId, HeaderCarrier()).futureValue shouldBe Left(EnvelopeDetailError.EnvelopeDetailNotFoundError(envelopeId))
     }
 
     "if an error occurs return an error" in {
@@ -58,7 +61,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
 
-      envelopeAvailable(envelopeId, HeaderCarrier()).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
+      envelopeDetail(envelopeId, HeaderCarrier()).futureValue shouldBe Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, "SOME_ERROR"))
     }
   }
 }
