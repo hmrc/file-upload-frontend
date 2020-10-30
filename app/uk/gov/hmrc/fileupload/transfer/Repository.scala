@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.transfer
 import play.api.http.Status
 import play.api.libs.json.{Json, JsValue}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
-import uk.gov.hmrc.fileupload.{EnvelopeId, RequestId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, HeaderCarrier}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,14 +38,14 @@ object Repository {
     baseUrl         : String,
     wSClient        : WSClient
   )(envelopeId      : EnvelopeId,
-    requestId       : Option[RequestId]
+    headerCarrier   : HeaderCarrier
   )(implicit
     executionContext: ExecutionContext
   ): Future[Either[EnvelopeAvailableError, EnvelopeId]] =
     auditedHttpCall(wSClient
       .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
       .withMethod("GET")
-      .withHttpHeaders(userAgent +: requestId.map("X-Request-ID" -> _.value).toSeq :_ *)
+      .withHttpHeaders(userAgent +: headerCarrier.forwardedHeaders :_ *)
     ).map {
       case Left(error)     => Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, error.message))
       case Right(response) => response.status match {
@@ -66,14 +66,14 @@ object Repository {
     baseUrl         : String,
     wSClient        : WSClient
   )(envelopeId      : EnvelopeId,
-    requestId       : Option[RequestId]
+    headerCarrier   : HeaderCarrier
   )(implicit
     executionContext: ExecutionContext
   ): Future[Either[EnvelopeDetailError, JsValue]] =
     auditedHttpCall(wSClient
       .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
       .withMethod("GET")
-      .withHttpHeaders(userAgent +: requestId.map("X-Request-ID" -> _.value).toSeq :_ *)
+      .withHttpHeaders(userAgent +: headerCarrier.forwardedHeaders :_ *)
     ).map {
       case Left(error)     => Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, error.message))
       case Right(response) => response.status match {

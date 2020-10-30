@@ -39,7 +39,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_OK)
 
-      envelopeAvailable(envelopeId, None).futureValue shouldBe Right(envelopeId)
+      envelopeAvailable(envelopeId, HeaderCarrier.empty).futureValue shouldBe Right(envelopeId)
     }
 
     "if the ID is not known of return an error" in {
@@ -47,7 +47,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_NOT_FOUND)
 
-      envelopeAvailable(envelopeId, None).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeNotFoundError(envelopeId))
+      envelopeAvailable(envelopeId, HeaderCarrier.empty).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeNotFoundError(envelopeId))
     }
 
     "if an error occurs return an error" in {
@@ -56,7 +56,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
       Wiremock.respondToEnvelopeCheck(envelopeId, HTTP_INTERNAL_ERROR, errorBody)
 
-      envelopeAvailable(envelopeId, None).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
+      envelopeAvailable(envelopeId, HeaderCarrier.empty).futureValue shouldBe Left(EnvelopeAvailableError.EnvelopeAvailableServiceError(envelopeId, "SOME_ERROR"))
     }
   }
 }

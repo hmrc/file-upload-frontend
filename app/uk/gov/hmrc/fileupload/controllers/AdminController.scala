@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import javax.inject.{Inject, Singleton}
 import play.api.mvc.MessagesControllerComponents
-import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId, RequestId}
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId, HeaderCarrier}
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
@@ -37,17 +37,19 @@ class AdminController @Inject()(
   val commandHandler: CommandHandler = appModule.commandHandler
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
+    implicit val hc = HeaderCarrier.fromRequestHeader(request)
     commandHandler.notify(
-      command   = VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId),
-      requestId = request.headers.get("X-Request-Id").map(RequestId)
+      command       = VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId),
+      headerCarrier = hc
     )
     Future.successful(Ok)
   }
 
   def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
+    implicit val hc = HeaderCarrier.fromRequestHeader(request)
     commandHandler.notify(
-      command   = TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId),
-      requestId = request.headers.get("X-Request-Id").map(RequestId)
+      command       = TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId),
+      headerCarrier = hc
     )
     Future.successful(Ok)
   }

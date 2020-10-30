@@ -20,14 +20,14 @@ import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, RequestId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, HeaderCarrier}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyError, NotifyResult, NotifySuccess}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait CommandHandler {
-  def notify(command: AnyRef, requestId: Option[RequestId])(implicit ec: ExecutionContext): Future[NotifyResult]
+  def notify(command: AnyRef, headerCarrier: HeaderCarrier)(implicit ec: ExecutionContext): Future[NotifyResult]
 }
 
 object CommandHandler {
@@ -62,8 +62,8 @@ class CommandHandlerImpl(
   val userAgent = "User-Agent" -> "FU-frontend-CH"
 
   def sendBackendCommand[T <: BackendCommand : Writes](
-    command  : T,
-    requestId: Option[RequestId]
+    command      : T,
+    headerCarrier: HeaderCarrier
   )(implicit
     ec: ExecutionContext
   ): Future[NotificationResult] =
@@ -72,7 +72,7 @@ class CommandHandlerImpl(
         .url(s"$baseUrl/file-upload/commands/${command.commandType}")
         .withBody(Json.toJson(command))
         .withMethod("POST")
-        .withHttpHeaders(userAgent +: requestId.map("X-Request-ID" -> _.value).toSeq :_ *)
+        .withHttpHeaders(userAgent +: headerCarrier.forwardedHeaders :_ *)
     ).map {
       case Left(error)     => Left(NotificationError.NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Right(response) => response.status match {
@@ -82,12 +82,12 @@ class CommandHandlerImpl(
     }
 
   private def sendNotification[T <: BackendCommand : Writes](
-    c: T,
-    requestId: Option[RequestId]
+    c            : T,
+    headerCarrier: HeaderCarrier
   )(implicit
     ec: ExecutionContext
   ): Future[NotifierService.NotifyResult] =
-    sendBackendCommand(c, requestId).map {
+    sendBackendCommand(c, headerCarrier).map {
       case Right(_) => Right(NotifySuccess)
       case Left(e) =>
         logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
@@ -96,19 +96,19 @@ class CommandHandlerImpl(
 
   val notifySuccess = Right(NotifySuccess)
 
-  def notify(command: AnyRef, requestId: Option[RequestId])(implicit ec: ExecutionContext): Future[NotifyResult] = {
+  def notify(command: AnyRef, headerCarrier: HeaderCarrier)(implicit ec: ExecutionContext): Future[NotifyResult] = {
 
-    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T, reqestId: Option[RequestId]) = {
-      val result = sendNotification(backendCommand, reqestId)
+    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T, headerCarrier: HeaderCarrier) = {
+      val result = sendNotification(backendCommand, headerCarrier)
       result.map(_.right.foreach(_ => publish(command)))
       result
     }
 
     command match {
-      case c: QuarantineFile     => sendCommandToBackendAndPublish(c, requestId)
-      case c: MarkFileAsClean    => sendCommandToBackendAndPublish(c, requestId)
-      case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c, requestId)
-      case c: StoreFile          => sendCommandToBackendAndPublish(c, requestId)
+      case c: QuarantineFile     => sendCommandToBackendAndPublish(c, headerCarrier)
+      case c: MarkFileAsClean    => sendCommandToBackendAndPublish(c, headerCarrier)
+      case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c, headerCarrier)
+      case c: StoreFile          => sendCommandToBackendAndPublish(c, headerCarrier)
       case _                     => publish(command)
                                     Future.successful(notifySuccess)
     }

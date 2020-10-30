@@ -53,7 +53,7 @@ class FileUploadControllerSpec
     val noEnvelopeValidation = null
     //val noParsingIsActuallyDoneHere = InMemoryMultipartFileHandler.parser
     val commandHandler = new CommandHandler {
-      def notify(command: AnyRef, requestId: Option[RequestId])(implicit ec: ExecutionContext) = Future.successful(Right(NotifySuccess))
+      def notify(command: AnyRef, headerCarrier: HeaderCarrier)(implicit ec: ExecutionContext) = Future.successful(Right(NotifySuccess))
     }
     val fakeCurrentTime = () => 10L
     val uploadToQuarantine: UploadToQuarantine = (_,_,_) => Future.successful(new UploadResult())

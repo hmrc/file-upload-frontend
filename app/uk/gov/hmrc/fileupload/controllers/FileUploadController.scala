@@ -22,7 +22,7 @@ import play.api.Configuration
 import play.api.Logger
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.{Action, EssentialAction, MessagesControllerComponents, MaxSizeExceeded, MultipartFormData, Result}
-import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId, RequestId}
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId, HeaderCarrier}
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.WithValidEnvelope
 import uk.gov.hmrc.fileupload.controllers.FileUploadController.metadataAsJson
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker.getMaxFileSizeFromEnvelope
@@ -77,6 +77,7 @@ class FileUploadController @Inject()(
             (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
     val maxSize = getMaxFileSizeFromEnvelope(constraints)
     Action.async(parse.maxLength(maxSize, parse.multipartFormData(cacheFileInMemory))) { implicit request =>
+      implicit val hc = HeaderCarrier.fromRequestHeader(request)
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
@@ -97,7 +98,7 @@ class FileUploadController @Inject()(
             case _ =>
               logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
                 s"fileIsEmpty value is $fileIsEmpty.")
-              val uploadResult = uploadTheProperFile(envelopeId, fileId, formData, request.headers.get("X-Request-Id").map(RequestId))
+              val uploadResult = uploadTheProperFile(envelopeId, fileId, formData, hc)
               if (logFileExtensions) {
                 val loggerValues = loggerHelper.getLoggerValues(formData.files.head, request)
                 logFileExtensionData(uploadResult)(loggerValues)
@@ -110,26 +111,26 @@ class FileUploadController @Inject()(
   }
 
   private def uploadTheProperFile(
-    envelopeId: EnvelopeId,
-    fileId    : FileId,
-    formData  : MultipartFormData[FileCachedInMemory],
-    requestId : Option[RequestId]
+    envelopeId   : EnvelopeId,
+    fileId       : FileId,
+    formData     : MultipartFormData[FileCachedInMemory],
+    headerCarrier: HeaderCarrier
   ) = {
     val file = formData.files.head
     val key = createS3Key(envelopeId, fileId)
     uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
       val fileRefId = FileRefId(uploadResult.getVersionId)
       commandHandler.notify(
-        command = QuarantineFile(
-                    id          = envelopeId, fileId,
-                    fileRefId   = fileRefId,
-                    created     = now(),
-                    name        = file.filename,
-                    contentType = file.contentType.getOrElse(""),
-                    length      = file.ref.size,
-                    metadata    = metadataAsJson(formData)
-                  ),
-        requestId = requestId
+        command       = QuarantineFile(
+                          id          = envelopeId, fileId,
+                          fileRefId   = fileRefId,
+                          created     = now(),
+                          name        = file.filename,
+                          contentType = file.contentType.getOrElse(""),
+                          length      = file.ref.size,
+                          metadata    = metadataAsJson(formData)
+                        ),
+        headerCarrier = headerCarrier
       )
       .map {
         case Right(_) => Ok

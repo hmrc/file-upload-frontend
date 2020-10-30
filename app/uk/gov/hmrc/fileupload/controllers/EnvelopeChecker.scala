@@ -23,7 +23,7 @@ import play.api.mvc.Results._
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.streams.Accumulator
 import play.api.mvc.{EssentialAction, MultipartFormData, RequestHeader, Result}
-import uk.gov.hmrc.fileupload.{EnvelopeId, RequestId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, HeaderCarrier}
 import uk.gov.hmrc.fileupload.quarantine.{EnvelopeConstraints, EnvelopeReport}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.transfer.Repository.EnvelopeDetailError
@@ -42,13 +42,14 @@ object EnvelopeChecker {
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
 
-  def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId, Option[RequestId]) => Future[Either[EnvelopeDetailError, JsValue]])
+  def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId, HeaderCarrier) => Future[Either[EnvelopeDetailError, JsValue]])
                        (envelopeId: EnvelopeId)
                        (action: Option[EnvelopeConstraints] => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
+      implicit val hc = HeaderCarrier.fromRequestHeader(rh)
       Accumulator.flatten {
-        checkEnvelopeDetails(envelopeId, rh.headers.get("X-Request-Id").map(RequestId)).map {
+        checkEnvelopeDetails(envelopeId, hc).map {
           case Right(envelope) =>
             val envelopeDetails = extractEnvelopeDetails(envelope)
             val status = envelopeDetails.status.getOrElse("")

@@ -23,7 +23,7 @@ import play.api.Logger
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
-import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
+import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId, HeaderCarrier}
 
 import scala.collection.immutable.Queue
 import scala.concurrent.{ExecutionContext, Future}
@@ -109,7 +109,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
           MarkFileAsInfected(e.envelopeId, e.fileId, e.fileRefId)
         else
           MarkFileAsClean(e.envelopeId, e.fileId, e.fileRefId)
-      commandHandler.notify(command, requestId = None)
+      commandHandler.notify(command, headerCarrier = HeaderCarrier.empty)
     }
 }
 
