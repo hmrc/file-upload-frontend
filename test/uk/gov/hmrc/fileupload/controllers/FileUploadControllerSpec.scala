@@ -37,6 +37,7 @@ import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.s3.S3Service.UploadToQuarantine
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -53,7 +54,7 @@ class FileUploadControllerSpec
     val noEnvelopeValidation = null
     //val noParsingIsActuallyDoneHere = InMemoryMultipartFileHandler.parser
     val commandHandler = new CommandHandler {
-      def notify(command: AnyRef)(implicit ec: ExecutionContext) = Future.successful(Right(NotifySuccess))
+      def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier) = Future.successful(Right(NotifySuccess))
     }
     val fakeCurrentTime = () => 10L
     val uploadToQuarantine: UploadToQuarantine = (_,_,_) => Future.successful(new UploadResult())

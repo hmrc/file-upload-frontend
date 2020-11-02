@@ -32,6 +32,8 @@ import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{cacheFileInMemory
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.HeaderCarrierConverter
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -58,8 +60,12 @@ class FileUploadController @Inject()(
   private lazy val logFileExtensions: Boolean =
     config.getOptional[Boolean]("flags.log-file-extensions").getOrElse(false)
 
-  def uploadWithRedirection(envelopeId: EnvelopeId, fileId: FileId,
-                            `redirect-success-url`: Option[String], `redirect-error-url`: Option[String]): EssentialAction =
+  def uploadWithRedirection(
+    envelopeId            : EnvelopeId,
+    fileId                : FileId,
+    `redirect-success-url`: Option[String],
+    `redirect-error-url`  : Option[String],
+  ): EssentialAction =
     redirectionFeature.redirect(`redirect-success-url`, `redirect-error-url`) {
       uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
     }
@@ -73,6 +79,7 @@ class FileUploadController @Inject()(
             (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
     val maxSize = getMaxFileSizeFromEnvelope(constraints)
     Action.async(parse.maxLength(maxSize, parse.multipartFormData(cacheFileInMemory))) { implicit request =>
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
       request.body match {
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
@@ -105,17 +112,32 @@ class FileUploadController @Inject()(
     }
   }
 
-  private def uploadTheProperFile(envelopeId: EnvelopeId, fileId: FileId, formData: MultipartFormData[FileCachedInMemory]) = {
+  private def uploadTheProperFile(
+    envelopeId   : EnvelopeId,
+    fileId       : FileId,
+    formData     : MultipartFormData[FileCachedInMemory]
+  )(implicit
+    hc: HeaderCarrier
+  ) = {
     val file = formData.files.head
     val key = createS3Key(envelopeId, fileId)
     uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
       val fileRefId = FileRefId(uploadResult.getVersionId)
-      commandHandler.notify(QuarantineFile(envelopeId, fileId, fileRefId, created = now(), name = file.filename,
-        contentType = file.contentType.getOrElse(""), file.ref.size, metadata = metadataAsJson(formData)))
-        .map {
-          case Right(_) => Ok
-          case Left(e) => Status(e.statusCode)(e.reason)
-        }
+      commandHandler.notify(
+        QuarantineFile(
+          id          = envelopeId, fileId,
+          fileRefId   = fileRefId,
+          created     = now(),
+          name        = file.filename,
+          contentType = file.contentType.getOrElse(""),
+          length      = file.ref.size,
+          metadata    = metadataAsJson(formData)
+        )
+      )
+      .map {
+        case Right(_) => Ok
+        case Left(e) => Status(e.statusCode)(e.reason)
+      }
     }
   }
 

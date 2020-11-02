@@ -26,6 +26,7 @@ import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultVirusDetected}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -91,19 +92,19 @@ class ScannerActorSpec
 
     def scanBinaryDataClean(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
-      collector = collector.::(fileRefId)
+      collector = fileRefId :: collector
       Future.successful(Right(ScanResultFileClean))
     }
 
     def scanBinaryDataInfected(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
-      collector = collector.::(fileRefId)
+      collector = fileRefId :: collector
       Future.successful(Left(ScanResultVirusDetected))
     }
 
     val commandHandler = new CommandHandler {
-      def notify(command: AnyRef)(implicit ec: ExecutionContext) = {
-        collector = collector.::(command)
+      def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier) = {
+        collector = command :: collector
         Future.successful(Right(NotifySuccess))
       }
     }
@@ -113,14 +114,10 @@ class ScannerActorSpec
     }
 
     def expectedCleanCollector(events: List[QuarantineFile]): List[Any] =
-      events.reverse.flatMap(e => {
-        List(MarkFileAsClean(e.id, e.fileId, e.fileRefId), e.fileRefId)
-      })
+      events.reverse.flatMap(e => List(MarkFileAsClean(e.id, e.fileId, e.fileRefId), e.fileRefId))
 
     def expectedInfectedCollector(events: List[QuarantineFile]): List[Any] =
-      events.reverse.flatMap(e => {
-        List(MarkFileAsInfected(e.id, e.fileId, e.fileRefId), e.fileRefId)
-      })
+      events.reverse.flatMap(e => List(MarkFileAsInfected(e.id, e.fileId, e.fileRefId), e.fileRefId))
 
     def createActor(scanResult: (EnvelopeId, FileId, FileRefId) => Future[ScanResult]) =
       system.actorOf(ScannerActor.props(subscribe, scanResult, commandHandler))

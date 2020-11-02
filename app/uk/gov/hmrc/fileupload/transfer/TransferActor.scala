@@ -22,6 +22,7 @@ import play.api.Logger
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, StoreFile}
 import uk.gov.hmrc.fileupload.s3.S3KeyName
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
@@ -53,7 +54,10 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
   private def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId): Unit =
     transferFile(createS3Key(envelopeId, fileId), fileRefId.value) match {
       case Success(_) =>
-        commandHandler.notify(StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId))) // todo (konrad) missing length!!!
+        implicit val hc = HeaderCarrier()
+        commandHandler.notify(
+          StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId))
+        )
         logger.info(s"File successfully transferred for envelopeId: $envelopeId, fileId: $fileId and version: $fileRefId")
       case Failure(NonFatal(ex)) =>
         logger.error(s"File not transferred for $envelopeId and $fileId and $fileRefId", ex)

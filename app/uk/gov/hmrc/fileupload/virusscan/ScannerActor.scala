@@ -24,6 +24,7 @@ import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFil
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.collection.immutable.Queue
 import scala.concurrent.{ExecutionContext, Future}
@@ -102,15 +103,17 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
     }
   }
 
-  def notify(hasVirus: Boolean): Unit =
+  def notify(hasVirus: Boolean): Unit = {
+    implicit val hc = HeaderCarrier()
     scanningEvent.foreach { e =>
-      val command = if(hasVirus) {
-        MarkFileAsInfected(e.envelopeId, e.fileId, e.fileRefId)
-      } else {
-        MarkFileAsClean(e.envelopeId, e.fileId, e.fileRefId)
-      }
+      val command =
+        if (hasVirus)
+          MarkFileAsInfected(e.envelopeId, e.fileId, e.fileRefId)
+        else
+          MarkFileAsClean(e.envelopeId, e.fileId, e.fileRefId)
       commandHandler.notify(command)
     }
+  }
 }
 
 object ScannerActor {

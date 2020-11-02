@@ -26,7 +26,9 @@ import play.api.mvc.{EssentialAction, MultipartFormData, RequestHeader, Result}
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.quarantine.{EnvelopeConstraints, EnvelopeReport}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
-import uk.gov.hmrc.fileupload.transfer.TransferService
+import uk.gov.hmrc.fileupload.transfer.Repository.{EnvelopeDetailResult, EnvelopeDetailError}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.HeaderCarrierConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,13 +44,14 @@ object EnvelopeChecker {
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
 
-  def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId) => Future[TransferService.EnvelopeDetailResult])
+  def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId, HeaderCarrier) => Future[EnvelopeDetailResult])
                        (envelopeId: EnvelopeId)
                        (action: Option[EnvelopeConstraints] => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(rh.headers, None)
       Accumulator.flatten {
-        checkEnvelopeDetails(envelopeId).map {
+        checkEnvelopeDetails(envelopeId, hc).map {
           case Right(envelope) =>
             val envelopeDetails = extractEnvelopeDetails(envelope)
             val status = envelopeDetails.status.getOrElse("")
@@ -59,7 +62,7 @@ object EnvelopeChecker {
               case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
               case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
             }
-          case Left(TransferService.EnvelopeDetailNotFoundError(_)) =>
+          case Left(EnvelopeDetailError.EnvelopeDetailNotFoundError(_)) =>
             logAndReturn(NOT_FOUND, s"Unable to upload to nonexistent envelope: $envelopeId")
           case Left(error) =>
             logAndReturn(INTERNAL_SERVER_ERROR, error.toString)

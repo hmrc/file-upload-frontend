@@ -28,7 +28,8 @@ import play.api.test.Helpers._
 import play.mvc.BodyParser.AnyContent
 import uk.gov.hmrc.fileupload.EnvelopeId
 import uk.gov.hmrc.fileupload.controllers.EnvelopeChecker._
-import uk.gov.hmrc.fileupload.transfer.TransferService.{EnvelopeDetailNotFoundError, EnvelopeDetailServiceError}
+import uk.gov.hmrc.fileupload.transfer.Repository.EnvelopeDetailError
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -78,8 +79,9 @@ class EnvelopeCheckerSpec
       val expectedAction = Action { _ => Ok }
 
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
+      val checkEnvelopeDetails = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Right(envelopeOpen))
 
-      val wrappedAction = withValidEnvelope(_ => Future(Right(envelopeOpen)))(testEnvelopeId)(_ => expectedAction)
+      val wrappedAction = withValidEnvelope(checkEnvelopeDetails)(testEnvelopeId)(_ => expectedAction)
       val result = wrappedAction(testRequest).run // this for some reason causes exceptions when running with testOnly
 
       status(result) shouldBe 200
@@ -91,9 +93,9 @@ class EnvelopeCheckerSpec
       val expectedAction = Action { _ => Ok }
 
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
+      val checkEnvelopeDetails = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Right(envelopeOpen))
 
-      val wrappedAction = withValidEnvelope(_ =>
-        Future(Right(envelopeOpen)))(testEnvelopeId)(_ => expectedAction)
+      val wrappedAction = withValidEnvelope(checkEnvelopeDetails)(testEnvelopeId)(_ => expectedAction)
       val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 200
@@ -105,9 +107,9 @@ class EnvelopeCheckerSpec
       val statusClosed = "CLOSED"
 
       val envelopeClosed = Json.parse("""{"status" : "CLOSED" }""")
+      val checkEnvelopeDetails = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Right(envelopeClosed))
 
-      val wrappedAction = withValidEnvelope(_ =>
-        Future(Right(envelopeClosed)))(testEnvelopeId)(_ => actionThatShouldNotExecute)
+      val wrappedAction = withValidEnvelope(checkEnvelopeDetails)(testEnvelopeId)(_ => actionThatShouldNotExecute)
 
       val result = wrappedAction(testRequest).run
 
@@ -118,7 +120,7 @@ class EnvelopeCheckerSpec
 
   "When envelope does not exist function withExistingEnvelope" should {
     "prevent both action's body and the body parser from running and return 404 NotFound" in {
-      val envNotFound = (envId: EnvelopeId) => Future(Left(EnvelopeDetailNotFoundError(envId)))
+      val envNotFound = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Left(EnvelopeDetailError.EnvelopeDetailNotFoundError(envId)))
 
       val wrappedAction = withValidEnvelope(envNotFound)(testEnvelopeId)(_ => actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
@@ -131,7 +133,7 @@ class EnvelopeCheckerSpec
   "In case of another error function withExistingEnvelope" should {
     "prevent both action's body and body parser from running and propagate the upstream error" in {
       val errorMsg = "error happened :("
-      val errorCheckingStatus = (envId: EnvelopeId) => Future(Left(EnvelopeDetailServiceError(envId, errorMsg)))
+      val errorCheckingStatus = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Left(EnvelopeDetailError.EnvelopeDetailServiceError(envId, errorMsg)))
 
       val wrappedAction = withValidEnvelope(errorCheckingStatus)(testEnvelopeId)(_ => actionThatShouldNotExecute)
       val result = wrappedAction(testRequest).run
