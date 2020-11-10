@@ -313,15 +313,17 @@ class S3JavaSdkService @Inject()(
     envelopeId: EnvelopeId,
     files     : List[(FileId, Option[String])]
   ): Source[(ArchiveMetadata, S3Service.StreamResult), akka.NotUsed]#Repr[ByteString] =
-    Source(
-      files.map { case (fileId, name) =>
-        val filename = name.getOrElse(UUID.randomUUID().toString)
+    Source.fromIterator( () =>
+      files.toIterator.map { case (fileId, optName) =>
+        val filename = optName.getOrElse(UUID.randomUUID().toString)
         download(
           bucketName = awsConfig.transientBucketName,
           key        = S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId)
         ) match {
           case None => sys.error(s"Could not find file $fileId, for envelope $envelopeId")
-          case Some(streamWithMetadata) => (ArchiveMetadata(filename), streamWithMetadata.stream)
+          case Some(streamWithMetadata) => (ArchiveMetadata(filename),
+                                            streamWithMetadata.stream.mapMaterializedValue { res => logger.debug(s"Finished adding $filename to zip: $res"); res }
+                                           )
         }
       }
     ).via(Archive.zip())
