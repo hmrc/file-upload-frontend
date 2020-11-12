@@ -10,7 +10,7 @@
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <pattern>%date{ISO8601} level=[%level] logger=[%logger] thread=[%thread] rid=[%X{X-Request-ID}] user=[%X{Authorization}] message=[%message] %replace(exception=[%xException]){'^exception=\[\]$',''}%n</pattern>
+            <pattern>%date{ISO8601} level=%highlight([%level]) logger=[%logger] thread=[%thread] rid=[%X{X-Request-ID}] user=[%X{Authorization}] message=[%message] %replace(exception=[%xException]){'^exception=\[\]$',''}%n</pattern>
         </encoder>
     </appender>
 
@@ -51,6 +51,10 @@
     <logger name="javax.management" level="INFO" />
     <logger name="sun.rmi" level="INFO" />
     <logger name="org.apache.http.wire" level="INFO" />
+    <!-- the following includes connection pool stats as used by AWS
+    <logger name="org.apache.http.impl.conn.PoolingHttpClientConnectionManager" level="DEBUG" />
+    -->
+
 
     <logger name="application" level="DEBUG"/>
 

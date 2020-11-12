@@ -314,11 +314,13 @@ class S3JavaSdkService @Inject()(
   def zipSource(
     envelopeId: EnvelopeId,
     files     : List[(FileId, Option[String])]
+  )(implicit ec: ExecutionContext
   ): Source[(ArchiveMetadata, S3Service.StreamResult), akka.NotUsed]#Repr[ByteString] = {
     // dedupe filenames since file-upload doesn't prevent multiple files with the same name
-    val filesUnique = dedupeFilenames(files)
-    logger.debug(s"filenames $files has been deduped to $filesUnique")
+    val filesUnique = dedupeFilenames(envelopeId, files)
+
     // load as an iterator to avoid downloading multiple files at once - aws connection pool is limited
+    // also since streams must be consumed for the connection to be returned, we don't want to get any prematurely
     Source.fromIterator( () =>
       filesUnique.toIterator.map { case (fileId, filename) =>
         download(
@@ -328,11 +330,16 @@ class S3JavaSdkService @Inject()(
           case None => sys.error(s"Could not find file $fileId, for envelope $envelopeId")
           case Some(streamWithMetadata) => (ArchiveMetadata(filename),
                                             streamWithMetadata.stream
-                                              .mapMaterializedValue { res => logger.debug(s"Finished adding $filename to zip: $res"); res }
+                                              .mapMaterializedValue(
+                                                _.map { res => logger.debug(s"Finished reading stream for fileId $fileId in envelope $envelopeId to zip: $res"); res }
+                                              )
                                            )
         }
       }
     ).via(Archive.zip())
+    .mapError {
+      case t: Throwable => new RuntimeException(s"Failed to create zip for envelope $envelopeId: ${t.getMessage}", t)
+    }
   }
 
   def presign(bucketName: String, key: String, expirationDuration: Duration): URL = {
@@ -350,25 +357,28 @@ class S3JavaSdkService @Inject()(
 }
 
 object S3JavaSdkService {
+  private val logger = Logger(getClass)
+
   // ensure no duplicate file names
-  def dedupeFilenames(files: List[(FileId, Option[String])]): List[(FileId, String)] =
+  def dedupeFilenames(envelopeId: EnvelopeId, files: List[(FileId, Option[String])]): List[(FileId, String)] =
     files
       .groupBy(_._2)
       .mapValues(_.map(_._1))
       .toList
       .flatMap {
-        case (None          , fileIds) => fileIds.map(fileId => (fileId, UUID.randomUUID().toString))
-        case (Some(fileName), fileIds) => lazy val (name, ext) = {
-                                            val pos = fileName.lastIndexOf('.')
-                                            if (pos == -1) (fileName, "")
-                                            else fileName.splitAt(pos)
-                                          }
-                                          fileIds.zipWithIndex.map {
-                                            case (fileId, 0) => (fileId, fileName)
-                                            case (fileId, i) => (fileId, name + "-" + i + ext)
-                                          }
+        case (None          , fileIds    ) => fileIds.map(_ -> UUID.randomUUID().toString)
+        case (Some(fileName), Seq(fileId)) => Seq(fileId -> fileName)
+        case (Some(fileName), fileIds    ) => logger.warn(s"Duplicate filename have been provided for envelope $envelopeId, they will be renamed")
+                                              lazy val (name, ext) = {
+                                                val pos = fileName.lastIndexOf('.')
+                                                if (pos == -1) (fileName, "")
+                                                else fileName.splitAt(pos)
+                                              }
+                                              fileIds.zipWithIndex.map {
+                                                case (fileId, 0) => (fileId, fileName)
+                                                case (fileId, i) => (fileId, name + "-" + i + ext)
+                                              }
       }
-
 }
 
 class S3FilesIterator(s3Client: AmazonS3, bucketName: String) extends Iterator[Seq[S3ObjectSummary]] {
