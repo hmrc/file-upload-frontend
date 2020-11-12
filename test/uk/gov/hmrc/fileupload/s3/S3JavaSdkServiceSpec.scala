@@ -18,47 +18,52 @@ package uk.gov.hmrc.fileupload.s3
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import uk.gov.hmrc.fileupload.FileId
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 class S3JavaSdkServiceSpec
   extends AnyWordSpecLike
      with Matchers {
 
+  val testEnvelopeId = EnvelopeId()
+
   "dedupeFilenames" should {
     "dedupe" in {
-      S3JavaSdkService.dedupeFilenames(files = List(
-          FileId("1") -> Some("file"),
-          FileId("2") -> Some("file"),
-          FileId("3") -> Some("file")
-         )).toSet shouldBe Set(
-          FileId("1") -> "file",
-          FileId("2") -> "file-1",
-          FileId("3") -> "file-2"
-         )
+      S3JavaSdkService.dedupeFilenames(testEnvelopeId, files = List(
+         FileId("1") -> Some("file"),
+         FileId("2") -> Some("file"),
+         FileId("3") -> Some("file")
+        )
+      ).toSet shouldBe Set(
+        FileId("1") -> "file",
+        FileId("2") -> "file-1",
+        FileId("3") -> "file-2"
+       )
     }
 
     "preserve extension" in {
-      S3JavaSdkService.dedupeFilenames(files = List(
+      S3JavaSdkService.dedupeFilenames(testEnvelopeId, files = List(
           FileId("1") -> Some("file.pdf"),
           FileId("2") -> Some("file.pdf"),
           FileId("3") -> Some("file.pdf")
-         )).toSet shouldBe Set(
-          FileId("1") -> "file.pdf",
-          FileId("2") -> "file-1.pdf",
-          FileId("3") -> "file-2.pdf"
-         )
+        )
+      ).toSet shouldBe Set(
+        FileId("1") -> "file.pdf",
+        FileId("2") -> "file-1.pdf",
+        FileId("3") -> "file-2.pdf"
+      )
     }
 
     "not affect file names when there are no duplicates" in {
-      S3JavaSdkService.dedupeFilenames(files = List(
+      S3JavaSdkService.dedupeFilenames(testEnvelopeId, files = List(
           FileId("1") -> Some("file1.pdf"),
           FileId("2") -> Some("file2.pdf"),
           FileId("3") -> Some("file3.pdf")
-         )).toSet shouldBe Set(
-          FileId("1") -> "file1.pdf",
-          FileId("2") -> "file2.pdf",
-          FileId("3") -> "file3.pdf"
-         )
+        )
+      ).toSet shouldBe Set(
+        FileId("1") -> "file1.pdf",
+        FileId("2") -> "file2.pdf",
+        FileId("3") -> "file3.pdf"
+      )
     }
   }
 }
