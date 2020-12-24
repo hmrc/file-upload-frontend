@@ -1,6 +1,6 @@
 # file-upload-frontend
 
-**This service is in the process of being replace.  If you have a need to use it please get in touch with the owning team**
+**This service is now deprecated. If you need to use the functions this service delivers, please use [Upscan service](https://confluence.tools.tax.service.gov.uk/pages/viewpage.action?pageId=101663507) or speak to the owners of Upscan service**
 
 Frontend for uploading files to the Tax Platform. Please <i>**DO NOT USE**</i> Test-Only and Internal-Use-Only endpoints <i>**WITHOUT PERMISSION**</i>
 
