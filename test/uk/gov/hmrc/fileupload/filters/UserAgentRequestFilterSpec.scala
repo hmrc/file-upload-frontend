@@ -49,18 +49,18 @@ class UserAgentRequestFilterSpec
   }
 
   val dfsFrontend = "dfs-frontend"
-  val whitelist =
+  val allowlist =
     Set(dfsFrontend, "voa-property-linking-frontend").map(UserAgent.apply)
 
   val nginxChecks = "nginx-health"
-  val blacklist =
+  val ignorelist =
     Set(nginxChecks).map(UserAgent.apply)
 
   implicit val patience: PatienceConfig = PatienceConfig(5.seconds, 1.second)
 
   def withFilter[T](block: (UserAgentRequestFilter, MetricRegistry) => T): T = {
     val metrics = new MetricRegistry
-    val filter = new UserAgentRequestFilter(metrics, whitelist, blacklist)
+    val filter = new UserAgentRequestFilter(metrics, allowlist, ignorelist)
     block(filter, metrics)
   }
 
@@ -71,7 +71,7 @@ class UserAgentRequestFilterSpec
       name -> timer.getCount
     }.toMap
 
-  test("Timer created for User-Agent when header is white listed") {
+  test("Timer is created for allowed User-Agent") {
     withFilter { (filter, metrics) =>
       val rh = FakeRequest().withHeaders(HeaderNames.USER_AGENT -> dfsFrontend)
       filter(endAction)(rh).run()
@@ -99,7 +99,7 @@ class UserAgentRequestFilterSpec
     }
   }
 
-  test("Timer for UnknownUserAgent is incremented when User-Agent header not in whitelist") {
+  test("Timer for UnknownUserAgent is incremented when User-Agent header is not in allowlist") {
     withFilter { (filter, metrics) =>
       val rh = FakeRequest().withHeaders(HeaderNames.USER_AGENT -> UUID.randomUUID().toString)
       filter(endAction)(rh).run()
