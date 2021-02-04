@@ -17,7 +17,6 @@
 import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.PlayImport.PlayKeys
 import play.sbt.routes.RoutesKeys.routesGenerator
-import sbt.Tests.{Group, SubProcess}
 import scoverage.ScoverageKeys
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 import uk.gov.hmrc.versioning.SbtGitVersioning
@@ -55,7 +54,7 @@ lazy val microservice = Project(appName, file("."))
   )
   .configs(IntegrationTest)
   .settings(
-    DefaultBuildSettings.integrationTestSettings,
+    DefaultBuildSettings.integrationTestSettings(),
     // since it depends on test, we must explicitly add it, and filter out the test specs.
     // this requires explicitly adding the test report option since we have replaced the testOptions.
     unmanagedSourceDirectories in IntegrationTest := (baseDirectory in IntegrationTest)(base => Seq(base / "it", base / "test")).value,

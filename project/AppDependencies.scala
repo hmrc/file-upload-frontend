@@ -20,10 +20,9 @@ private object AppDependencies {
 
   import play.core.PlayVersion
 
-  private val playBootstrapVersion = "3.0.0"
+  private val playBootstrapVersion = "3.4.0"
   private val playPartialsVersion  = "6.11.0-play-27"
-  private val authClient           = "3.1.0-play-27"
-  private val hmrcTestVersion      = "3.9.0-play-27"
+  private val authClient           = "3.2.0-play-27"
   private val clamAvClientVersion  = "7.0.0"
 
   val compile = Seq(
