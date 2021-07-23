@@ -39,7 +39,7 @@ class RedirectionFeatureSpec
      with ScalaFutures
      with TestApplicationComponents {
 
-  private val allowedHosts = Seq[String]("gov.uk","localhost")
+  private val allowedHosts = Seq[String]("*.gov.uk","gov.uk","localhost")
   private val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
 
   val redirectionFeature = new RedirectionFeature(allowedHosts, null)
@@ -85,6 +85,16 @@ class RedirectionFeatureSpec
 
     "fail on incorrect redirect URL" in {
       val redirectA = redirect(None, Some("asdf//:asdf.asdf.pl"))(okAction)
+
+      val result = call(redirectA, request)
+
+      status(result) shouldEqual BAD_REQUEST
+    }
+
+    "fail on a URL pretending to be a gov.uk site" in {
+      // gov.uk is a .uk tld rather than a restricted .gov.uk one
+      // its possible to register a .uk domian ending in gov e.g. fakegov.uk
+      val redirectA = redirect(None, Some("https//fakegov.uk/phishing-site"))(okAction)
 
       val result = call(redirectA, request)
 

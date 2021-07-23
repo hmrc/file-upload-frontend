@@ -85,7 +85,10 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
       val suspect = new URL(url)
       if(!(suspect.getProtocol == "https" || (isLocalHostAllowed && suspect.getHost == LOCAL_HOST)))
         throw new MalformedURLException("Https is required for the redirection.")
-      if(!allowedHosts.exists(base => suspect.getHost.endsWith(base)))
+      if(!allowedHosts.exists {
+        case base if base.startsWith("*") => suspect.getHost.endsWith(base.drop(1))
+        case base                         => suspect.getHost.equalsIgnoreCase(base)
+      })
         throw new MalformedURLException("Given redirection domain is not allowed.")
     }.map( _ => ValidatedUrl(
       url.takeWhile( c => !(c=='?' || c=='#'))
