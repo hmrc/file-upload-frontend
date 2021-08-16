@@ -43,10 +43,13 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
 
   private val isLocalHostAllowed = allowedHosts.contains(LOCAL_HOST)
 
-  def redirect(successUrlO: Option[String], failureUrlO: Option[String])
-              (task: => EssentialAction)
-              (implicit ec: ExecutionContext): EssentialAction = EssentialAction { implicit rh =>
-
+  def redirect(
+    successUrlO: Option[String],
+    failureUrlO: Option[String]
+  )(task: => EssentialAction
+  )(implicit
+    ec: ExecutionContext
+  ): EssentialAction = EssentialAction { implicit rh =>
     val validation: Try[RedirectUrlsO] = {
       val sO = successUrlO.map(validateAndSanitize)
       val fO = failureUrlO.map(validateAndSanitize)
@@ -57,11 +60,10 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
     validation match {
       case Failure(ex) => logUrlProblemAndReturn(BAD_REQUEST, ex)
       case Success(redirectParams) =>
-        task(rh).recoverWith {
-          case e: Throwable => errorHandler.onServerError(rh, e)
-        }.map(
-          redirectTheResult(redirectParams, _)
-        )
+        task(rh)
+          .recoverWith {
+            case e: Throwable => errorHandler.onServerError(rh, e)
+          }.map(redirectTheResult(redirectParams, _))
     }
   }
 
@@ -80,27 +82,24 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
       .getOrElse(result)
   }
 
-  def validateAndSanitize(url: String): Try[ValidatedUrl] = {
-    Try{
+  def validateAndSanitize(url: String): Try[ValidatedUrl] =
+    Try {
       val suspect = new URL(url)
-      if(!(suspect.getProtocol == "https" || (isLocalHostAllowed && suspect.getHost == LOCAL_HOST)))
+      if (suspect.getProtocol != "https" && (!isLocalHostAllowed || suspect.getHost != LOCAL_HOST))
         throw new MalformedURLException("Https is required for the redirection.")
-      if(!allowedHosts.exists {
+      if (!allowedHosts.exists {
         case base if base.startsWith("*") => suspect.getHost.endsWith(base.drop(1))
         case base                         => suspect.getHost.equalsIgnoreCase(base)
       })
         throw new MalformedURLException("Given redirection domain is not allowed.")
-    }.map( _ => ValidatedUrl(
-      url.takeWhile( c => !(c=='?' || c=='#'))
-    ))
-  }
+    }.map(_ => ValidatedUrl(url.takeWhile(c => (c != '?' && c != '#'))))
 }
 
 object RedirectionFeature {
   private val logger = Logger(getClass)
 
   val LOCAL_HOST = "localhost"
-  val MAX_URL_LENGHT = 2000
+  val MAX_URL_LENGTH = 2000
 
   case class ValidatedUrl(url: String)
   case class RedirectUrlsO(succ: Option[ValidatedUrl], fail: Option[ValidatedUrl])
@@ -112,7 +111,7 @@ object RedirectionFeature {
   }
 
   // with cats it should be much better:
-  private def optTry2TryOpt(sO: Option[Try[ValidatedUrl]], fO: Option[Try[ValidatedUrl]]) = {
+  private def optTry2TryOpt(sO: Option[Try[ValidatedUrl]], fO: Option[Try[ValidatedUrl]]): Try[RedirectUrlsO] = {
     val failureCheck = Seq(sO, fO).flatten.filter(_.isFailure)
 
     if (failureCheck.nonEmpty)
@@ -126,11 +125,10 @@ object RedirectionFeature {
 
   def addErrorDataToUrl(status: Int, msg: String): ValidatedUrl => ValidatedUrl = baseUrl => {
     val first = baseUrl.url + s"?errorCode=$status&reason="
-    val restLength = MAX_URL_LENGHT - first.length
+    val restLength = MAX_URL_LENGTH - first.length
     ValidatedUrl(first + msg.take(restLength))
   }
 
-  def extractErrorMsg(result: Result): String = {
+  def extractErrorMsg(result: Result): String =
     result.body.asInstanceOf[HttpEntity.Strict].data.decodeString("utf-8") // how to do it cleanly?
-  }
 }

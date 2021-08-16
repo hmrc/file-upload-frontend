@@ -16,28 +16,26 @@
 
 package uk.gov.hmrc.fileupload.infrastructure
 
-import akka.stream.Materializer
-import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.{BeforeAndAfterEach, EitherValues, OptionValues, Suite}
-import org.scalatest.concurrent.{Eventually, IntegrationPatience}
+import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import play.api.Application
 import play.api.http.Status
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsSuccess, Json}
 import play.api.libs.ws.WSClient
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.fileupload.TestApplicationComponents
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
-import uk.gov.hmrc.fileupload.transfer.FakeAuditer
-import uk.gov.hmrc.play.audit.http.config.{AuditingConfig, BaseUri, Consumer}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
-import akka.stream.Materializer
-import play.api.inject.ApplicationLifecycle
 
 class PlayHttpSpec
   extends AnyWordSpecLike
@@ -47,45 +45,40 @@ class PlayHttpSpec
      with BeforeAndAfterEach
      with TestApplicationComponents
      with Eventually
-     with FakeAuditer
-     with IntegrationPatience {
+     with ScalaFutures
+     with IntegrationPatience
+     with WireMockSupport {
   this: Suite =>
 
-  private lazy val fakeDownstreamSystemConfig = wireMockConfig().dynamicPort()
-  private lazy val fakeDownstreamSystem = new WireMockServer(fakeDownstreamSystemConfig)
   private lazy val downstreamPath = "/test"
-  private lazy val downstreamUrl = s"http://localhost:${fakeDownstreamSystem.port()}$downstreamPath"
+  private lazy val downstreamUrl = s"http://$wireMockHost:$wireMockPort$downstreamPath"
 
   private val testAppName = "test-app"
 
-  object TestAuditConnector extends AuditConnector {
-    override def materializer: Materializer =
-      app.injector.instanceOf[Materializer]
+  implicit override lazy val app: Application =
+    new GuiceApplicationBuilder()
+      .configure(
+        "appName"                            -> testAppName,
+        "auditing.enabled"                   -> true,
+        "auditing.consumer.baseUri.host"     -> wireMockHost,
+        "auditing.consumer.baseUri.port"     -> wireMockPort,
+        "auditing.consumer.baseUri.protocol" -> "http",
+      )
+      .build()
 
-    override def lifecycle: ApplicationLifecycle =
-      app.injector.instanceOf[ApplicationLifecycle]
+  private lazy val TestAuditConnector =
+    app.injector.instanceOf[AuditConnector]
 
-    override lazy val consumer = Consumer(BaseUri("localhost", fakeAuditer.port(), "http"))
-    override lazy val auditingConfig = AuditingConfig(Some(consumer), enabled = true, auditSource = "test-app")
-  }
+  private val wsClient = app.injector.instanceOf[WSClient]
+
+  private val hc = HeaderCarrier()
 
   private val loggedErrors = ListBuffer.empty[Throwable]
   private val testExecute = PlayHttp.execute(TestAuditConnector, testAppName, Some { t => loggedErrors += t } ) _
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    fakeDownstreamSystem.start()
-  }
-
-
   override protected def beforeEach(): Unit = {
     super.beforeEach()
-    resetAuditRequests()
-  }
-
-  override def afterAll(): Unit = {
-    super.afterAll()
-    fakeDownstreamSystem.stop()
+    wireMockServer.resetRequests()
   }
 
   "Executor" should {
@@ -98,7 +91,7 @@ class PlayHttpSpec
     }
 
     def testFor(statusCode: Int) = {
-      fakeDownstreamSystem.addStubMapping(
+      wireMockServer.addStubMapping(
         get(urlPathMatching(downstreamPath))
           .willReturn(new ResponseDefinitionBuilder()
             .withStatus(statusCode).withBody("someResponseBody")
@@ -106,8 +99,11 @@ class PlayHttpSpec
           .build()
       )
 
-      val wsClient = app.injector.instanceOf[WSClient]
-      val response = testExecute(wsClient.url(downstreamUrl).withMethod("GET")).futureValue.right.value
+      val response =
+        testExecute(
+          wsClient.url(downstreamUrl).withMethod("GET"),
+          hc
+        ).futureValue.right.value
 
       response.status shouldBe statusCode
       eventually {
@@ -117,15 +113,15 @@ class PlayHttpSpec
       val auditedItem = getAudits().get(0)
       val json = Json.parse(auditedItem.getBodyAsString)
 
-      (json \ "auditSource").validate[String] shouldBe JsSuccess[String](testAppName)
-      (json \ "tags" \ "path").validate[String] shouldBe JsSuccess[String](downstreamPath)
-      (json \ "tags" \ "method").validate[String] shouldBe JsSuccess[String]("GET")
-      (json \ "tags" \ "statusCode").validate[String] shouldBe JsSuccess[String](s"$statusCode")
+      (json \ "auditSource"          ).validate[String] shouldBe JsSuccess[String](testAppName)
+      (json \ "tags" \ "path"        ).validate[String] shouldBe JsSuccess[String](downstreamPath)
+      (json \ "tags" \ "method"      ).validate[String] shouldBe JsSuccess[String]("GET")
+      (json \ "tags" \ "statusCode"  ).validate[String] shouldBe JsSuccess[String](s"$statusCode")
       (json \ "tags" \ "responseBody").validate[String] shouldBe JsSuccess[String]("someResponseBody")
     }
 
     "logs errors" in {
-      fakeDownstreamSystem.addStubMapping(
+      wireMockServer.addStubMapping(
         get(urlPathMatching(downstreamPath))
           .willReturn(new ResponseDefinitionBuilder()
             .withFault(Fault.MALFORMED_RESPONSE_CHUNK)
@@ -133,11 +129,19 @@ class PlayHttpSpec
           .build()
       )
 
-      val wsClient = app.injector.instanceOf[WSClient]
-      val response = testExecute(wsClient.url(downstreamUrl).withMethod("GET")).futureValue
+      val response =
+        testExecute(
+          wsClient.url(downstreamUrl).withMethod("GET"),
+          hc
+        ).futureValue
 
       response shouldBe Left(PlayHttpError("Remotely closed"))
       loggedErrors.headOption.getOrElse(fail("No error logged")).getMessage shouldBe "Remotely closed"
     }
   }
+
+  def getAudits() =
+    wireMockServer.findAll(
+      postRequestedFor(urlPathMatching("/*"))
+    )
 }

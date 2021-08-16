@@ -30,7 +30,7 @@ import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{cacheFileInMemory, FileCachedInMemory}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
-import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
+import uk.gov.hmrc.fileupload.utils.StreamImplicits._
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter

@@ -40,7 +40,7 @@ object EnvelopeChecker {
 
   private val logger = Logger(getClass)
 
-  import uk.gov.hmrc.fileupload.utils.StreamImplicits.materializer
+  import uk.gov.hmrc.fileupload.utils.StreamImplicits._
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
 
