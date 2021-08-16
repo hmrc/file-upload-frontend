@@ -52,7 +52,7 @@ object CommandHandler {
 }
 
 class CommandHandlerImpl(
-  auditedHttpCall: WSRequest => Future[Either[PlayHttpError, WSResponse]],
+  auditedHttpCall: (WSRequest, HeaderCarrier) => Future[Either[PlayHttpError, WSResponse]],
   baseUrl        : String,
   wsClient       : WSClient,
   publish        : AnyRef => Unit
@@ -77,7 +77,8 @@ class CommandHandlerImpl(
         .url(url)
         .withBody(Json.toJson(command))
         .withMethod("POST")
-        .withHttpHeaders(userAgent +: hc.headersForUrl(hcConfig)(url) :_ *)
+        .withHttpHeaders(userAgent +: hc.headersForUrl(hcConfig)(url) :_ *),
+      hc
     ).map {
       case Left(error)     => Left(NotificationError.NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Right(response) => response.status match {

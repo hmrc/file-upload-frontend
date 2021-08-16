@@ -40,7 +40,7 @@ object Repository {
   type EnvelopeDetailResult = Either[EnvelopeDetailError, JsValue]
 
   def envelopeDetail(
-    auditedHttpCall : (WSRequest => Future[Either[PlayHttpError, WSResponse]]),
+    auditedHttpCall : ((WSRequest, HeaderCarrier) => Future[Either[PlayHttpError, WSResponse]]),
     baseUrl         : String,
     wsClient        : WSClient
   )(envelopeId      : EnvelopeId,
@@ -53,7 +53,8 @@ object Repository {
       wsClient
         .url(url)
         .withMethod("GET")
-        .withHttpHeaders(userAgent +: hc.headersForUrl(hcConfig)(url) :_ *)
+        .withHttpHeaders(userAgent +: hc.headersForUrl(hcConfig)(url) :_ *),
+      hc
     ).map {
       case Left(error)     => Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, error.message))
       case Right(response) => response.status match {

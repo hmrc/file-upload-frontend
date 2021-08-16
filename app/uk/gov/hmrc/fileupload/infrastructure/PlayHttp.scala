@@ -19,47 +19,73 @@ package uk.gov.hmrc.fileupload.infrastructure
 import java.net.URL
 
 import play.api.libs.ws.{WSRequest, WSResponse}
-import play.api.mvc.{Headers, Request}
+import play.api.mvc.Request
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.audit.model.{DataEvent, EventTypes}
-import uk.gov.hmrc.play.HeaderCarrierConverter
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 object PlayHttp {
 
-  def audit(connector: AuditConnector, appName: String, errorLogger: Option[(Throwable => Unit)])
-           (success: Boolean, status: Int, body: String)
-           (request: Request[_])
-           (implicit ec: ExecutionContext): Future[AuditResult] = {
-
-    val hc = HeaderCarrierConverter.fromHeadersAndSession(request.headers)
+  def audit(
+    connector  : AuditConnector,
+    appName    : String,
+    errorLogger: Option[(Throwable => Unit)]
+  )(success: Boolean,
+    status : Int,
+    body   : String
+  )(request: Request[_]
+  )(implicit
+    ec: ExecutionContext
+  ): Future[AuditResult] = {
+    val hc = HeaderCarrierConverter.fromRequest(request)
 
     connector.sendEvent(
-      DataEvent(appName, if (success) EventTypes.Succeeded else EventTypes.Failed,
-        tags = Map("method" -> request.method, "statusCode" -> s"${ status }", "responseBody" -> "")
-          ++ hc.toAuditTags(request.path, request.path),
-        detail = hc.toAuditDetails())
+      DataEvent(
+        appName,
+        if (success) EventTypes.Succeeded else EventTypes.Failed,
+        tags   = Map(
+                   "method"       -> request.method,
+                   "statusCode"   -> status.toString,
+                   "responseBody" -> ""
+                 ) ++ hc.toAuditTags(request.path, request.path),
+        detail = hc.toAuditDetails()
+      )
     )
   }
 
   case class PlayHttpError(message: String)
 
-  def execute(connector: AuditConnector, appName: String, errorLogger: Option[(Throwable => Unit)])(request: WSRequest)
-             (implicit ec: ExecutionContext): Future[Either[PlayHttpError, WSResponse]] = {
-    val hc = headerCarrier(request)
+  def execute(
+    connector  : AuditConnector,
+    appName    : String,
+    errorLogger: Option[(Throwable => Unit)]
+  )(request: WSRequest,
+    hc     : HeaderCarrier
+  )(implicit
+    ec: ExecutionContext
+  ): Future[Either[PlayHttpError, WSResponse]] = {
     val eventualResponse = request.execute()
 
     eventualResponse.foreach {
       response =>
         val path = new URL(request.url).getPath
-        connector.sendEvent(DataEvent(appName, EventTypes.Succeeded,
-          tags = Map("method" -> request.method, "statusCode" -> s"${ response.status }", "responseBody" -> response.body)
-            ++ hc.toAuditTags(path, path),
-          detail = hc.toAuditDetails()))
+        connector.sendEvent(
+          DataEvent(
+            appName,
+            EventTypes.Succeeded,
+            tags   = Map(
+                       "method"       -> request.method,
+                       "statusCode"   -> response.status.toString,
+                       "responseBody" -> response.body
+                     ) ++ hc.toAuditTags(path, path),
+            detail = hc.toAuditDetails()
+          )
+        )
     }
 
     eventualResponse.map(Right.apply)
@@ -69,7 +95,4 @@ object PlayHttp {
           Left(PlayHttpError(t.getMessage))
       }
   }
-
-  private def headerCarrier(request: WSRequest): HeaderCarrier =
-    HeaderCarrierConverter.fromHeadersAndSession(new Headers(request.headers.toSeq.map { case (s, seq) => (s, seq.head) }))
 }

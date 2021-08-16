@@ -28,7 +28,7 @@ import uk.gov.hmrc.fileupload.quarantine.{EnvelopeConstraints, EnvelopeReport}
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 import uk.gov.hmrc.fileupload.transfer.Repository.{EnvelopeDetailResult, EnvelopeDetailError}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.HeaderCarrierConverter
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -49,7 +49,7 @@ object EnvelopeChecker {
                        (action: Option[EnvelopeConstraints] => EssentialAction)
                        (implicit ec: ExecutionContext) =
     EssentialAction { implicit rh =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(rh.headers, None)
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(rh)
       Accumulator.flatten {
         checkEnvelopeDetails(envelopeId, hc).map {
           case Right(envelope) =>

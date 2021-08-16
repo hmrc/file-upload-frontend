@@ -17,9 +17,9 @@
 package uk.gov.hmrc.fileupload.utils
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 
 object StreamImplicits {
   implicit val system = ActorSystem()
-  implicit val materializer: Materializer = ActorMaterializer()
+  implicit val materializer: Materializer = implicitly[Materializer]
 }

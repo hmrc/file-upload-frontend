@@ -23,7 +23,7 @@ import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.HeaderCarrierConverter
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,7 +39,7 @@ class AdminController @Inject()(
   val commandHandler: CommandHandler = appModule.commandHandler
 
   def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
     commandHandler.notify(
       VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId)
     )
@@ -47,7 +47,7 @@ class AdminController @Inject()(
   }
 
   def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, None)
+    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
     commandHandler.notify(
       TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId)
     )
