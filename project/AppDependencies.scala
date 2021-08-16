@@ -17,20 +17,15 @@
 import sbt._
 
 private object AppDependencies {
-
-  import play.core.PlayVersion
-
-  private val playBootstrapVersion = "3.4.0"
-  private val playPartialsVersion  = "6.11.0-play-27"
-  private val authClient           = "3.2.0-play-27"
-  private val clamAvClientVersion  = "7.0.0"
+  private val bootstrapPlayVersion = "5.7.0"
+  private val playPartialsVersion  = "8.2.0-play-28"
+  private val clamAvClientVersion  = "7.0.0" // only built against play-26...
 
   val compile = Seq(
-    "uk.gov.hmrc"        %% "bootstrap-frontend-play-27" % playBootstrapVersion,
+    "uk.gov.hmrc"        %% "bootstrap-frontend-play-28" % bootstrapPlayVersion,
     "uk.gov.hmrc"        %% "play-partials"              % playPartialsVersion,
-    "uk.gov.hmrc"        %% "auth-client"                % authClient,
     "uk.gov.hmrc"        %% "clamav-client"              % clamAvClientVersion,
-    "org.typelevel"      %% "cats-core"                  % "2.2.0",
+    "org.typelevel"      %% "cats-core"                  % "2.6.1",
     "com.amazonaws"      %  "aws-java-sdk"               % "1.11.97",
     "com.lightbend.akka" %% "akka-stream-alpakka-file"   % "2.0.1",
     "com.typesafe.play"  %% "play-json-joda"             % "2.6.14",
@@ -40,16 +35,13 @@ private object AppDependencies {
   )
 
   val test = Seq(
-    "org.scalatest"          %% "scalatest"                   % "3.1.2"             % "test,it",
-    "org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"             % "test,it",
-    "com.github.tomakehurst" %  "wiremock"                    % "1.58"              % "test,it",
-    "org.scalatestplus.play" %% "scalatestplus-play"          % "4.0.3"             % "test,it",
-    "org.mockito"            %% "mockito-scala"               % "1.10.0"            % "test,it",
-    "com.vladsch.flexmark"   %  "flexmark-all"                % "0.35.10"           % "test,it",
-    "org.jsoup"              %  "jsoup"                       % "1.11.3"            % "test,it",
-    "com.typesafe.play"      %% "play-test"                   % PlayVersion.current % "test,it",
-    "com.typesafe.akka"      %% "akka-testkit"                % "2.5.31"            % "test,it",
-    "io.findify"             %% "s3mock"                      % "0.2.6"             % "it"
+    "uk.gov.hmrc"            %% "bootstrap-test-play-28"      % bootstrapPlayVersion % "test,it",
+    "org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"              % "test,it",
+    "org.mockito"            %% "mockito-scala"               % "1.10.0"             % "test,it",
+    "com.vladsch.flexmark"   %  "flexmark-all"                % "0.35.10"            % "test,it",
+    "org.jsoup"              %  "jsoup"                       % "1.11.3"             % "test,it",
+    "com.typesafe.akka"      %% "akka-testkit"                % "2.5.31"             % "test,it",
+    "io.findify"             %% "s3mock"                      % "0.2.6"              % "it"
   )
 
   val dependencies = compile ++ test

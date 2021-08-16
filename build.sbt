@@ -21,9 +21,6 @@ import scoverage.ScoverageKeys
 import uk.gov.hmrc.DefaultBuildSettings
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
-
-val appName = "file-upload-frontend"
-
 lazy val scoverageSettings =
   Seq(
     ScoverageKeys.coverageExcludedPackages := List("<empty>", "Reverse.*", ".*AuthService.*", "models/.data/..*", "view.*").mkString(";"),
@@ -36,7 +33,7 @@ lazy val scoverageSettings =
     parallelExecution in Test := false
   )
 
-lazy val microservice = Project(appName, file("."))
+lazy val microservice = Project("file-upload-frontend", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(majorVersion := 1)
@@ -44,7 +41,7 @@ lazy val microservice = Project(appName, file("."))
   .settings(scoverageSettings: _*)
   .settings(SbtDistributablesPlugin.publishingSettings: _*)
   .settings(
-    scalaVersion := "2.12.12",
+    scalaVersion := "2.12.14",
     libraryDependencies ++= AppDependencies.dependencies,
     parallelExecution in Test := false,
     retrieveManaged := true,
