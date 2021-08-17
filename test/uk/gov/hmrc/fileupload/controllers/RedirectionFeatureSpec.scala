@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import akka.actor.ActorSystem
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -24,8 +25,8 @@ import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.libs.json.Json
+import play.api.mvc.{AnyContent, EssentialAction, RequestHeader}
 import play.api.mvc.Results._
-import play.api.mvc.{Action, EssentialAction, RequestHeader}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.fileupload._
@@ -40,28 +41,36 @@ class RedirectionFeatureSpec
      with TestApplicationComponents {
 
   private val allowedHosts = Seq[String]("*.gov.uk","gov.uk","localhost")
-  private val request = FakeRequest(POST, "/").withJsonBody(Json.parse("""{ "field": "value" }"""))
+
+  private val jsonBody = Json.parse("""{ "field": "value" }""")
+  private val request = FakeRequest(POST, "/").withJsonBody(jsonBody)
+
+  val Action =
+    stubControllerComponents(bodyParser = stubBodyParser(AnyContent(jsonBody))) // we can't get the body from the request?
+      .actionBuilder
 
   val redirectionFeature = new RedirectionFeature(allowedHosts, null)
-  val redirectionWithExceptions = {
-    new RedirectionFeature(allowedHosts, new HttpErrorHandler() {
-      private val logger = Logger(getClass)
+  val redirectionWithExceptions =
+    new RedirectionFeature(
+      allowedHosts,
+      new HttpErrorHandler() {
+        private val logger = Logger(getClass)
 
-      implicit val erFormats = Json.format[ErrorResponse]
+        implicit val erFormats = Json.format[ErrorResponse]
 
-      override def onClientError(request: RequestHeader, statusCode: Int, message: String) = ???
+        override def onClientError(request: RequestHeader, statusCode: Int, message: String) = ???
 
-      override def onServerError(request: RequestHeader, ex: Throwable) = {
-        logger.error(ex.getMessage, ex)
-        Future.successful {
-          val (code, message) = ex match {
-            case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
+        override def onServerError(request: RequestHeader, ex: Throwable) = {
+          logger.error(ex.getMessage, ex)
+          Future.successful {
+            val (code, message) = ex match {
+              case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
+            }
+            new Status(code)(Json.toJson(ErrorResponse(code, message)))
           }
-          new Status(code)(Json.toJson(ErrorResponse(code, message)))
         }
       }
-    })
-  }
+    )
 
   val okAction: EssentialAction = Action { request =>
     val value = (request.body.asJson.get \ "field").as[String]
@@ -69,11 +78,11 @@ class RedirectionFeatureSpec
   }
 
   import redirectionFeature.redirect
-  import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  "Redirection feature" should {
+  implicit val actorSystem = ActorSystem()
 
+  "Redirection feature" should {
     "be backward compatible" in {
       val redirectA = redirect(None, None)(okAction)
 

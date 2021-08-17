@@ -21,8 +21,8 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.http.MimeTypes
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
+import play.api.mvc.BodyParser
 import play.api.mvc.Results._
-import play.api.mvc.{Action, BodyParser}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.mvc.BodyParser.AnyContent
@@ -33,18 +33,21 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import akka.actor.ActorSystem
 
 class EnvelopeCheckerSpec
   extends AnyWordSpecLike
      with Matchers {
-
-  import uk.gov.hmrc.fileupload.ImplicitsSupport.StreamImplicits.materializer
 
   val testRequest = FakeRequest()
 
   val testEnvelopeId = EnvelopeId()
 
   val defaultFileSize = 10 * 1024 * 1024
+
+  lazy val Action = stubControllerComponents().actionBuilder
+
+  implicit val actorSystem = ActorSystem()
 
   def envelopeMaxSizePerItemJson(size:String) = Json.parse(
     s"""{"status" : "OPEN",
@@ -76,13 +79,14 @@ class EnvelopeCheckerSpec
 
   "When an envelope is OPEN it" should {
     "be possible to execute an Action" in {
-      val expectedAction = Action { _ => Ok }
+      lazy val expectedAction = Action(_ => Ok)
 
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
       val checkEnvelopeDetails = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Right(envelopeOpen))
 
       val wrappedAction = withValidEnvelope(checkEnvelopeDetails)(testEnvelopeId)(_ => expectedAction)
-      val result = wrappedAction(testRequest).run // this for some reason causes exceptions when running with testOnly
+
+      val result = wrappedAction(testRequest).run
 
       status(result) shouldBe 200
     }

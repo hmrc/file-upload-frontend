@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.notifier
 
+import com.typesafe.config.ConfigFactory
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
@@ -51,7 +52,7 @@ object CommandHandler {
 }
 
 class CommandHandlerImpl(
-  auditedHttpCall: WSRequest => Future[Either[PlayHttpError, WSResponse]],
+  auditedHttpCall: (WSRequest, HeaderCarrier) => Future[Either[PlayHttpError, WSResponse]],
   baseUrl        : String,
   wsClient       : WSClient,
   publish        : AnyRef => Unit
@@ -62,18 +63,22 @@ class CommandHandlerImpl(
 
   val userAgent = "User-Agent" -> "FU-frontend-CH"
 
+  private val hcConfig = HeaderCarrier.Config.fromConfig(ConfigFactory.load())
+
   def sendBackendCommand[T <: BackendCommand : Writes](
     command: T
   )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
-  ): Future[NotificationResult] =
+  ): Future[NotificationResult] = {
+    val url = s"$baseUrl/file-upload/commands/${command.commandType}"
     auditedHttpCall(
       wsClient
-        .url(s"$baseUrl/file-upload/commands/${command.commandType}")
+        .url(url)
         .withBody(Json.toJson(command))
         .withMethod("POST")
-        .withHttpHeaders(userAgent +: hc.headers :_ *)
+        .withHttpHeaders(userAgent +: hc.headersForUrl(hcConfig)(url) :_ *),
+      hc
     ).map {
       case Left(error)     => Left(NotificationError.NotificationFailedError(command.id, command.fileId, 500, error.message))
       case Right(response) => response.status match {
@@ -81,6 +86,7 @@ class CommandHandlerImpl(
         case _         => Left(NotificationError.NotificationFailedError(command.id, command.fileId, response.status, response.body))
       }
     }
+  }
 
   private def sendNotification[T <: BackendCommand : Writes](
     c: T

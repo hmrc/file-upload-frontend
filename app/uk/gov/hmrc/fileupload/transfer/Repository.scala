@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
+import com.typesafe.config.ConfigFactory
 import play.api.http.Status
 import play.api.libs.json.{Json, JsValue}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
@@ -28,6 +29,8 @@ object Repository {
 
   val userAgent = "User-Agent" -> "FU-frontend-transfer"
 
+  private val hcConfig = HeaderCarrier.Config.fromConfig(ConfigFactory.load())
+
   sealed trait EnvelopeDetailError
   object EnvelopeDetailError {
     case class EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeDetailError
@@ -37,19 +40,21 @@ object Repository {
   type EnvelopeDetailResult = Either[EnvelopeDetailError, JsValue]
 
   def envelopeDetail(
-    auditedHttpCall : (WSRequest => Future[Either[PlayHttpError, WSResponse]]),
+    auditedHttpCall : ((WSRequest, HeaderCarrier) => Future[Either[PlayHttpError, WSResponse]]),
     baseUrl         : String,
     wsClient        : WSClient
   )(envelopeId      : EnvelopeId,
     hc              : HeaderCarrier
   )(implicit
     ec              : ExecutionContext
-  ): Future[EnvelopeDetailResult] =
+  ): Future[EnvelopeDetailResult] = {
+    val url = s"$baseUrl/file-upload/envelopes/${envelopeId.value}"
     auditedHttpCall(
       wsClient
-        .url(s"$baseUrl/file-upload/envelopes/${envelopeId.value}")
+        .url(url)
         .withMethod("GET")
-        .withHttpHeaders(userAgent +: hc.headers :_ *)
+        .withHttpHeaders(userAgent +: hc.headersForUrl(hcConfig)(url) :_ *),
+      hc
     ).map {
       case Left(error)     => Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, error.message))
       case Right(response) => response.status match {
@@ -58,4 +63,5 @@ object Repository {
         case _                => Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, response.body))
       }
     }
+  }
 }
