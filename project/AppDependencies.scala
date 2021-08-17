@@ -44,7 +44,9 @@ private object AppDependencies {
     "com.vladsch.flexmark"   %  "flexmark-all"                % "0.35.10"            % "test,it",
     "org.jsoup"              %  "jsoup"                       % "1.11.3"             % "test,it",
     "com.typesafe.akka"      %% "akka-testkit"                % akkaVersion          % "test,it",
-    "io.findify"             %% "s3mock"                      % "0.2.6"              % "it"
+    "io.findify"             %% "s3mock"                      % "0.2.6"              % "it",
+    // ensure all akka versions are the same
+    "com.typesafe.akka"      %% "akka-http"                   % "10.1.13"            % "it"
   )
 
   val dependencies = compile ++ test

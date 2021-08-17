@@ -33,7 +33,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import akka.stream.Materializer
 import akka.actor.ActorSystem
 
 class EnvelopeCheckerSpec

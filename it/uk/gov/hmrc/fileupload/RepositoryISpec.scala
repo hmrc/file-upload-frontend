@@ -35,7 +35,7 @@ class RepositoryISpec extends IntegrationTestApplicationComponents {
 
   "When calling the envelope check" should {
 
-    val auditedHttpCall = (request: WSRequest) => request.execute().map(Right.apply)
+    val auditedHttpCall = (request: WSRequest, hc: HeaderCarrier) => request.execute().map(Right.apply)
     val envelopeDetail = Repository.envelopeDetail(auditedHttpCall, fileUploadBackendBaseUrl, wsClient) _
 
     "if the ID is known of return a success" in {
