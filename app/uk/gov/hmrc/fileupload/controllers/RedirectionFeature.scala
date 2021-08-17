@@ -19,17 +19,19 @@ package uk.gov.hmrc.fileupload.controllers
 
 import java.net.{MalformedURLException, URL}
 
+import akka.stream.Materializer
 import akka.util.ByteString
+import cats.implicits._
 import com.typesafe.config.Config
 import play.api.Logger
-import play.api.http.{HttpEntity, HttpErrorHandler}
+import play.api.http.HttpErrorHandler
 import play.api.http.Status.{BAD_REQUEST, MOVED_PERMANENTLY}
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
 import play.api.mvc.Results.Status
 import play.api.mvc.{EssentialAction, RequestHeader, Result, Results}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 
@@ -37,9 +39,14 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
   import RedirectionFeature._
 
   def this(config: Config, errorHandler: HttpErrorHandler) =
-    this(config.getString("controllers.redirection.allowedHosts")
-      .split(",").toSeq
-      .map(_.trim), errorHandler)
+    this(
+      config
+        .getString("controllers.redirection.allowedHosts")
+        .split(",")
+        .toSeq
+        .map(_.trim),
+      errorHandler
+    )
 
   private val isLocalHostAllowed = allowedHosts.contains(LOCAL_HOST)
 
@@ -48,14 +55,14 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
     failureUrlO: Option[String]
   )(task: => EssentialAction
   )(implicit
-    ec: ExecutionContext
+    mat: Materializer,
+    ec : ExecutionContext
   ): EssentialAction = EssentialAction { implicit rh =>
-    val validation: Try[RedirectUrlsO] = {
-      val sO = successUrlO.map(validateAndSanitize)
-      val fO = failureUrlO.map(validateAndSanitize)
-
-      optTry2TryOpt(sO, fO)
-    }
+    val validation: Try[RedirectUrlsO] =
+      for {
+         optS <- successUrlO.map(validateAndSanitize).sequence
+         optF <- failureUrlO.map(validateAndSanitize).sequence
+       } yield RedirectUrlsO(optS, optF)
 
     validation match {
       case Failure(ex) => logUrlProblemAndReturn(BAD_REQUEST, ex)
@@ -63,35 +70,37 @@ class RedirectionFeature(allowedHosts: Seq[String], errorHandler: HttpErrorHandl
         task(rh)
           .recoverWith {
             case e: Throwable => errorHandler.onServerError(rh, e)
-          }.map(redirectTheResult(redirectParams, _))
+          }.mapFuture(redirectTheResult(redirectParams, _))
     }
   }
 
-  private def redirectTheResult(redirectParams: RedirectUrlsO, result: Result) = {
-    val newUrlO = {
-      import result.header.status
-
+  private def redirectTheResult(redirectParams: RedirectUrlsO, result: Result)(implicit mat: Materializer, ec: ExecutionContext): Future[Result] = {
+    import result.header.status
+    val newUrlO =
       if (status > 199 && status < 300)
-        redirectParams.succ
+        Future.successful(redirectParams.succ)
       else // only our logical errors lands here
-        redirectParams.fail
-          .map(addErrorDataToUrl(status, extractErrorMsg(result)))
-    }
-
-    newUrlO.map(redirectToUrl)
-      .getOrElse(result)
+        extractErrorMsg(result)
+          .map { errorMsg =>
+            redirectParams.fail
+              .map(addErrorDataToUrl(status, errorMsg))
+          }
+    newUrlO.map(_.fold(result)(redirectToUrl))
   }
 
   def validateAndSanitize(url: String): Try[ValidatedUrl] =
     Try {
       val suspect = new URL(url)
+
       if (suspect.getProtocol != "https" && (!isLocalHostAllowed || suspect.getHost != LOCAL_HOST))
         throw new MalformedURLException("Https is required for the redirection.")
+
       if (!allowedHosts.exists {
         case base if base.startsWith("*") => suspect.getHost.endsWith(base.drop(1))
         case base                         => suspect.getHost.equalsIgnoreCase(base)
       })
         throw new MalformedURLException("Given redirection domain is not allowed.")
+
     }.map(_ => ValidatedUrl(url.takeWhile(c => (c != '?' && c != '#'))))
 }
 
@@ -110,16 +119,6 @@ object RedirectionFeature {
     Accumulator.done(new Status(statusCode).apply(Json.obj("message" -> "URL is invalid")))
   }
 
-  // with cats it should be much better:
-  private def optTry2TryOpt(sO: Option[Try[ValidatedUrl]], fO: Option[Try[ValidatedUrl]]): Try[RedirectUrlsO] = {
-    val failureCheck = Seq(sO, fO).flatten.filter(_.isFailure)
-
-    if (failureCheck.nonEmpty)
-      Failure(failureCheck.head.failed.get)
-    else
-      Success(RedirectUrlsO(sO.map(_.get), fO.map(_.get)))
-  }
-
   def redirectToUrl(url: ValidatedUrl): Result =
     Results.Redirect(url.url, MOVED_PERMANENTLY)
 
@@ -129,6 +128,6 @@ object RedirectionFeature {
     ValidatedUrl(first + msg.take(restLength))
   }
 
-  def extractErrorMsg(result: Result): String =
-    result.body.asInstanceOf[HttpEntity.Strict].data.decodeString("utf-8") // how to do it cleanly?
+  def extractErrorMsg(result: Result)(implicit mat: Materializer, ec: ExecutionContext): Future[String] =
+    result.body.consumeData.map(_.decodeString("utf-8"))
 }
