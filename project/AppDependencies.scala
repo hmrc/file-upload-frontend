@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
+import play.core.PlayVersion.{akkaVersion, akkaHttpVersion}
 import sbt._
 
 private object AppDependencies {
   private val bootstrapPlayVersion = "5.11.0"
   private val playPartialsVersion  = "8.2.0-play-28"
   private val clamAvClientVersion  = "7.0.0" // only built against play-26...
-  private val akkaVersion          = "2.6.14"
 
   val compile = Seq(
     "uk.gov.hmrc"        %% "bootstrap-frontend-play-28" % bootstrapPlayVersion,
@@ -46,7 +46,7 @@ private object AppDependencies {
     "com.typesafe.akka"      %% "akka-testkit"                % akkaVersion          % "test,it",
     "io.findify"             %% "s3mock"                      % "0.2.6"              % "it",
     // ensure all akka versions are the same
-    "com.typesafe.akka"      %% "akka-http"                   % "10.1.13"            % "it"
+    "com.typesafe.akka"      %% "akka-http"                   % akkaHttpVersion      % "it"
   )
 
   val dependencies = compile ++ test
