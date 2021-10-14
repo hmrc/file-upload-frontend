@@ -94,7 +94,7 @@ Note: Does not have AWS.
 *   [Internal Endpoints](./docs/internal-endpoints.md)
 *   [Test-Only Endpoints](./docs/test-only-endpoints.md)
 *   [Admin Endpoints](./docs/admin-endpoints.md)
-*   [File Upload Process](https://github.com/hmrc/file-upload/blob/master/docs/file-upload-process.md)
+*   [File Upload Process](https://github.com/hmrc/file-upload/blob/HEAD/docs/file-upload-process.md)
 
 
 ## Endpoints <a name="endpoints"></a>
