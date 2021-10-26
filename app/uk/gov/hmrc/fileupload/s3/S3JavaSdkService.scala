@@ -293,7 +293,8 @@ class S3JavaSdkService @Inject()(
            md5Checksum = md5Hash,
            url         = url
          )
-    ).andThen { case _ => SingletonTemporaryFileCreator.delete(tempFile) }
+    ).recover { case e: akka.stream.IOOperationIncompleteException if e.getCause.isInstanceOf[MissingFileException] => throw e.getCause }
+     .andThen { case _ => SingletonTemporaryFileCreator.delete(tempFile) }
   }
 
   private def broadcast2[T, Mat1, Mat2](
@@ -327,7 +328,7 @@ class S3JavaSdkService @Inject()(
           bucketName = awsConfig.transientBucketName,
           key        = S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId)
         ) match {
-          case None => sys.error(s"Could not find file $fileId, for envelope $envelopeId")
+          case None => throw new MissingFileException(s"Could not find file $fileId, for envelope $envelopeId")
           case Some(streamWithMetadata) => (ArchiveMetadata(filename),
                                             streamWithMetadata.stream
                                               .mapMaterializedValue(
@@ -338,6 +339,7 @@ class S3JavaSdkService @Inject()(
       }
     ).via(Archive.zip())
     .mapError {
+      case e: MissingFileException => e
       case t: Throwable => new RuntimeException(s"Failed to create zip for envelope $envelopeId: ${t.getMessage}", t)
     }
   }

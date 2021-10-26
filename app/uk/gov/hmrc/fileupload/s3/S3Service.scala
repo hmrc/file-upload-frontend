@@ -120,3 +120,5 @@ object ZipData {
     ~ (__ \ "url"        ).write[String].contramap[URL](_.toString)
     )(unlift(ZipData.unapply))
 }
+
+class MissingFileException(message: String) extends RuntimeException(message)
