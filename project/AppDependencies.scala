@@ -18,7 +18,7 @@ import play.core.PlayVersion.{akkaVersion, akkaHttpVersion}
 import sbt._
 
 private object AppDependencies {
-  private val bootstrapPlayVersion = "5.11.0"
+  private val bootstrapPlayVersion = "5.16.0"
   private val playPartialsVersion  = "8.2.0-play-28"
   private val clamAvClientVersion  = "7.0.0" // only built against play-26...
 
@@ -39,9 +39,8 @@ private object AppDependencies {
 
   val test = Seq(
     "uk.gov.hmrc"            %% "bootstrap-test-play-28"      % bootstrapPlayVersion % "test,it",
+    "org.mockito"            %% "mockito-scala-scalatest"     % "1.16.46"            % "test,it",
     "org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"              % "test,it",
-    "org.mockito"            %% "mockito-scala"               % "1.10.0"             % "test,it",
-    "com.vladsch.flexmark"   %  "flexmark-all"                % "0.35.10"            % "test,it",
     "org.jsoup"              %  "jsoup"                       % "1.11.3"             % "test,it",
     "com.typesafe.akka"      %% "akka-testkit"                % akkaVersion          % "test,it",
     "io.findify"             %% "s3mock"                      % "0.2.6"              % "it",

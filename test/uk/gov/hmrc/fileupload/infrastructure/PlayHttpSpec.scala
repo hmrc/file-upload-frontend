@@ -51,7 +51,8 @@ class PlayHttpSpec
   this: Suite =>
 
   private lazy val downstreamPath = "/test"
-  private lazy val downstreamUrl = s"http://$wireMockHost:$wireMockPort$downstreamPath"
+  private lazy val downstreamUrl = s"$wireMockUrl$downstreamPath"
+  private val auditPath = "/write/audit" // as defined by AuditConnector
 
   private val testAppName = "test-app"
 
@@ -66,7 +67,7 @@ class PlayHttpSpec
       )
       .build()
 
-  private lazy val TestAuditConnector =
+  private lazy val testAuditConnector =
     app.injector.instanceOf[AuditConnector]
 
   private val wsClient = app.injector.instanceOf[WSClient]
@@ -74,11 +75,15 @@ class PlayHttpSpec
   private val hc = HeaderCarrier()
 
   private val loggedErrors = ListBuffer.empty[Throwable]
-  private val testExecute = PlayHttp.execute(TestAuditConnector, testAppName, Some { t => loggedErrors += t } ) _
+  private val testExecute = PlayHttp.execute(testAuditConnector, testAppName, Some { t => loggedErrors += t } ) _
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
     wireMockServer.resetRequests()
+    wireMockServer.stubFor(
+      post(urlPathMatching(auditPath))
+        .willReturn(aResponse.withStatus(200))
+    )
   }
 
   "Executor" should {
@@ -91,12 +96,9 @@ class PlayHttpSpec
     }
 
     def testFor(statusCode: Int) = {
-      wireMockServer.addStubMapping(
+      wireMockServer.stubFor(
         get(urlPathMatching(downstreamPath))
-          .willReturn(new ResponseDefinitionBuilder()
-            .withStatus(statusCode).withBody("someResponseBody")
-          )
-          .build()
+          .willReturn(aResponse.withStatus(statusCode).withBody("someResponseBody"))
       )
 
       val response =
@@ -142,6 +144,6 @@ class PlayHttpSpec
 
   def getAudits() =
     wireMockServer.findAll(
-      postRequestedFor(urlPathMatching("/*"))
+      postRequestedFor(urlPathMatching(auditPath))
     )
 }
