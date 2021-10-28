@@ -18,8 +18,7 @@ package uk.gov.hmrc.fileupload
 
 import java.io.InputStream
 
-import org.mockito.ArgumentMatchers.any
-import org.mockito.MockitoSugar
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.concurrent.{IntegrationPatience, Eventually}
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
@@ -33,6 +32,7 @@ class VirusScanFileUploadISpec
      with Eventually
      with ITTestAppComponentsWithStubbedClamAV
      with MockitoSugar
+     with ArgumentMatchersSugar
      with IntegrationPatience {
 
   "File upload front-end" should {

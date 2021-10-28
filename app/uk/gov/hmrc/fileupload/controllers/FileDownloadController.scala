@@ -23,7 +23,7 @@ import play.api.http.HttpEntity
 import play.api.libs.json.{__, Json, JsObject, JsSuccess, JsError, JsValue, Reads}
 import play.api.mvc.{AnyContent, Action, MessagesControllerComponents, ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId}
-import uk.gov.hmrc.fileupload.s3.{S3KeyName, ZipData}
+import uk.gov.hmrc.fileupload.s3.{MissingFileException, S3KeyName, ZipData}
 import uk.gov.hmrc.fileupload.s3.S3Service.DownloadFromBucket
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
@@ -84,6 +84,11 @@ class FileDownloadController @Inject()(
         zipAndPresign(envelopeId, zipRequest.files).map { zipData =>
           implicit val zdw = ZipData.writes
           Ok(Json.toJson(zipData))
+        }
+        .recover {
+          case e: MissingFileException =>
+            logger.warn(s"could not zip files for envelopeId $envelopeId - missing files")
+            Gone(e.getMessage())
         }
       case JsError(errors) => Future.successful(BadRequest(s"$errors"))
     }

@@ -48,20 +48,18 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with Int
   s3MockServer.p.createBucket("file-upload-transient", new CreateBucketConfiguration(locationConstraint = None))
 
   backend.start()
-  backend.addStubMapping(
+  backend.stubFor(
     post(
-      urlPathMatching("/file-upload/events/*"))
+      urlPathMatching("/file-upload/events/(.*)"))
         .willReturn(aResponse().withStatus(Status.OK)
     )
-    .build()
   )
 
-  backend.addStubMapping(
+  backend.stubFor(
     post(
-      urlPathMatching("/file-upload/commands/*"))
+      urlPathMatching("/file-upload/commands/(.*)"))
         .willReturn(aResponse().withStatus(Status.OK)
     )
-    .build()
   )
 
   override def afterAll(): Unit = {
@@ -77,7 +75,7 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with Int
             "maxItems" : 100,
             "maxSize" : "25MB",
             "maxSizePerItem" : "10MB"}
-          } """.stripMargin
+          } """
 
   val ENVELOPE_CLOSED_RESPONSE: String =
     """ { "status" : "CLOSED",
@@ -85,52 +83,48 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with Int
             "maxItems" : 100,
             "maxSize" : "25MB",
             "maxSizePerItem" : "10MB"}
-          } """.stripMargin
+          } """
 
   object Wiremock {
 
     def respondToEnvelopeCheck(envelopeId: EnvelopeId, status: Int = Status.OK, body: String = ENVELOPE_OPEN_RESPONSE) =
-      backend.addStubMapping(
+      backend.stubFor(
         get(urlPathMatching(s"/file-upload/envelopes/${envelopeId.value}"))
           .willReturn(
             aResponse()
               .withBody(body)
               .withStatus(status)
           )
-          .build()
       )
 
     def responseToUpload(envelopeId: EnvelopeId, fileId: FileId, status: Int = Status.OK, body: String = "") =
-      backend.addStubMapping(
+      backend.stubFor(
         put(urlPathMatching(fileContentUrl(envelopeId, fileId)))
           .willReturn(
             aResponse()
               .withBody(body)
               .withStatus(status)
           )
-          .build()
       )
 
     def respondToCreateEnvelope(envelopeIdOfCreated: EnvelopeId) =
-      backend.addStubMapping(
+      backend.stubFor(
         post(urlPathMatching(s"/file-upload/envelopes"))
           .willReturn(
             aResponse()
               .withHeader("Location", s"$fileUploadBackendBaseUrl/file-upload/envelopes/${envelopeIdOfCreated.value}")
               .withStatus(Status.CREATED)
           )
-          .build()
       )
 
     def responseToDownloadFile(envelopeId: EnvelopeId, fileId: FileId, textBody: String = "", status: Int = Status.OK) =
-      backend.addStubMapping(
+      backend.stubFor(
         get(urlPathMatching(fileContentUrl(envelopeId, fileId)))
           .willReturn(
             aResponse()
               .withBody(textBody)
               .withStatus(status)
           )
-          .build()
       )
 
     def uploadedFile(envelopeId: EnvelopeId, fileId: FileId): Option[LoggedRequest] =
