@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.transfer
+package uk.gov.hmrc.clamav
 
-import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
+import uk.gov.hmrc.clamav.config.ClamAvConfig
 
-case class TransferRequested(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) extends Event
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext
+
+class ClamAntiVirusFactory @Inject()(clamAvConfig: ClamAvConfig)(implicit ec: ExecutionContext) {
+  def getClient(): ClamAntiVirus = new ClamAntiVirus(clamAvConfig)
+}

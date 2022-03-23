@@ -14,8 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.transfer
+package uk.gov.hmrc.clamav
 
-import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
+import play.api.inject.{Binding, Module}
+import play.api.{Configuration, Environment}
+import uk.gov.hmrc.clamav.config.{ClamAvConfig, PlayClamAvConfig}
 
-case class TransferRequested(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) extends Event
+class ClientModule extends Module {
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
+    bind[ClamAvConfig].to[PlayClamAvConfig].eagerly()
+  )
+}

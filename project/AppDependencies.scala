@@ -18,18 +18,17 @@ import play.core.PlayVersion.{akkaVersion, akkaHttpVersion}
 import sbt._
 
 private object AppDependencies {
-  private val bootstrapPlayVersion = "5.16.0"
-  private val playPartialsVersion  = "8.2.0-play-28"
-  private val clamAvClientVersion  = "7.0.0" // only built against play-26...
+  private val bootstrapPlayVersion = "5.21.0"
+  private val playPartialsVersion  = "8.3.0-play-28"
 
   val compile = Seq(
     "uk.gov.hmrc"        %% "bootstrap-frontend-play-28" % bootstrapPlayVersion,
     "uk.gov.hmrc"        %% "play-partials"              % playPartialsVersion,
-    "uk.gov.hmrc"        %% "clamav-client"              % clamAvClientVersion,
     "org.typelevel"      %% "cats-core"                  % "2.6.1",
-    "com.amazonaws"      %  "aws-java-sdk"               % "1.11.97",
+    "com.amazonaws"      %  "aws-java-sdk-s3"            % "1.11.97",
     "com.lightbend.akka" %% "akka-stream-alpakka-file"   % "3.0.3",
-    "com.typesafe.play"  %% "play-json-joda"             % "2.6.14",
+    "com.typesafe.play"  %% "play-json-joda"             % "2.8.2",
+    "commons-io"         %  "commons-io"                 % "2.11.0",
 
     // ensure all akka versions are the same
     "com.typesafe.akka"  %% "akka-actor-typed"           % akkaVersion,

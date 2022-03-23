@@ -30,7 +30,7 @@ lazy val scoverageSettings =
     ScoverageKeys.coverageMinimum := 25,
     ScoverageKeys.coverageFailOnMinimum := false,
     ScoverageKeys.coverageHighlighting := true,
-    parallelExecution in Test := false
+    Test / parallelExecution := false
   )
 
 lazy val microservice = Project("file-upload-frontend", file("."))
@@ -43,9 +43,9 @@ lazy val microservice = Project("file-upload-frontend", file("."))
   .settings(
     scalaVersion := "2.12.14",
     libraryDependencies ++= AppDependencies.dependencies,
-    parallelExecution in Test := false,
+    Test / parallelExecution  := false,
     retrieveManaged := true,
-    evictionWarningOptions in update := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
+    update / evictionWarningOptions := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
     routesGenerator := InjectedRoutesGenerator
   )
   .configs(IntegrationTest)
@@ -53,8 +53,8 @@ lazy val microservice = Project("file-upload-frontend", file("."))
     DefaultBuildSettings.integrationTestSettings(),
     // since it depends on test, we must explicitly add it, and filter out the test specs.
     // this requires explicitly adding the test report option since we have replaced the testOptions.
-    unmanagedSourceDirectories in IntegrationTest := (baseDirectory in IntegrationTest)(base => Seq(base / "it", base / "test")).value,
-    testOptions in IntegrationTest := Seq(Tests.Filter(_.endsWith("ISpec"))),
+    IntegrationTest / unmanagedSourceDirectories := (IntegrationTest / baseDirectory )(base => Seq(base / "it", base / "test")).value,
+    IntegrationTest / testOptions := Seq(Tests.Filter(_.endsWith("ISpec"))),
     DefaultBuildSettings.addTestReportOption(IntegrationTest, "int-test-reports")
   )
   .settings(
