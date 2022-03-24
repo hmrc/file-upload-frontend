@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ class TestOnlyController @Inject()(
         Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
       else
         InternalServerError(
-          Json.obj("upstream_status" -> response.status, "error_message" -> response.body)
+          Json.obj("upstream_status" -> response.status, "error_message" -> response.statusText)
         )
     }
   }

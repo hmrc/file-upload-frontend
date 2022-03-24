@@ -14,8 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.transfer
+package uk.gov.hmrc.clamav.config
 
-import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
+import javax.inject.Inject
 
-case class TransferRequested(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) extends Event
+import play.api.Configuration
+
+trait ClamAvConfig {
+  val host: String
+  val port: Int
+  val timeout: Int
+}
+
+class PlayClamAvConfig @Inject()(configuration: Configuration) extends ClamAvConfig {
+  val host: String = configuration.get[String]("clam.antivirus.host")
+  val port: Int = configuration.get[Int]("clam.antivirus.port")
+  val timeout: Int = configuration.get[Int]("clam.antivirus.timeout")
+}

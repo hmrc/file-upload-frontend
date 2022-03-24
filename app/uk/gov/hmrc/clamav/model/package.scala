@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.transfer
+package uk.gov.hmrc.clamav.model
 
-import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
+sealed trait ScanningResult
 
-case class TransferRequested(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) extends Event
+case object Clean extends ScanningResult
+case class Infected(virusName: String) extends ScanningResult
+
+class ClamAvException(message: String) extends Exception(message)
