@@ -18,7 +18,7 @@ import play.core.PlayVersion.{akkaVersion, akkaHttpVersion}
 import sbt._
 
 private object AppDependencies {
-  private val bootstrapPlayVersion = "5.23.0"
+  private val bootstrapPlayVersion = "5.24.0"
   private val playPartialsVersion  = "8.3.0-play-28"
 
   val compile = Seq(
