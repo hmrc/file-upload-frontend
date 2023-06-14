@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ class EnvelopeCheckerSpec
 
       val wrappedAction = withValidEnvelope(checkEnvelopeDetails)(testEnvelopeId)(_ => expectedAction)
 
-      val result = wrappedAction(testRequest).run
+      val result = wrappedAction(testRequest).run()
 
       status(result) shouldBe 200
     }
@@ -100,7 +100,7 @@ class EnvelopeCheckerSpec
       val checkEnvelopeDetails = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Right(envelopeOpen))
 
       val wrappedAction = withValidEnvelope(checkEnvelopeDetails)(testEnvelopeId)(_ => expectedAction)
-      val result = wrappedAction(testRequest).run
+      val result = wrappedAction(testRequest).run()
 
       status(result) shouldBe 200
     }
@@ -115,7 +115,7 @@ class EnvelopeCheckerSpec
 
       val wrappedAction = withValidEnvelope(checkEnvelopeDetails)(testEnvelopeId)(_ => actionThatShouldNotExecute)
 
-      val result = wrappedAction(testRequest).run
+      val result = wrappedAction(testRequest).run()
 
       status(result) shouldBe 423
       contentAsString(result) shouldBe s"""{"message":"Unable to upload to envelope: $testEnvelopeId with status: $statusClosed"}"""
@@ -127,7 +127,7 @@ class EnvelopeCheckerSpec
       val envNotFound = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Left(EnvelopeDetailError.EnvelopeDetailNotFoundError(envId)))
 
       val wrappedAction = withValidEnvelope(envNotFound)(testEnvelopeId)(_ => actionThatShouldNotExecute)
-      val result = wrappedAction(testRequest).run
+      val result = wrappedAction(testRequest).run()
 
       status(result) shouldBe 404
       contentAsString(result) shouldBe s"""{"message":"Unable to upload to nonexistent envelope: $testEnvelopeId"}"""
@@ -140,7 +140,7 @@ class EnvelopeCheckerSpec
       val errorCheckingStatus = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Left(EnvelopeDetailError.EnvelopeDetailServiceError(envId, errorMsg)))
 
       val wrappedAction = withValidEnvelope(errorCheckingStatus)(testEnvelopeId)(_ => actionThatShouldNotExecute)
-      val result = wrappedAction(testRequest).run
+      val result = wrappedAction(testRequest).run()
 
       status(result) shouldBe 500
       contentType(result).get shouldBe MimeTypes.JSON

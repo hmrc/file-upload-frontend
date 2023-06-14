@@ -3,7 +3,7 @@ These are endpoints used for testing purposes only and are not available in prod
 
 ### ENVELOPE TEST-ONLY
 
-#### CREATE ENVELOPE (DO NOT USE) 
+#### CREATE ENVELOPE (DO NOT USE)
 -- TODO move to backend documentation
 
 Creates an envelope and auto generates an Id. The body in the http request must be json. Successful response is provided in the Location Header which will have the link of the newly created envelope.
@@ -13,7 +13,7 @@ POST   	file-upload/test-only/create-envelope
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Ok  | 201   | Successfully created envelope. |
-| Bad Request | 400   |  Envelope not created. |  
+| Bad Request | 400   |  Envelope not created. |
 
 #### EXAMPLE
 Request (POST): localhost:8899/file-upload/test-only/create-envelope
@@ -28,7 +28,7 @@ Body:
 
 Note: All parameters are optional. A [callbackUrl](https://github.com/hmrc/file-upload#callback) (documented in file-upload README) is optional but should be provided in order for the service to provide feedback of the envelope's progress.
 
-Response (in Headers): Location → localhost:8898/file-upload/envelopes/0b215e97-11d4-4006-91db-c067e74fc653
+Response (in Headers): Location -> localhost:8898/file-upload/envelopes/0b215e97-11d4-4006-91db-c067e74fc653
 
 #### SHOW ENVELOPE (DO NOT USE)
 Shows the envelope and its current details such as status, callbackurl and potentially the current files inside. It should show at least the envelope Id and the status when the envelope was created.
@@ -39,7 +39,7 @@ GET     file-upload/test-only/envelopes/{envelope-id}
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Ok  | 200   | Successfully shows envelope details.  |
-| Not Found | 404   |  Envelope with id not found. |  
+| Not Found | 404   |  Envelope with id not found. |
 
 
 #### EXAMPLE
@@ -61,13 +61,13 @@ Response (in Body):
 Download a file from a given envelope.
 
 ```
-GET      /file-upload/test-only/download-file/envelopes/{envelopeId}/files/{fileId}/content 
+GET      /file-upload/test-only/download-file/envelopes/{envelopeId}/files/{fileId}/content
 ```
 
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Ok  | 200   | Successfully returns a list of envelopes.|
-| Not Found | 404   |  File not found. |  
+| Not Found | 404   |  File not found. |
 
 #### EXAMPLE
 Request (GET): localhost:8899/file-upload/test-only/download-file/envelopes/0b215e97-11d4-4575-91db-c067e74fc111/files/file-id-2324/content
@@ -84,7 +84,7 @@ GET     /file-upload/test-only/events/{streamId}
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Ok  | 200   | Successfully returns a list of envelopes.|
-| Not Found | 404   |  Envelope with id not found. | 
+| Not Found | 404   |  Envelope with id not found. |
 
 #### EXAMPLE
 Request (GET): localhost:8899/file-upload/test-only/events/stream-id-32456
@@ -140,7 +140,7 @@ Response (in Body):
 Returns a list of all files that are inprogress.
 
 ```
-GET     /file-upload/test-only/files/inprogress 
+GET     /file-upload/test-only/files/inprogress
 ```
 
 | Responses    | Status    | Description |
@@ -211,7 +211,7 @@ POST    /file-upload/test-only/routing/requests
 | Responses    | Status    | Description |
 | --------|---------|-------|
 | Created  | 201   | Successfully created routing request.  |
-| Bad Request  | 400   | Failed to create route request. | 
+| Bad Request  | 400   | Failed to create route request. |
 
 #### EXAMPLE
 Request (POST): localhost:8898/file-routing/requests
@@ -230,8 +230,8 @@ Response(in Headers): Location -> /file-routing/requests/39e0e07d-7969-44ac-9f9c
 
 ### TRANSFER TEST-ONLY
 
-#### DOWNLOAD LIST OF ENVELOPES (DO NOT USE) 
-Returns either a list of all available or selected envelopes (via query string) for routing that have the status CLOSED and information from the routing request provided (above). 
+#### DOWNLOAD LIST OF ENVELOPES (DO NOT USE)
+Returns either a list of all available or selected envelopes (via query string) for routing that have the status CLOSED and information from the routing request provided (above).
 ```
 GET     /file-transfer/test-only/transfer/get-envelopes
 ```

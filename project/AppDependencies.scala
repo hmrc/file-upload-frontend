@@ -18,15 +18,15 @@ import play.core.PlayVersion.{akkaVersion, akkaHttpVersion}
 import sbt._
 
 private object AppDependencies {
-  private val bootstrapPlayVersion = "5.24.0"
-  private val playPartialsVersion  = "8.3.0-play-28"
+  private val bootstrapPlayVersion = "7.16.0"
+  private val playPartialsVersion  = "8.4.0-play-28"
 
   val compile = Seq(
     "uk.gov.hmrc"        %% "bootstrap-frontend-play-28" % bootstrapPlayVersion,
     "uk.gov.hmrc"        %% "play-partials"              % playPartialsVersion,
-    "org.typelevel"      %% "cats-core"                  % "2.6.1",
-    "com.amazonaws"      %  "aws-java-sdk-s3"            % "1.11.97",
-    "com.lightbend.akka" %% "akka-stream-alpakka-file"   % "3.0.3",
+    "org.typelevel"      %% "cats-core"                  % "2.9.0",
+    "com.amazonaws"      %  "aws-java-sdk-s3"            % "1.11.1034",
+    "com.lightbend.akka" %% "akka-stream-alpakka-file"   % "4.0.0",
     "com.typesafe.play"  %% "play-json-joda"             % "2.8.2",
     "commons-io"         %  "commons-io"                 % "2.11.0",
 
@@ -39,7 +39,7 @@ private object AppDependencies {
   val test = Seq(
     "uk.gov.hmrc"            %% "bootstrap-test-play-28"      % bootstrapPlayVersion % "test,it",
     "org.mockito"            %% "mockito-scala-scalatest"     % "1.16.46"            % "test,it",
-    "org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"              % "test,it",
+    //"org.scalamock"          %% "scalamock-scalatest-support" % "3.6.0"              % "test,it",
     "org.jsoup"              %  "jsoup"                       % "1.11.3"             % "test,it",
     "com.typesafe.akka"      %% "akka-testkit"                % akkaVersion          % "test,it",
     "io.findify"             %% "s3mock"                      % "0.2.6"              % "it",

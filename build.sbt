@@ -27,7 +27,7 @@ lazy val scoverageSettings =
     ScoverageKeys.coverageExcludedFiles := List(".*/frontendGlobal.*", ".*/frontendAppConfig.*", ".*/frontendWiring.*",
       ".*/views/.*_template.*", ".*/govuk_wrapper.*", ".*/routes_routing.*", ".*/BuildInfo.*").mkString(";"),
     // Minimum is deliberately low to avoid failures initially - please increase as we add more coverage
-    ScoverageKeys.coverageMinimum := 25,
+    ScoverageKeys.coverageMinimumStmtTotal := 25,
     ScoverageKeys.coverageFailOnMinimum := false,
     ScoverageKeys.coverageHighlighting := true,
     Test / parallelExecution := false
@@ -39,14 +39,12 @@ lazy val microservice = Project("file-upload-frontend", file("."))
   .settings(majorVersion := 1)
   .settings(PlayKeys.playDefaultPort := 8899)
   .settings(scoverageSettings: _*)
-  .settings(SbtDistributablesPlugin.publishingSettings: _*)
   .settings(
-    scalaVersion := "2.12.15",
+    scalaVersion := "2.13.8",
     libraryDependencies ++= AppDependencies.dependencies,
     Test / parallelExecution  := false,
-    retrieveManaged := true,
-    update / evictionWarningOptions := EvictionWarningOptions.default.withWarnScalaVersionEviction(false),
-    routesGenerator := InjectedRoutesGenerator
+    routesGenerator := InjectedRoutesGenerator,
+    scalacOptions += "-Wconf:src=routes/.*:s"
   )
   .configs(IntegrationTest)
   .settings(

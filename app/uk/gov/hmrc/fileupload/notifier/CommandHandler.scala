@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ class CommandHandlerImpl(
 
     def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T)(implicit hc: HeaderCarrier) = {
       val result = sendNotification(backendCommand)
-      result.map(_.right.foreach(_ => publish(command)))
+      result.map(_.foreach(_ => publish(command)))
       result
     }
 

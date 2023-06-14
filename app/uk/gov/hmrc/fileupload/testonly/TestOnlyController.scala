@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ class TestOnlyController @Inject()(
     wsUrl.get().map { response =>
       val body = Json.parse(response.body)
       if (response.status != 200)
-        InternalServerError(body + s" backendStatus:${response.status}")
+        InternalServerError(s"$body backendStatus:${response.status}")
       else
         Ok(body)
     }
@@ -180,10 +180,10 @@ object EnvelopeRequestWrites extends Writes[CreateEnvelopeRequest] {
     Json.obj("expiryDate" -> s.expiryDate,
              "metadata" -> s.metadata,
              "callbackUrl" -> s.callbackUrl,
-             "constraints" -> Json.obj("contentTypes" → envelopeConstraintsUserSetting.contentTypes,
-                                       "maxItems" → envelopeConstraintsUserSetting.maxItems,
-                                       "maxSize" → envelopeConstraintsUserSetting.maxSize,
-                                       "maxSizePerItem" → envelopeConstraintsUserSetting.maxSizePerItem
+             "constraints" -> Json.obj("contentTypes" -> envelopeConstraintsUserSetting.contentTypes,
+                                       "maxItems" -> envelopeConstraintsUserSetting.maxItems,
+                                       "maxSize" -> envelopeConstraintsUserSetting.maxSize,
+                                       "maxSizePerItem" -> envelopeConstraintsUserSetting.maxSizePerItem
                               )
     )
   }

@@ -53,7 +53,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       val uploadFileResponse = uploadDummyFileWithoutRedirects(envelopeId, fileId, queryParam)
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
-      uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
+      uploadFileResponse.header("Location").value shouldBe redirectSuccessUrl
     }
 
     "Redirect upon success to valid url - both success and error urls provided" in {
@@ -70,7 +70,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       val uploadFileResponse = uploadDummyFileWithoutRedirects(envelopeId, fileId, queryParam)
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
-      uploadFileResponse.header("Location").get shouldBe redirectSuccessUrl
+      uploadFileResponse.header("Location").value shouldBe redirectSuccessUrl
     }
 
     "Redirect upon error to valid url - both success and error urls provided" in {
@@ -86,7 +86,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
 
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
-      uploadFileResponse.header("Location").get.startsWith(redirectErrorUrl) shouldBe true
+      uploadFileResponse.header("Location").value.startsWith(redirectErrorUrl) shouldBe true
     }
 
     "Redirect upon success to invalid url - not https" in {
@@ -191,7 +191,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
 
       Then("upon success the user should be redirected to the url specified in the query parameter")
       uploadFileResponse.status should be(301)
-      uploadFileResponse.header("Location").get.startsWith(redirectErrorUrl) shouldBe true
+      uploadFileResponse.header("Location").value.startsWith(redirectErrorUrl) shouldBe true
     }
 
   }

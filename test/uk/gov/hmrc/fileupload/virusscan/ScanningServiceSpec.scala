@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ package uk.gov.hmrc.fileupload.virusscan
 
 import java.io.{FileInputStream, InputStream}
 
+import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
@@ -33,8 +33,9 @@ import scala.concurrent.Future
 class ScanningServiceSpec
   extends AnyFlatSpec
      with Matchers
+     with MockitoSugar
+     with ArgumentMatchersSugar
      with ScalaFutures
-     with MockFactory
      with IntegrationPatience {
 
   private val exception = new Exception("error")
@@ -65,32 +66,35 @@ class ScanningServiceSpec
   it should behave like timeoutFollowedByNonTimeout(Left(ScanResultError(exception)), "error", 2)
   it should behave like timeoutFollowedByNonTimeout(Left(ScanReadCommandTimeOut), "timeout", 3)
 
-  def timeoutFollowedByNonTimeout(scanResult: ScanResult, scanResultType: String, attempts: Int) {
+  def timeoutFollowedByNonTimeout(scanResult: ScanResult, scanResultType: String, attempts: Int): Unit = {
     it should s"make exactly $attempts when followed by a $scanResultType scan result" in {
-      val scanner = stubFunction[InputStream, Long, Future[ScanResult]]
+      val scanner = mock[(InputStream, Long) => Future[ScanResult]]
 
-      scanner.when(*, *).returns(Future.successful(Left(ScanReadCommandTimeOut))).noMoreThanOnce()
-      scanner.when(*, *).returns(Future.successful(scanResult))
+      when(scanner.apply(any[InputStream], any[Long]))
+        .thenReturn(
+          Future.successful(Left(ScanReadCommandTimeOut)),
+        Future.successful(scanResult))
 
       val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = timeoutAttempts, getFile = (_, _) => file)((_, _) => S3KeyName("some-key"))(EnvelopeId(), FileId(), FileRefId()).futureValue
 
       result shouldBe scanResult
 
-      scanner.verify(*, *).repeat(attempts)
+      verify(scanner, times(attempts)).apply(any, any)
     }
   }
 
-  def scanWithNumberOfAttempts(scanResult: ScanResult, attempts: Int, maxNumberOfAttemps: Int = timeoutAttempts) {
+  def scanWithNumberOfAttempts(scanResult: ScanResult, attempts: Int, maxNumberOfAttemps: Int = timeoutAttempts): Unit = {
     it should s"make exactly $attempts attempt[s] at scanning" in {
-      val scanner = stubFunction[InputStream, Long, Future[ScanResult]]
+      val scanner = mock[(InputStream, Long) => Future[ScanResult]]
 
-      scanner.when(*, *).returns(Future.successful(scanResult))
+      when(scanner.apply(any[InputStream], any[Long]))
+        .thenReturn(Future.successful(scanResult))
 
       val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = maxNumberOfAttemps, getFile = (_, _) => file)((_, _) => S3KeyName("some-key"))(EnvelopeId(), FileId(), FileRefId()).futureValue
 
       result shouldBe scanResult
 
-      scanner.verify(*, *).repeat(attempts)
+      verify(scanner, times(attempts)).apply(any, any)
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,9 +46,9 @@ import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
 @Singleton
@@ -188,7 +188,7 @@ class S3JavaSdkService @Inject()(
     val uploadTime = metricUploadCompleted.time()
     Try(transferManager.upload(bucketName, key.value, file, metadata)) match {
       case Success(upload) =>
-        val promise = Promise[UploadResult]
+        val promise = Promise[UploadResult]()
         logger.info(s"upload-s3 started: $fileInfo")
         upload.addProgressListener(new ProgressListener {
           var events:List[ProgressEvent] = List.empty
@@ -302,7 +302,7 @@ class S3JavaSdkService @Inject()(
     sink1: Sink[T, Mat1],
     sink2: Sink[T, Mat2]
   ): RunnableGraph[(Mat1, Mat2)] =
-    RunnableGraph.fromGraph(GraphDSL.create(sink1, sink2)(Tuple2.apply) {
+    RunnableGraph.fromGraph(GraphDSL.createGraph(sink1, sink2)(Tuple2.apply) {
       implicit builder => (s1, s2) =>
         import GraphDSL.Implicits._
         val broadcast = builder.add(Broadcast[T](2))
@@ -323,7 +323,7 @@ class S3JavaSdkService @Inject()(
     // load as an iterator to avoid downloading multiple files at once - aws connection pool is limited
     // also since streams must be consumed for the connection to be returned, we don't want to get any prematurely
     Source.fromIterator( () =>
-      filesUnique.toIterator.map { case (fileId, filename) =>
+      filesUnique.iterator.map { case (fileId, filename) =>
         download(
           bucketName = awsConfig.transientBucketName,
           key        = S3Key.forEnvSubdir(awsConfig.envSubdir)(envelopeId, fileId)
@@ -365,7 +365,7 @@ object S3JavaSdkService {
   def dedupeFilenames(envelopeId: EnvelopeId, files: List[(FileId, Option[String])]): List[(FileId, String)] =
     files
       .groupBy(_._2)
-      .mapValues(_.map(_._1))
+      .view.mapValues(_.map(_._1))
       .toList
       .flatMap {
         case (None          , fileIds    ) => fileIds.map(_ -> UUID.randomUUID().toString)
@@ -397,6 +397,6 @@ class S3FilesIterator(s3Client: AmazonS3, bucketName: String) extends Iterator[S
     val current = summaries
     listing = s3Client.listNextBatchOfObjects(listing)
     _hasNext = listing.isTruncated
-    current.asScala
+    current.asScala.toSeq
   }
 }
