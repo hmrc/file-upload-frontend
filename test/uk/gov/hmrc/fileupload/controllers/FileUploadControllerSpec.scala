@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.mockito.MockitoSugar
+import org.scalatest.EitherValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -45,6 +46,7 @@ class FileUploadControllerSpec
   extends AnyWordSpecLike
      with Matchers
      with MockitoSugar
+     with EitherValues
      with ScalaFutures
      with TestApplicationComponents {
 
@@ -163,7 +165,7 @@ class FileUploadControllerSpec
   "function metadataToJson" should {
     "convert params of a multipart/form-data request to a Json Object" in {
       val params = Map("foo" -> Seq("1"), "bar" -> Seq("2"))
-      val formData = multipartFormData(params).body.right.get
+      val formData = multipartFormData(params).body.right.value
 
       val result = FileUploadController.metadataAsJson(formData)
 
@@ -171,7 +173,7 @@ class FileUploadControllerSpec
     }
     "work for an empty set of params" in {
       val params: Map[String, Seq[String]] = Map()
-      val formData = multipartFormData(params).body.right.get
+      val formData = multipartFormData(params).body.right.value
 
       val result = FileUploadController.metadataAsJson(formData)
 
@@ -179,7 +181,7 @@ class FileUploadControllerSpec
     }
     "work for keys with no corresponding values" in {
       val params: Map[String, Seq[String]] = Map("foo" -> Seq())
-      val formData = multipartFormData(params).body.right.get
+      val formData = multipartFormData(params).body.right.value
 
       val result = FileUploadController.metadataAsJson(formData)
 
@@ -187,7 +189,7 @@ class FileUploadControllerSpec
     }
     "work for keys with multiple values" in {
       val params: Map[String, Seq[String]] = Map("foo" -> Seq("bar", "baz"))
-      val formData = multipartFormData(params).body.right.get
+      val formData = multipartFormData(params).body.right.value
 
       val result = FileUploadController.metadataAsJson(formData)
 

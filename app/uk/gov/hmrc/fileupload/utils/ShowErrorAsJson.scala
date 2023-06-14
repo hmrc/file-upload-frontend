@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND}
 import play.api.libs.json.Json
 import play.api.mvc.Results._
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.http.{HttpException, Upstream4xxResponse, Upstream5xxResponse}
+import uk.gov.hmrc.http.{HttpException, UpstreamErrorResponse}
 
 import scala.concurrent.Future
 
@@ -54,10 +54,7 @@ class ShowErrorAsJson @Inject()(
     Future.successful {
       val (code, message) = ex match {
         case e: HttpException => (e.responseCode, e.getMessage)
-
-        case e: Upstream4xxResponse => (e.reportAs, e.getMessage)
-        case e: Upstream5xxResponse => (e.reportAs, e.getMessage)
-
+        case e: UpstreamErrorResponse => (e.reportAs, e.getMessage)
         case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
       }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3KeyName}
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 trait S3TestController { self: FrontendController =>
@@ -76,7 +75,7 @@ trait S3TestController { self: FrontendController =>
   def copyFromQtoT(fileName: String, versionId: String) = Action { _ =>
     s3Service.copyFromQtoT(S3KeyName(fileName), versionId) match {
       case Success(result) => Ok(s"Successfully copied file: $fileName, etag: ${result.getETag}, versionId: ${result.getVersionId}")
-      case Failure(NonFatal(ex)) => InternalServerError("Problem copying to transient: " + ex.getMessage)
+      case Failure(ex) => InternalServerError("Problem copying to transient: " + ex.getMessage)
     }
   }
 

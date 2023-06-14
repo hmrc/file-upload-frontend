@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext
-import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
@@ -36,7 +35,7 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   private val logger = Logger(getClass)
 
-  override def preStart = {
+  override def preStart(): Unit = {
     subscribe(self, classOf[MarkFileAsClean])
     subscribe(self, classOf[TransferRequested])
   }
@@ -59,7 +58,7 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
           StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId))
         )
         logger.info(s"File successfully transferred for envelopeId: $envelopeId, fileId: $fileId and version: $fileRefId")
-      case Failure(NonFatal(ex)) =>
+      case Failure(ex) =>
         logger.error(s"File not transferred for $envelopeId and $fileId and $fileRefId", ex)
     }
 }
