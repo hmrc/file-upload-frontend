@@ -100,7 +100,6 @@
 						}
 					],
 					"cookie": [],
-					"responseTime": 30,
 					"body": "{\"_id\":\"0e17bd50-9993-45a3-9533-2a71f7a278a7\",\"constraints\":{\"contentTypes\":[\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"application/vnd.oasis.opendocument.spreadsheet\"],\"maxItems\":100,\"maxSize\":\"12GB\",\"maxSizePerItem\":\"10MB\"},\"callbackUrl\":\"http://absolute.callback.url\",\"expiryDate\":1467893730000,\"metadata\":{\"anything\":\"the caller wants to add to the envelope\"}}"
 				}
 			]
@@ -311,7 +310,6 @@
 						}
 					],
 					"cookie": [],
-					"responseTime": 30,
 					"body": "{\"_id\":\"0e17bd50-9993-45a3-9533-2a71f7a278a7\",\"constraints\":{\"contentTypes\":[\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"application/vnd.oasis.opendocument.spreadsheet\"],\"maxItems\":100,\"maxSize\":\"12GB\",\"maxSizePerItem\":\"10MB\"},\"callbackUrl\":\"http://absolute.callback.url\",\"expiryDate\":1467893730000,\"metadata\":{\"anything\":\"the caller wants to add to the envelope\"}}"
 				}
 			]
@@ -404,7 +402,6 @@
 						}
 					],
 					"cookie": [],
-					"responseTime": 30,
 					"body": "{\"_id\":\"0e17bd50-9993-45a3-9533-2a71f7a278a7\",\"constraints\":{\"contentTypes\":[\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\",\"application/vnd.oasis.opendocument.spreadsheet\"],\"maxItems\":100,\"maxSize\":\"12GB\",\"maxSizePerItem\":\"10MB\"},\"callbackUrl\":\"http://absolute.callback.url\",\"expiryDate\":1467893730000,\"metadata\":{\"anything\":\"the caller wants to add to the envelope\"}}"
 				}
 			]
