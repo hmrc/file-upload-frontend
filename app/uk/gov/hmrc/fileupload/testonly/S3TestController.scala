@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload.testonly
 
-import akka.stream.scaladsl.Source
+import org.apache.pekko.stream.scaladsl.Source
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import play.api.Logger
 import play.api.http.HttpEntity

@@ -19,8 +19,8 @@ package uk.gov.hmrc.fileupload.virusscan
 import java.net.SocketException
 import java.io.{ByteArrayInputStream, InputStream}
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.ActorMaterializer
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike

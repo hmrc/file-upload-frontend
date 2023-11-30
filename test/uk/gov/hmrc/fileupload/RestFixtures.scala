@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
-import akka.util.ByteString
+import org.apache.pekko.util.ByteString
 import play.api.mvc.MultipartFormData.FilePart
 import play.api.mvc.{MaxSizeExceeded, MultipartFormData, Request}
 import play.api.test.{FakeHeaders, FakeRequest}

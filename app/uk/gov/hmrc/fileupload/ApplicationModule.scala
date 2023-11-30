@@ -18,8 +18,8 @@ package uk.gov.hmrc.fileupload
 
 import java.util.concurrent.Executors
 
-import akka.actor.ActorRef
-import com.kenshoo.play.metrics.MetricsImpl
+import org.apache.pekko.actor.ActorRef
+import com.codahale.metrics.MetricRegistry
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpErrorHandler
@@ -44,21 +44,21 @@ import scala.concurrent.{ExecutionContext, Future}
 class ApplicationModule @Inject()(
   servicesConfig          : ServicesConfig,
   auditConnector          : AuditConnector,
-  metrics                 : MetricsImpl,
+  metricsRegistry         : MetricRegistry,
   avClient                : AvClient,
   httpErrorHandler        : HttpErrorHandler,
-  actorSystem             : akka.actor.ActorSystem,
+  actorSystem             : org.apache.pekko.actor.ActorSystem,
   val applicationLifecycle: play.api.inject.ApplicationLifecycle,
   val configuration       : play.api.Configuration,
   val environment         : play.api.Environment
 )(implicit
   val executionContext: scala.concurrent.ExecutionContext,
-  val materializer    : akka.stream.Materializer
+  val materializer    : org.apache.pekko.stream.Materializer
 ) extends AhcWSComponents {
 
   private val logger = Logger(getClass)
 
-  lazy val s3Service = new S3JavaSdkService(configuration.underlying, metrics.defaultRegistry)
+  lazy val s3Service = new S3JavaSdkService(configuration.underlying, metricsRegistry)
 
   lazy val downloadFromTransient = s3Service.downloadFromTransient
 

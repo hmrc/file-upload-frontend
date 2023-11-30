@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
-import akka.actor.Status.Failure
-import akka.actor.{Actor, ActorRef, Props}
-import akka.pattern.pipe
+import org.apache.pekko.actor.Status.Failure
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.pattern.pipe
 import play.api.Logger
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.FileInQuarantineStored

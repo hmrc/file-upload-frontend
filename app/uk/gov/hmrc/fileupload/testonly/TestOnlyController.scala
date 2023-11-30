@@ -175,7 +175,11 @@ object CreateEnvelopeRequest {
 
 object EnvelopeRequestWrites extends Writes[CreateEnvelopeRequest] {
   override def writes(s: CreateEnvelopeRequest): JsValue = {
-    implicit val dateWrites: Writes[DateTime] = JodaWrites.jodaDateWrites("yyyy-MM-dd'T'HH:mm:ss'Z'")
+    implicit val dateWrites: Writes[DateTime] = {
+      val pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+      val df      = org.joda.time.format.DateTimeFormat.forPattern(pattern)
+      Writes[DateTime] { d => JsString(d.toString(df)) }
+    }
     val envelopeConstraintsUserSetting = s.constraints.getOrElse(EnvelopeConstraintsUserSetting(None,None,None,None))
     Json.obj("expiryDate" -> s.expiryDate,
              "metadata" -> s.metadata,
@@ -190,7 +194,19 @@ object EnvelopeRequestWrites extends Writes[CreateEnvelopeRequest] {
 }
 
 object EnvelopeRequestReads extends Reads[CreateEnvelopeRequest] {
-  implicit val dateReads: Reads[DateTime] = JodaReads.jodaDateReads("yyyy-MM-dd'T'HH:mm:ss'Z'")
+  implicit val dateReads: Reads[DateTime] = new Reads[DateTime] {
+    val pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+    val df      = org.joda.time.format.DateTimeFormat.forPattern(pattern)
+    def reads(json: JsValue): JsResult[DateTime] =
+      json match {
+        case JsNumber(d) => JsSuccess(new DateTime(d.toLong))
+        case JsString(s) => scala.util.Try(DateTime.parse(s, df)).toOption match {
+                              case Some(d) => JsSuccess(d)
+                              case _       => JsError(Seq(JsPath() -> Seq(JsonValidationError("error.expected.jodadate.format", pattern))))
+                            }
+        case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError("error.expected.date"))))
+      }
+  }
   implicit val constraintsFormats: OFormat[EnvelopeConstraintsUserSetting] = Json.format[EnvelopeConstraintsUserSetting]
 
   override def reads(value: JsValue): JsSuccess[CreateEnvelopeRequest] = {

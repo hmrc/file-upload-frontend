@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import akka.util.ByteString
+import org.apache.pekko.util.ByteString
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpEntity

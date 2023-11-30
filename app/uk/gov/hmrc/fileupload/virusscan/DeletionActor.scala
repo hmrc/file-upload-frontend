@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
-import akka.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
 import play.api.Logger
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.notifier.MarkFileAsInfected
