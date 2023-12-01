@@ -32,7 +32,7 @@ trait ITTestAppComponentsWithStubbedClamAV
   override lazy val numberOfTimeoutAttempts: Int = 3
   override lazy val avClient: Option[AvClient] = Some(stubbedAvClient)
 
-  override def beforeEach {
+  override def beforeEach(): Unit = {
     super.beforeEach()
     reset(stubbedAvClient)
   }

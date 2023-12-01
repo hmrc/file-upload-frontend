@@ -28,7 +28,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import play.api.http.Status
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 trait FakeFileUploadBackend
   extends BeforeAndAfterAll

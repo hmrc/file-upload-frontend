@@ -16,45 +16,66 @@
 
 package uk.gov.hmrc.fileupload.notifier
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{Format, JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 
 sealed trait BackendCommand {
   def commandType: String
-  def id: EnvelopeId
-  def fileId: FileId
-  def fileRefId: FileRefId
+  def id         : EnvelopeId
+  def fileId     : FileId
+  def fileRefId  : FileRefId
 }
 
-case class QuarantineFile(id: EnvelopeId, fileId: FileId, fileRefId: FileRefId,
-                          created: Long, name: String, contentType: String, length: Long, metadata: JsObject) extends BackendCommand {
+case class QuarantineFile(
+  id         : EnvelopeId,
+  fileId     : FileId,
+  fileRefId  : FileRefId,
+  created    : Long,
+  name       : String,
+  contentType: String,
+  length     : Long,
+  metadata   : JsObject
+) extends BackendCommand {
   val commandType = "quarantine-file"
 }
 
 object QuarantineFile {
-  implicit val format = Json.format[QuarantineFile]
+  implicit val format: Format[QuarantineFile] = Json.format[QuarantineFile]
 }
 
-case class MarkFileAsClean(id: EnvelopeId, fileId: FileId, fileRefId: FileRefId) extends BackendCommand {
+case class MarkFileAsClean(
+  id       : EnvelopeId,
+  fileId   : FileId,
+  fileRefId: FileRefId
+) extends BackendCommand {
   val commandType = "mark-file-as-clean"
 }
 
 object MarkFileAsClean {
-  implicit val format = Json.format[MarkFileAsClean]
+  implicit val format: Format[MarkFileAsClean] = Json.format[MarkFileAsClean]
 }
 
-case class MarkFileAsInfected(id: EnvelopeId, fileId: FileId, fileRefId: FileRefId) extends BackendCommand {
+case class MarkFileAsInfected(
+  id       : EnvelopeId,
+  fileId   : FileId,
+  fileRefId: FileRefId
+) extends BackendCommand {
   val commandType = "mark-file-as-infected"
 }
 
 object MarkFileAsInfected {
-  implicit val format = Json.format[MarkFileAsInfected]
+  implicit val format: Format[MarkFileAsInfected] = Json.format[MarkFileAsInfected]
 }
 
-case class StoreFile(id: EnvelopeId, fileId: FileId, fileRefId: FileRefId, length: Long) extends BackendCommand {
+case class StoreFile(
+  id       : EnvelopeId,
+  fileId   : FileId,
+  fileRefId: FileRefId,
+  length   : Long
+) extends BackendCommand {
   val commandType = "store-file"
 }
 
 object StoreFile {
-  implicit val format = Json.format[StoreFile]
+  implicit val format: Format[StoreFile] = Json.format[StoreFile]
 }

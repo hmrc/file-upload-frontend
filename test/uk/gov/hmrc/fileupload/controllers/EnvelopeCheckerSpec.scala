@@ -47,7 +47,7 @@ class EnvelopeCheckerSpec
 
   lazy val Action = stubControllerComponents().actionBuilder
 
-  implicit val actorSystem = ActorSystem()
+  implicit val actorSystem: ActorSystem = ActorSystem()
 
   def envelopeMaxSizePerItemJson(size:String) = Json.parse(
     s"""{"status" : "OPEN",
@@ -207,7 +207,7 @@ class EnvelopeCheckerSpec
   "When returned envelope data does not have allowZeroLengthFiles" should {
     "allowZeroLengthFiles should be undefined in constraints" in {
       val constraints = extractEnvelopeDetails(envelopeAllowZeroLengthFiles(None)).constraints
-      constraints.flatMap(_.allowZeroLengthFiles) should not be 'defined
+      constraints.flatMap(_.allowZeroLengthFiles) should not be Symbol("defined")
     }
   }
 

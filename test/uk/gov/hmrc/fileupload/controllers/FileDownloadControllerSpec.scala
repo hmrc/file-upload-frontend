@@ -41,7 +41,7 @@ class FileDownloadControllerSpec
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit lazy val mat = app.injector.instanceOf[Materializer]
+  implicit lazy val mat: Materializer = app.injector.instanceOf[Materializer]
 
   val appModule = mock[ApplicationModule]
 

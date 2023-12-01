@@ -127,6 +127,7 @@ class FileUploadControllerSpec
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
     }
+
     "return 400 Bad Request if >1 files were found in the request" in {
       val requestWith2Files = validUploadRequest(List(anyFile(), anyFile()))
 
@@ -135,6 +136,7 @@ class FileUploadControllerSpec
       status(result) shouldBe Status.BAD_REQUEST
       contentAsString(result) shouldBe """{"error":{"msg":"Request must have exactly 1 file attached"}}"""
     }
+
     "return 413 Entity To Large if file size exceeds 10MB" in {
       val tooLargeRequest = validUploadRequest(List(anyFile()), sizeExceeded = true)
 
@@ -165,31 +167,34 @@ class FileUploadControllerSpec
   "function metadataToJson" should {
     "convert params of a multipart/form-data request to a Json Object" in {
       val params = Map("foo" -> Seq("1"), "bar" -> Seq("2"))
-      val formData = multipartFormData(params).body.right.value
+      val formData = multipartFormData(params).body.value
 
       val result = FileUploadController.metadataAsJson(formData)
 
       result shouldBe Json.obj("foo" -> "1", "bar" -> "2")
     }
+
     "work for an empty set of params" in {
       val params: Map[String, Seq[String]] = Map()
-      val formData = multipartFormData(params).body.right.value
+      val formData = multipartFormData(params).body.value
 
       val result = FileUploadController.metadataAsJson(formData)
 
       result shouldBe Json.obj()
     }
+
     "work for keys with no corresponding values" in {
       val params: Map[String, Seq[String]] = Map("foo" -> Seq())
-      val formData = multipartFormData(params).body.right.value
+      val formData = multipartFormData(params).body.value
 
       val result = FileUploadController.metadataAsJson(formData)
 
       result shouldBe Json.obj()
     }
+
     "work for keys with multiple values" in {
       val params: Map[String, Seq[String]] = Map("foo" -> Seq("bar", "baz"))
-      val formData = multipartFormData(params).body.right.value
+      val formData = multipartFormData(params).body.value
 
       val result = FileUploadController.metadataAsJson(formData)
 
