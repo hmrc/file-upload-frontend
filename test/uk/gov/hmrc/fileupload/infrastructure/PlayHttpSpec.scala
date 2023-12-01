@@ -105,7 +105,7 @@ class PlayHttpSpec
         testExecute(
           wsClient.url(downstreamUrl).withMethod("GET"),
           hc
-        ).futureValue.right.value
+        ).futureValue.value
 
       response.status shouldBe statusCode
       eventually {

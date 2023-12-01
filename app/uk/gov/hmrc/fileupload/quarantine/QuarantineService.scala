@@ -25,12 +25,21 @@ object QuarantineService {
   type QuarantineDownloadResult = Either[QuarantineDownloadFileNotFound.type, File]
   case object QuarantineDownloadFileNotFound
 
-  def getFileFromQuarantine(retrieveFile: (S3KeyName, String) => Future[Option[FileData]])
-                           (key: S3KeyName, version: String)
-                           (implicit executionContext: ExecutionContext): Future[QuarantineDownloadResult] =
+  def getFileFromQuarantine(
+    retrieveFile: (S3KeyName, String) => Future[Option[FileData]]
+  )(
+    key: S3KeyName,
+    version: String
+  )(implicit
+    ec: ExecutionContext
+  ): Future[QuarantineDownloadResult] =
     for {
       maybeFileData <- retrieveFile(key, version)
     } yield
       maybeFileData.toRight(QuarantineDownloadFileNotFound)
-        .map(fd => File(data = fd.data, length = fd.length, filename = fd.filename, contentType = fd.contentType))
+        .map(fd => File(data        = fd.data,
+                        length      = fd.length,
+                        filename    = fd.filename,
+                        contentType = fd.contentType
+        ))
 }

@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import org.apache.pekko.actor.ActorSystem
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.http.MimeTypes
@@ -33,7 +34,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import akka.actor.ActorSystem
 
 class EnvelopeCheckerSpec
   extends AnyWordSpecLike
@@ -47,7 +47,7 @@ class EnvelopeCheckerSpec
 
   lazy val Action = stubControllerComponents().actionBuilder
 
-  implicit val actorSystem = ActorSystem()
+  implicit val actorSystem: ActorSystem = ActorSystem()
 
   def envelopeMaxSizePerItemJson(size:String) = Json.parse(
     s"""{"status" : "OPEN",
@@ -207,7 +207,7 @@ class EnvelopeCheckerSpec
   "When returned envelope data does not have allowZeroLengthFiles" should {
     "allowZeroLengthFiles should be undefined in constraints" in {
       val constraints = extractEnvelopeDetails(envelopeAllowZeroLengthFiles(None)).constraints
-      constraints.flatMap(_.allowZeroLengthFiles) should not be 'defined
+      constraints.flatMap(_.allowZeroLengthFiles) should not be Symbol("defined")
     }
   }
 

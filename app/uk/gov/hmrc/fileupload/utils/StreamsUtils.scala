@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.fileupload.utils
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 
 object StreamImplicits {
-  implicit val system = ActorSystem()
+  implicit val system: ActorSystem = ActorSystem()
 }

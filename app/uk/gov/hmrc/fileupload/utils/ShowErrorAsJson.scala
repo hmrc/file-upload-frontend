@@ -20,7 +20,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.{Environment, Configuration, Logger}
 import play.api.http.DefaultHttpErrorHandler
 import play.api.http.Status.{BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND}
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.Results._
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.http.{HttpException, UpstreamErrorResponse}
@@ -47,15 +47,15 @@ class ShowErrorAsJson @Inject()(
 
   private val logger = Logger(getClass)
 
-  implicit val erFormats = Json.format[ErrorResponse]
+  implicit val erFormats: Format[ErrorResponse] = Json.format[ErrorResponse]
 
   override def onServerError(request: RequestHeader, ex: Throwable) = {
     logger.error(ex.getMessage, ex)
     Future.successful {
       val (code, message) = ex match {
-        case e: HttpException => (e.responseCode, e.getMessage)
-        case e: UpstreamErrorResponse => (e.reportAs, e.getMessage)
-        case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
+        case e: HttpException         => (e.responseCode       , e.getMessage)
+        case e: UpstreamErrorResponse => (e.reportAs           , e.getMessage)
+        case e: Throwable             => (INTERNAL_SERVER_ERROR, e.getMessage)
       }
 
       new Status(code)(Json.toJson(ErrorResponse(code, message)))

@@ -19,10 +19,19 @@ package uk.gov.hmrc.fileupload.virusscan
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
 
-case class FileScanned(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId, hasVirus: Boolean) extends Event
+case class FileScanned(
+  envelopeId: EnvelopeId,
+  fileId    : FileId,
+  fileRefId : FileRefId,
+  hasVirus  : Boolean
+) extends Event
 
 object FileScanned {
   implicit val fileScannedFormats: Format[FileScanned] = Json.format[FileScanned]
 }
 
-case class VirusScanRequested(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) extends Event
+case class VirusScanRequested(
+  envelopeId: EnvelopeId,
+  fileId    : FileId,
+  fileRefId : FileRefId
+) extends Event

@@ -19,8 +19,7 @@ package uk.gov.hmrc.fileupload.virusscan
 import java.net.SocketException
 import java.io.{ByteArrayInputStream, InputStream}
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import org.apache.pekko.actor.ActorSystem
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -38,8 +37,7 @@ class VirusScannerSpec
      with TestApplicationComponents
      with IntegrationPatience {
 
-  implicit val sys = ActorSystem("test")
-  implicit val mat = ActorMaterializer
+  implicit val as: ActorSystem = ActorSystem("test")
 
   val inputString = "a random string long enough to by divided into chunks"
   private def fileSource: InputStream = new ByteArrayInputStream(inputString.getBytes)

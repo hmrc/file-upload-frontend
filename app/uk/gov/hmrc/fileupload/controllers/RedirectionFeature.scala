@@ -19,8 +19,8 @@ package uk.gov.hmrc.fileupload.controllers
 
 import java.net.{MalformedURLException, URL}
 
-import akka.stream.Materializer
-import akka.util.ByteString
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.util.ByteString
 import cats.implicits._
 import com.typesafe.config.Config
 import play.api.Logger

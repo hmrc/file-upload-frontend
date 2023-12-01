@@ -16,13 +16,15 @@
 
 package uk.gov.hmrc.fileupload.support
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, JsValue}
 
 object EnvelopeReportSupport extends Support {
 
-  def requestBodyAsJson(args: Map[String, Any] = Map.empty) = Json.parse(requestBody(args))
+  def requestBodyAsJson(args: Map[String, Any] = Map.empty): JsValue =
+    Json.parse(requestBody(args))
 
-  def requestBody(args: Map[String, Any] = Map.empty) = s"""
+  def requestBody(args: Map[String, Any] = Map.empty): String =
+    s"""
      |{
      |  "constraints": {
      |    "contentTypes": [
@@ -42,9 +44,11 @@ object EnvelopeReportSupport extends Support {
      |}
 		 """.stripMargin
 
-  def responseBodyAsJson(id: String, args: Map[String, Any] = Map.empty) = Json.parse(responseBody(id, args))
+  def responseBodyAsJson(id: String, args: Map[String, Any] = Map.empty): JsValue =
+    Json.parse(responseBody(id, args))
 
-  def responseBody(id: String, args: Map[String, Any] = Map.empty) = s"""
+  def responseBody(id: String, args: Map[String, Any] = Map.empty): String =
+    s"""
     |{
     |  "id": "$id",
     |  "constraints": {
@@ -64,5 +68,4 @@ object EnvelopeReportSupport extends Support {
     |  }
     |}
     """.stripMargin
-
 }

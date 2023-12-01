@@ -44,7 +44,7 @@ class FileUploadController @Inject()(
   config   : Configuration,
   mcc      : MessagesControllerComponents
 )(implicit
-  executionContext: ExecutionContext
+  ec: ExecutionContext
 ) extends FrontendController(mcc) {
 
   private val logger = Logger(getClass)
@@ -75,8 +75,11 @@ class FileUploadController @Inject()(
       setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
     }
 
-  def upload(constraints: Option[EnvelopeConstraints])
-            (envelopeId: EnvelopeId, fileId: FileId): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
+  def upload(
+    constraints: Option[EnvelopeConstraints]
+  )(envelopeId : EnvelopeId,
+    fileId     : FileId
+  ): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
     val maxSize = getMaxFileSizeFromEnvelope(constraints)
     Action.async(parse.maxLength(maxSize, parse.multipartFormData(cacheFileInMemory))) { implicit request =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
@@ -160,11 +163,11 @@ object FileUploadController {
       case (key, values: Seq[String]) if values.nonEmpty => key -> Json.toJson(values)
     }
 
-    val metadata = if (metadataParams.nonEmpty) {
-      Json.toJson(metadataParams).as[JsObject]
-    } else {
-      Json.obj()
-    }
+    val metadata =
+      if (metadataParams.nonEmpty)
+        Json.toJson(metadataParams).as[JsObject]
+      else
+        Json.obj()
     metadata
   }
 }

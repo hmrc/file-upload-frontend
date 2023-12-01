@@ -31,10 +31,14 @@ object NotifierService {
 
   private val logger = Logger(getClass)
 
-  def notify(send: BackendCommand => Future[CommandHandler.NotificationResult], publish: AnyRef => Unit)
-            (command: AnyRef)
-            (implicit executionContext: ExecutionContext): Future[NotifyResult] = {
-
+  def notify(
+    send: BackendCommand => Future[CommandHandler.NotificationResult],
+    publish: AnyRef => Unit
+  )(
+    command: AnyRef
+  )(implicit
+    ec: ExecutionContext
+  ): Future[NotifyResult] = {
     def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T) = {
       val result = sendNotification(send, backendCommand)
       result.map(_.foreach(_ => publish(command)))
@@ -42,22 +46,24 @@ object NotifierService {
     }
 
     command match {
-      case c: QuarantineFile => sendCommandToBackendAndPublish(c)
-      case c: MarkFileAsClean => sendCommandToBackendAndPublish(c)
+      case c: QuarantineFile     => sendCommandToBackendAndPublish(c)
+      case c: MarkFileAsClean    => sendCommandToBackendAndPublish(c)
       case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c)
-      case c: StoreFile => sendCommandToBackendAndPublish(c)
-      case _ =>
-        publish(command)
-        Future.successful(Right(NotifySuccess))
+      case c: StoreFile          => sendCommandToBackendAndPublish(c)
+      case _                     => publish(command)
+                                    Future.successful(Right(NotifySuccess))
     }
   }
 
-  private def sendNotification(send: BackendCommand => Future[CommandHandler.NotificationResult], c: BackendCommand)
-                              (implicit executionContext: ExecutionContext): Future[NotifyResult] =
+  private def sendNotification(
+    send: BackendCommand => Future[CommandHandler.NotificationResult],
+    c   : BackendCommand
+  )(implicit
+    ec: ExecutionContext
+  ): Future[NotifyResult] =
     send(c).map {
       case Right(_) => Right(NotifySuccess)
-      case Left(e) =>
-        logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
-        Left(NotifyError(e.statusCode, e.reason))
+      case Left(e)  => logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
+                       Left(NotifyError(e.statusCode, e.reason))
     }
 }

@@ -19,12 +19,12 @@ package uk.gov.hmrc.fileupload.s3
 import java.io.InputStream
 import java.net.URL
 
-import akka.NotUsed
-import akka.stream.{IOResult, Materializer}
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.amazonaws.services.s3.model.{CopyObjectResult, S3ObjectSummary}
 import com.amazonaws.services.s3.transfer.model.UploadResult
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.{IOResult, Materializer}
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import play.api.libs.json.JsValue
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
@@ -95,13 +95,17 @@ object S3Service {
 }
 
 case class Metadata(
-                     contentType: String,
-                     contentLength: Long,
-                     versionId: String = "",
-                     ETag: String = "",
-                     s3Metadata: Option[Map[String, String]] = None)
+  contentType  : String,
+  contentLength: Long,
+  versionId    : String = "",
+  ETag         : String = "",
+  s3Metadata   : Option[Map[String, String]] = None
+)
 
-case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
+case class StreamWithMetadata(
+  stream  : StreamResult,
+  metadata: Metadata
+)
 
 
 case class ZipData(

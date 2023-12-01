@@ -21,6 +21,9 @@ import scoverage.ScoverageKeys
 import uk.gov.hmrc.DefaultBuildSettings
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
+ThisBuild / majorVersion := 1
+ThisBuild / scalaVersion := "2.13.12"
+
 lazy val scoverageSettings =
   Seq(
     ScoverageKeys.coverageExcludedPackages := List("<empty>", "Reverse.*", ".*AuthService.*", "models/.data/..*", "view.*").mkString(";"),
@@ -34,27 +37,23 @@ lazy val scoverageSettings =
   )
 
 lazy val microservice = Project("file-upload-frontend", file("."))
-  .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
+  .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
-  .settings(majorVersion := 1)
   .settings(PlayKeys.playDefaultPort := 8899)
   .settings(scoverageSettings: _*)
   .settings(
-    scalaVersion := "2.13.8",
     libraryDependencies ++= AppDependencies.dependencies,
     Test / parallelExecution  := false,
     routesGenerator := InjectedRoutesGenerator,
     scalacOptions += "-Wconf:src=routes/.*:s"
   )
-  .configs(IntegrationTest)
-  .settings(
-    DefaultBuildSettings.integrationTestSettings(),
-    // since it depends on test, we must explicitly add it, and filter out the test specs.
-    // this requires explicitly adding the test report option since we have replaced the testOptions.
-    IntegrationTest / unmanagedSourceDirectories := (IntegrationTest / baseDirectory )(base => Seq(base / "it", base / "test")).value,
-    IntegrationTest / testOptions := Seq(Tests.Filter(_.endsWith("ISpec"))),
-    DefaultBuildSettings.addTestReportOption(IntegrationTest, "int-test-reports")
-  )
   .settings(
     resolvers += Resolver.jcenterRepo // for metrics-play
   )
+
+lazy val it = project
+  .enablePlugins(PlayScala)
+  .dependsOn(microservice % "test->test")
+  .settings(DefaultBuildSettings.itSettings)
+  .settings(libraryDependencies ++= AppDependencies.it)
+  .settings(dependencyOverrides ++= AppDependencies.itOverrides)

@@ -19,8 +19,16 @@ package uk.gov.hmrc.fileupload.quarantine
 import play.api.libs.json.{Format, JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
 
-case class FileInQuarantineStored(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId,
-                                  created: Long, name: String, fileLength: Long, contentType: String, metadata: JsObject) extends Event
+case class FileInQuarantineStored(
+  envelopeId : EnvelopeId,
+  fileId     : FileId,
+  fileRefId  : FileRefId,
+  created    : Long,
+  name       : String,
+  fileLength : Long,
+  contentType: String,
+  metadata   : JsObject
+) extends Event
 
 object FileInQuarantineStored {
   implicit val fileQuarantinedFormats: Format[FileInQuarantineStored] = Json.format[FileInQuarantineStored]

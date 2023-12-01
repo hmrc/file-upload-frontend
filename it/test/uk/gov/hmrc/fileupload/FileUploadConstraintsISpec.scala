@@ -27,7 +27,6 @@ class FileUploadConstraintsISpec extends FileActions with GivenWhenThen {
 
   "Upload file of unsupported type that is not listed in content types specified in envelope" should {
     "Return 200 as contentTypes checking was not enabled" in {
-
       Given("Envelope created with specified contentTypes: application/pdf, image/jpeg and application/xml")
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
 
@@ -40,9 +39,7 @@ class FileUploadConstraintsISpec extends FileActions with GivenWhenThen {
   }
 
   "Prevent uploading file that is larger than maxSizePerItem specified in envelope" should {
-
     "Recieve 413 Entity Too Large" in {
-
       Given("Envelope created with specified maxSizePerItem: 10Mb")
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
 

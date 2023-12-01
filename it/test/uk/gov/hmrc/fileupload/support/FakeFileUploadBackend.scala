@@ -18,19 +18,23 @@ package uk.gov.hmrc.fileupload.support
 
 import better.files.File
 import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, post, postRequestedFor, put, putRequestedFor, urlPathMatching, urlEqualTo}
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import io.findify.s3mock.S3Mock
 import io.findify.s3mock.request.CreateBucketConfiguration
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{BeforeAndAfterAll, Suite}
 import play.api.http.Status
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
-trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with IntegrationPatience {
+trait FakeFileUploadBackend
+  extends BeforeAndAfterAll
+     with BeforeAndAfterEach
+     with ScalaFutures
+     with IntegrationPatience {
   this: Suite =>
 
   lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
@@ -48,25 +52,30 @@ trait FakeFileUploadBackend extends BeforeAndAfterAll with ScalaFutures with Int
   s3MockServer.p.createBucket("file-upload-transient", new CreateBucketConfiguration(locationConstraint = None))
 
   backend.start()
-  backend.stubFor(
-    post(
-      urlPathMatching("/file-upload/events/(.*)"))
-        .willReturn(aResponse().withStatus(Status.OK)
-    )
-  )
-
-  backend.stubFor(
-    post(
-      urlPathMatching("/file-upload/commands/(.*)"))
-        .willReturn(aResponse().withStatus(Status.OK)
-    )
-  )
 
   override def afterAll(): Unit = {
     super.afterAll()
     backend.stop()
     s3MockServer.stop
     File(workDir).delete()
+  }
+
+  override def beforeEach(): Unit = {
+    backend.resetAll()
+    backend.stubFor(
+      post(
+        urlPathMatching("/file-upload/events/(.*)"))
+          .willReturn(aResponse().withStatus(Status.OK)
+      )
+    )
+
+    backend.stubFor(
+      post(
+        urlPathMatching("/file-upload/commands/(.*)"))
+          .willReturn(aResponse().withStatus(Status.OK)
+      )
+    )
+    super.beforeEach()
   }
 
   val ENVELOPE_OPEN_RESPONSE: String =

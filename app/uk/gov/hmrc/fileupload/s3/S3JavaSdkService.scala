@@ -21,11 +21,12 @@ import java.net.URL
 import java.util.concurrent.Executors
 import java.util.UUID
 
-import akka.stream.{ClosedShape, Materializer}
-import akka.stream.alpakka.file.ArchiveMetadata
-import akka.stream.alpakka.file.scaladsl.Archive
-import akka.stream.scaladsl.{Broadcast, FileIO, Flow, GraphDSL, RunnableGraph, Sink, Source, StreamConverters}
-import akka.util.ByteString
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.{ClosedShape, IOOperationIncompleteException, Materializer}
+import org.apache.pekko.stream.connectors.file.ArchiveMetadata
+import org.apache.pekko.stream.connectors.file.scaladsl.Archive
+import org.apache.pekko.stream.scaladsl.{Broadcast, FileIO, Flow, GraphDSL, RunnableGraph, Sink, Source, StreamConverters}
+import org.apache.pekko.util.ByteString
 import com.amazonaws.{ClientConfiguration, HttpMethod}
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
@@ -216,7 +217,7 @@ class S3JavaSdkService @Inject()(
     }
   }
 
-  override def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], akka.NotUsed] =
+  override def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], NotUsed] =
     Source.fromIterator(() => new S3FilesIterator(s3Client, bucketName))
 
   override def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResult] = Try {
@@ -293,7 +294,7 @@ class S3JavaSdkService @Inject()(
            md5Checksum = md5Hash,
            url         = url
          )
-    ).recover { case e: akka.stream.IOOperationIncompleteException if e.getCause.isInstanceOf[MissingFileException] => throw e.getCause }
+    ).recover { case e: IOOperationIncompleteException if e.getCause.isInstanceOf[MissingFileException] => throw e.getCause }
      .andThen { case _ => SingletonTemporaryFileCreator.delete(tempFile) }
   }
 
@@ -316,7 +317,7 @@ class S3JavaSdkService @Inject()(
     envelopeId: EnvelopeId,
     files     : List[(FileId, Option[String])]
   )(implicit ec: ExecutionContext
-  ): Source[(ArchiveMetadata, S3Service.StreamResult), akka.NotUsed]#Repr[ByteString] = {
+  ): Source[(ArchiveMetadata, S3Service.StreamResult), NotUsed]#Repr[ByteString] = {
     // dedupe filenames since file-upload doesn't prevent multiple files with the same name
     val filesUnique = dedupeFilenames(envelopeId, files)
 

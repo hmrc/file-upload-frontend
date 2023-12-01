@@ -18,8 +18,8 @@ package uk.gov.hmrc.fileupload.s3
 
 import java.io.InputStream
 
-import akka.stream.scaladsl.Sink
-import akka.util.ByteString
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.util.ByteString
 import play.api.libs.streams.Accumulator
 import play.api.mvc.MultipartFormData.FilePart
 import play.api.mvc.{BodyParser, MultipartFormData}

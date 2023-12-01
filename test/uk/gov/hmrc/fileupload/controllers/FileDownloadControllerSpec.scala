@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import org.mockito.MockitoSugar
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -41,7 +41,7 @@ class FileDownloadControllerSpec
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit lazy val mat = app.injector.instanceOf[Materializer]
+  implicit lazy val mat: Materializer = app.injector.instanceOf[Materializer]
 
   val appModule = mock[ApplicationModule]
 

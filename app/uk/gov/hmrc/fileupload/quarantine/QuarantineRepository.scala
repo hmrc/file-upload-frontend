@@ -30,15 +30,17 @@ case class FileData(
 )
 
 //This class is needed to keep in sync with the backend
-case class EnvelopeReport(id: Option[EnvelopeId] = None,
-                          callbackUrl: Option[String] = None,
-                          expiryDate: Option[DateTime] = None,
-                          metadata: Option[JsObject] = None,
-                          constraints: Option[EnvelopeConstraints] = None,
-                          status: Option[String] = None,
-                          destination: Option[String] = None,
-                          application: Option[String] = None,
-                          files: Option[Seq[JsObject]] = None)
+case class EnvelopeReport(
+  id         : Option[EnvelopeId]          = None,
+  callbackUrl: Option[String]              = None,
+  expiryDate : Option[DateTime]            = None,
+  metadata   : Option[JsObject]            = None,
+  constraints: Option[EnvelopeConstraints] = None,
+  status     : Option[String]              = None,
+  destination: Option[String]              = None,
+  application: Option[String]              = None,
+  files      : Option[Seq[JsObject]]       = None
+)
 
 object EnvelopeReport{
   implicit val envelopeFormat: OFormat[EnvelopeReport] = {
@@ -49,10 +51,12 @@ object EnvelopeReport{
 }
 
 
-case class EnvelopeConstraints(maxItems: Int,
-                               maxSize: String,
-                               maxSizePerItem: String,
-                               allowZeroLengthFiles: Option[Boolean])
+case class EnvelopeConstraints(
+  maxItems            : Int,
+  maxSize             : String,
+  maxSizePerItem      : String,
+  allowZeroLengthFiles: Option[Boolean]
+)
 
 object EnvelopeConstraints {
   implicit val constraintsFormat: Format[EnvelopeConstraints] = Json.format[EnvelopeConstraints]

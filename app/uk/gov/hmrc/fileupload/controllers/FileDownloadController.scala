@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import akka.util.ByteString
+import org.apache.pekko.util.ByteString
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpEntity
@@ -34,7 +34,7 @@ class FileDownloadController @Inject()(
   appModule: ApplicationModule,
   mcc      : MessagesControllerComponents
 )(implicit
-  executionContext: ExecutionContext
+  ec: ExecutionContext
 ) extends FrontendController(mcc) {
 
   private val logger = Logger(getClass)

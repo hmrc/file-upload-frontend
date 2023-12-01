@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -24,7 +24,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.http.Status.INTERNAL_SERVER_ERROR
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.{AnyContent, EssentialAction, RequestHeader}
 import play.api.mvc.Results._
 import play.api.test.FakeRequest
@@ -56,7 +56,7 @@ class RedirectionFeatureSpec
       new HttpErrorHandler() {
         private val logger = Logger(getClass)
 
-        implicit val erFormats = Json.format[ErrorResponse]
+        implicit val erFormats: Format[ErrorResponse] = Json.format[ErrorResponse]
 
         override def onClientError(request: RequestHeader, statusCode: Int, message: String) = ???
 
@@ -80,7 +80,7 @@ class RedirectionFeatureSpec
   import redirectionFeature.redirect
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit val actorSystem = ActorSystem()
+  implicit val actorSystem: ActorSystem = ActorSystem()
 
   "Redirection feature" should {
     "be backward compatible" in {
