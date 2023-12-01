@@ -34,7 +34,7 @@ class FileDownloadController @Inject()(
   appModule: ApplicationModule,
   mcc      : MessagesControllerComponents
 )(implicit
-  executionContext: ExecutionContext
+  ec: ExecutionContext
 ) extends FrontendController(mcc) {
 
   private val logger = Logger(getClass)

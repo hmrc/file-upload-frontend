@@ -101,10 +101,6 @@ trait Event {
   def fileRefId : FileRefId
 }
 
-package object fileupload {
-  type ByteStream = Array[Byte]
-}
-
 class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(implicit m: Manifest[T]) extends PathBindable[T] {
   override def bind(key: String, value: String): Either[String, T] =
     try {

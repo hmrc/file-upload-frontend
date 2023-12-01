@@ -44,10 +44,15 @@ object EnvelopeChecker {
 
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
 
-  def withValidEnvelope(checkEnvelopeDetails: (EnvelopeId, HeaderCarrier) => Future[EnvelopeDetailResult])
-                       (envelopeId: EnvelopeId)
-                       (action: Option[EnvelopeConstraints] => EssentialAction)
-                       (implicit ec: ExecutionContext) =
+  def withValidEnvelope(
+    checkEnvelopeDetails: (EnvelopeId, HeaderCarrier) => Future[EnvelopeDetailResult]
+  )(
+    envelopeId: EnvelopeId
+  )(
+    action: Option[EnvelopeConstraints] => EssentialAction
+  )(implicit
+    ec: ExecutionContext
+  ) =
     EssentialAction { implicit rh =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(rh)
       Accumulator.flatten {
@@ -70,7 +75,8 @@ object EnvelopeChecker {
       }
     }
 
-  def extractEnvelopeDetails(envelope: JsValue): EnvelopeReport = envelope.as[EnvelopeReport]
+  def extractEnvelopeDetails(envelope: JsValue): EnvelopeReport =
+    envelope.as[EnvelopeReport]
 
   def getMaxFileSizeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): FileSize = {
     val sizeRegex = "([1-9][0-9]{0,3})([KB,MB]{2})".r
@@ -90,8 +96,12 @@ object EnvelopeChecker {
       .flatMap(_.contentType)
       .headOption.getOrElse("")
 
-  def logAndReturn(statusCode: Int, problem: String)
-                  (implicit rh: RequestHeader): Accumulator[ByteString, Result] = {
+  def logAndReturn(
+    statusCode: Int,
+    problem   : String
+  )(implicit
+    rh: RequestHeader
+  ): Accumulator[ByteString, Result] = {
     logger.warn(s"Request: $rh failed because: $problem")
     Accumulator.done(new Status(statusCode).apply(Json.obj("message" -> problem)))
   }

@@ -18,4 +18,8 @@ package uk.gov.hmrc.fileupload.transfer
 
 import uk.gov.hmrc.fileupload.{EnvelopeId, Event, FileId, FileRefId}
 
-case class TransferRequested(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) extends Event
+case class TransferRequested(
+  envelopeId: EnvelopeId,
+  fileId    : FileId,
+  fileRefId : FileRefId
+) extends Event

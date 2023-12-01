@@ -23,7 +23,6 @@ import uk.gov.hmrc.fileupload.support._
 class FileUploadISpec extends FileActions with EnvelopeActions with Eventually {
 
   "File upload front-end" should {
-
     val fileId = anyFileId
     val envelopeId = anyEnvelopeId
 
@@ -73,7 +72,6 @@ class FileUploadISpec extends FileActions with EnvelopeActions with Eventually {
     }
 
     """Ensure we continue to allow uploading if envelope is in "OPEN" state"""" in {
-
       val secondFileId = anyFileId
       Wiremock.respondToEnvelopeCheck(envelopeId, body = ENVELOPE_OPEN_RESPONSE)
 
@@ -85,7 +83,5 @@ class FileUploadISpec extends FileActions with EnvelopeActions with Eventually {
         res.status shouldBe 200
       }
     }
-
   }
-
 }

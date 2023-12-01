@@ -27,11 +27,15 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                    createS3Key: (EnvelopeId, FileId) => S3KeyName,
-                    commandHandler: CommandHandler,
-                    getFileLength: (EnvelopeId, FileId, FileRefId) => Long,
-                    transferFile: (S3KeyName, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) extends Actor {
+class TransferActor(
+  subscribe     : (ActorRef, Class[_]) => Boolean,
+  createS3Key   : (EnvelopeId, FileId) => S3KeyName,
+  commandHandler: CommandHandler,
+  getFileLength : (EnvelopeId, FileId, FileRefId) => Long,
+  transferFile  : (S3KeyName, String) => Try[CopyObjectResult]
+)(implicit
+  ec: ExecutionContext
+) extends Actor {
 
   private val logger = Logger(getClass)
 
@@ -65,10 +69,14 @@ class TransferActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
 object TransferActor {
 
-  def props(subscribe: (ActorRef, Class[_]) => Boolean,
-            createS3Key: (EnvelopeId, FileId) => S3KeyName,
-            commandHandler: CommandHandler,
-            getFileLength: (EnvelopeId, FileId, FileRefId) => Long,
-            transferFile: (S3KeyName, String) => Try[CopyObjectResult])(implicit ec: ExecutionContext) =
+  def props(
+    subscribe     : (ActorRef, Class[_]) => Boolean,
+    createS3Key   : (EnvelopeId, FileId) => S3KeyName,
+    commandHandler: CommandHandler,
+    getFileLength : (EnvelopeId, FileId, FileRefId) => Long,
+    transferFile  : (S3KeyName, String) => Try[CopyObjectResult]
+  )(implicit
+    ec: ExecutionContext
+  ): Props =
     Props(new TransferActor(subscribe, createS3Key, commandHandler, getFileLength, transferFile))
 }

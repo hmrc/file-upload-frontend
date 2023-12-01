@@ -20,9 +20,6 @@ import play.api.libs.json.Json
 import play.api.libs.json.Json._
 
 trait Support {
-
-  def prettify(json: String) = {
-    prettyPrint( Json.parse(json) )
-  }
-
+  def prettify(json: String): String =
+    prettyPrint(Json.parse(json))
 }

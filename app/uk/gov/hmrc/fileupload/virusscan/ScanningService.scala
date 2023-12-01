@@ -47,21 +47,31 @@ object ScanningService {
 
   private val logger = Logger(getClass)
 
-  def scanBinaryData(scanner: AvScan,
-                     scanTimeoutAttempts: Int,
-                     getFile: (S3KeyName, String) => Future[QuarantineDownloadResult])
-                    (s3KeyAppender: (EnvelopeId, FileId) => S3KeyName)
-                    (envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId)
-                    (implicit ec: ExecutionContext): Future[ScanResult] = {
+  def scanBinaryData(
+    scanner            : AvScan,
+    scanTimeoutAttempts: Int,
+    getFile            : (S3KeyName, String) => Future[QuarantineDownloadResult]
+  )(
+    s3KeyAppender      : (EnvelopeId, FileId) => S3KeyName
+  )(
+    envelopeId         : EnvelopeId,
+    fileId             : FileId,
+    fileRefId          : FileRefId
+  )(implicit
+    ec: ExecutionContext
+  ): Future[ScanResult] = {
     val appendedKey = s3KeyAppender(envelopeId, fileId)
     retries(scan(scanner, getFile(appendedKey, fileRefId.value)), fileId, scanTimeoutAttempts)
   }
 
-  private def retries(scanResult: => Future[ScanResult],
-                      fileId: FileId,
-                      maximumScansAllowed: Int,
-                      scansAttempted: Int = 1)
-                     (implicit ec: ExecutionContext): Future[ScanResult] =
+  private def retries(
+    scanResult         : => Future[ScanResult],
+    fileId             : FileId,
+    maximumScansAllowed: Int,
+    scansAttempted     : Int                  = 1
+  )(implicit
+    ec: ExecutionContext
+  ): Future[ScanResult] =
     scanResult.flatMap {
       case result if scansAttempted >= maximumScansAllowed =>
         logger.warn(s"Maximum scan retries attempted for fileId: $fileId ($scansAttempted of $maximumScansAllowed)")
@@ -72,11 +82,14 @@ object ScanningService {
       case result => Future.successful(result)
     }
 
-  private def scan(scanner: AvScan,
-                   file: Future[QuarantineDownloadResult])
-                  (implicit ec: ExecutionContext): Future[ScanResult] =
+  private def scan(
+    scanner: AvScan,
+    file   : Future[QuarantineDownloadResult]
+  )(implicit
+    ec: ExecutionContext
+  ): Future[ScanResult] =
     file.flatMap {
       case Right(file) => scanner(file.data, file.length)
-      case Left(e) => Future.successful(Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
+      case Left(e)     => Future.successful(Left(ScanResultError(new Exception(e.getClass.getSimpleName))))
     }
 }

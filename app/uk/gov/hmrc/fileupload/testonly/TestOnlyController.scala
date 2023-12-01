@@ -156,18 +156,21 @@ class TestOnlyController @Inject()(
   }
 }
 
-case class EnvelopeConstraintsUserSetting(maxItems: Option[Int] = None,
-                                          maxSize: Option[String] = None,
-                                          maxSizePerItem: Option[String] = None,
-                                          contentTypes: Option[List[ContentTypes]] = None)
+case class EnvelopeConstraintsUserSetting(
+  maxItems      : Option[Int]                = None,
+  maxSize       : Option[String]             = None,
+  maxSizePerItem: Option[String]             = None,
+  contentTypes  : Option[List[ContentTypes]] = None
+)
 
-case class CreateEnvelopeRequest(callbackUrl: Option[String] = None,
-                                 expiryDate: Option[DateTime] = None,
-                                 metadata: Option[JsObject] = None,
-                                 constraints: Option[EnvelopeConstraintsUserSetting] = None)
+case class CreateEnvelopeRequest(
+  callbackUrl: Option[String]                         = None,
+  expiryDate : Option[DateTime]                       = None,
+  metadata   : Option[JsObject]                       = None,
+  constraints: Option[EnvelopeConstraintsUserSetting] = None
+)
 
 object CreateEnvelopeRequest {
-  type ByteStream = Array[Byte]
   type ContentTypes = String
   implicit val createEnvelopeRequestReads: Reads[CreateEnvelopeRequest] = EnvelopeRequestReads
   implicit val createEnvelopeRequestWrites: Writes[CreateEnvelopeRequest] = EnvelopeRequestWrites
@@ -209,13 +212,11 @@ object EnvelopeRequestReads extends Reads[CreateEnvelopeRequest] {
   }
   implicit val constraintsFormats: OFormat[EnvelopeConstraintsUserSetting] = Json.format[EnvelopeConstraintsUserSetting]
 
-  override def reads(value: JsValue): JsSuccess[CreateEnvelopeRequest] = {
+  override def reads(value: JsValue): JsSuccess[CreateEnvelopeRequest] =
     JsSuccess(CreateEnvelopeRequest(
-                (value \ "callbackUrl").validate[String].asOpt,
-                (value \ "expiryDate").validate[DateTime].asOpt,
-                (value \ "metadata").validate[JsObject].asOpt,
-                (value \ "constraints").validate[EnvelopeConstraintsUserSetting].asOpt
-              )
-    )
-  }
+      (value \ "callbackUrl").validate[String].asOpt,
+      (value \ "expiryDate" ).validate[DateTime].asOpt,
+      (value \ "metadata"   ).validate[JsObject].asOpt,
+      (value \ "constraints").validate[EnvelopeConstraintsUserSetting].asOpt
+    ))
 }

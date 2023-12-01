@@ -42,18 +42,18 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ApplicationModule @Inject()(
-  servicesConfig          : ServicesConfig,
-  auditConnector          : AuditConnector,
-  metricsRegistry         : MetricRegistry,
-  avClient                : AvClient,
-  httpErrorHandler        : HttpErrorHandler,
-  actorSystem             : org.apache.pekko.actor.ActorSystem,
-  val applicationLifecycle: play.api.inject.ApplicationLifecycle,
-  val configuration       : play.api.Configuration,
-  val environment         : play.api.Environment
+  servicesConfig                   : ServicesConfig,
+  auditConnector                   : AuditConnector,
+  metricsRegistry                  : MetricRegistry,
+  avClient                         : AvClient,
+  httpErrorHandler                 : HttpErrorHandler,
+  actorSystem                      : org.apache.pekko.actor.ActorSystem,
+  override val applicationLifecycle: play.api.inject.ApplicationLifecycle,
+  override val configuration       : play.api.Configuration,
+  override val environment         : play.api.Environment
 )(implicit
-  val executionContext: scala.concurrent.ExecutionContext,
-  val materializer    : org.apache.pekko.stream.Materializer
+  override val executionContext    : scala.concurrent.ExecutionContext,
+  override val materializer        : org.apache.pekko.stream.Materializer
 ) extends AhcWSComponents {
 
   private val logger = Logger(getClass)

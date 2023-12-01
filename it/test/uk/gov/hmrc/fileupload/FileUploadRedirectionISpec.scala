@@ -37,11 +37,10 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
   val NOT_GOV_DOMAIN = "https://www.playframework.com/documentation/2.5.x/ScalaTestingWithScalaTest"
 
   "Redirect End User when provided with redirect parameters as part of upload file request" should {
-
     val fileId = anyFileId
     val envelopeId = anyEnvelopeId
-    "Redirect upon success to valid url - only success url provided" in {
 
+    "Redirect upon success to valid url - only success url provided" in {
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -57,7 +56,6 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
     }
 
     "Redirect upon success to valid url - both success and error urls provided" in {
-
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -74,7 +72,6 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
     }
 
     "Redirect upon error to valid url - both success and error urls provided" in {
-
       Given("An envelope which does not exist")
       val invalidEnvelopeId = EnvelopeId("12345-123124")
 
@@ -90,7 +87,6 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
     }
 
     "Redirect upon success to invalid url - not https" in {
-
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -111,7 +107,6 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
     }
 
     "Redirect upon error to invalid url - not https" in {
-
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -132,7 +127,6 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
     }
 
     "Redirect upon success to invalid url - not service.gov.uk" in {
-
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -153,7 +147,6 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
     }
 
     "Redirect upon error to invalid url - not gov.uk" in {
-
       Given("Envelope created with default parameters")
       Wiremock.responseToUpload(envelopeId, fileId)
       Wiremock.respondToEnvelopeCheck(envelopeId)
@@ -174,7 +167,6 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
     }
 
     "Redirect upon s3 error to valid url - both success and error urls provided" in {
-
       Given("Envelope created with default parameters")
 
       Wiremock.responseToUpload(envelopeId, fileId)
@@ -193,7 +185,5 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       uploadFileResponse.status should be(301)
       uploadFileResponse.header("Location").value.startsWith(redirectErrorUrl) shouldBe true
     }
-
   }
-
 }

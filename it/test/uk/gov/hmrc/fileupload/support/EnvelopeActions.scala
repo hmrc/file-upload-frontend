@@ -27,9 +27,11 @@ import scala.io.Source
 trait EnvelopeActions extends ActionsSupport {
   this: Suite =>
 
-  def createEnvelope(file: File): WSResponse = createEnvelope(Source.fromFile(file).mkString)
+  def createEnvelope(file: File): WSResponse =
+    createEnvelope(Source.fromFile(file).mkString)
 
-  def createEnvelope(data: String): WSResponse = createEnvelope(data.getBytes())
+  def createEnvelope(data: String): WSResponse =
+    createEnvelope(data.getBytes())
 
   def createEnvelope(data: Array[Byte]): WSResponse =
     wsClient

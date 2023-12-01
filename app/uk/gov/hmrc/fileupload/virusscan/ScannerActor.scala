@@ -29,10 +29,13 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.collection.immutable.Queue
 import scala.concurrent.{ExecutionContext, Future}
 
-class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
-                   scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
-                   commandHandler: CommandHandler)
-                  (implicit executionContext: ExecutionContext) extends Actor {
+class ScannerActor(
+  subscribe: (ActorRef, Class[_]) => Boolean,
+  scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
+  commandHandler: CommandHandler
+)(implicit
+  ec: ExecutionContext
+) extends Actor {
 
   private val logger = Logger(getClass)
 
@@ -86,7 +89,7 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
   case class ScanExecuted(requestedFor: FileRefId, result: ScanResult)
 
-  def scanNext(): Unit = {
+  def scanNext(): Unit =
     outstandingScans.dequeueOption match {
       case Some((e, newQueue)) =>
         context become receiveWhenScanning
@@ -101,7 +104,6 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
         context become receive
         scanningEvent = None
     }
-  }
 
   def notify(hasVirus: Boolean): Unit = {
     implicit val hc = HeaderCarrier()
@@ -118,9 +120,12 @@ class ScannerActor(subscribe: (ActorRef, Class[_]) => Boolean,
 
 object ScannerActor {
 
-  def props(subscribe: (ActorRef, Class[_]) => Boolean,
-            scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
-            commandHandler: CommandHandler)
-           (implicit executionContext: ExecutionContext) =
+  def props(
+    subscribe     : (ActorRef, Class[_]) => Boolean,
+    scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
+    commandHandler: CommandHandler
+  )(implicit
+    ec: ExecutionContext
+  ): Props =
     Props(new ScannerActor(subscribe, scanBinaryData, commandHandler))
 }

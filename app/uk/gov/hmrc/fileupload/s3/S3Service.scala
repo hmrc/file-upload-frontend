@@ -95,13 +95,17 @@ object S3Service {
 }
 
 case class Metadata(
-                     contentType: String,
-                     contentLength: Long,
-                     versionId: String = "",
-                     ETag: String = "",
-                     s3Metadata: Option[Map[String, String]] = None)
+  contentType  : String,
+  contentLength: Long,
+  versionId    : String = "",
+  ETag         : String = "",
+  s3Metadata   : Option[Map[String, String]] = None
+)
 
-case class StreamWithMetadata(stream: StreamResult, metadata: Metadata)
+case class StreamWithMetadata(
+  stream  : StreamResult,
+  metadata: Metadata
+)
 
 
 case class ZipData(
