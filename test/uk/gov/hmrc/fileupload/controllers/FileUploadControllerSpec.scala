@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import com.amazonaws.services.s3.transfer.model.UploadResult
+import org.apache.pekko.actor.ActorSystem
 import org.mockito.MockitoSugar
 import org.scalatest.EitherValues
 import org.scalatest.concurrent.ScalaFutures
@@ -66,6 +67,8 @@ class FileUploadControllerSpec
       override def getLoggerValues(formData: MultipartFormData.FilePart[FileCachedInMemory], request: Request[_]): LoggerValues =
         LoggerValues("txt", "some-user-agent")
     }
+
+    implicit val as: ActorSystem = ActorSystem()
 
     val appModule = mock[ApplicationModule]
     when(appModule.withValidEnvelope).thenReturn(noEnvelopeValidation)

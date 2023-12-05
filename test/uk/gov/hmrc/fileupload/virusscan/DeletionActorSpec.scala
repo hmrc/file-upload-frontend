@@ -21,7 +21,7 @@ import org.apache.pekko.testkit.{ImplicitSender, TestKit}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId, StopSystemAfterAll}
+import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.{MarkFileAsClean, MarkFileAsInfected}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 
@@ -31,7 +31,6 @@ class DeletionActorSpec
      with AnyWordSpecLike
      with Matchers
      with Eventually
-     with StopSystemAfterAll
      with IntegrationPatience {
 
   "DeletionActor" should {

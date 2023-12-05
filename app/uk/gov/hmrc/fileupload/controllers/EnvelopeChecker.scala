@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
+import org.apache.pekko.stream.Materializer
 import org.apache.pekko.util.ByteString
 import play.api.Logger
 import play.api.http.Status._
@@ -40,8 +41,6 @@ object EnvelopeChecker {
 
   private val logger = Logger(getClass)
 
-  import uk.gov.hmrc.fileupload.utils.StreamImplicits._
-
   val defaultFileSize: FileSize = (10 * 1024 * 1024).toLong //bytes
 
   def withValidEnvelope(
@@ -51,7 +50,8 @@ object EnvelopeChecker {
   )(
     action: Option[EnvelopeConstraints] => EssentialAction
   )(implicit
-    ec: ExecutionContext
+    ec : ExecutionContext,
+    mat: Materializer
   ) =
     EssentialAction { implicit rh =>
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(rh)
