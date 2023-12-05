@@ -25,7 +25,7 @@ private object AppDependencies {
     "uk.gov.hmrc"        %% "bootstrap-frontend-play-30" % bootstrapPlayVersion,
     "uk.gov.hmrc"        %% "play-partials-play-30"      % playPartialsVersion,
     "org.typelevel"      %% "cats-core"                  % "2.10.0",
-    "com.amazonaws"      %  "aws-java-sdk-s3"            % "1.12.95",
+    "com.amazonaws"      %  "aws-java-sdk-s3"            % "1.12.604",
     "org.apache.pekko"   %% "pekko-connectors-file"      % "1.0.1",
     "commons-io"         %  "commons-io"                 % "2.15.0"
   )
@@ -38,7 +38,7 @@ private object AppDependencies {
   )
 
   val it = Seq(
-    "io.findify"         %% "s3mock"                     % "0.2.6"              % Test
+    "io.findify"         %% "s3mock"                     % "0.2.6"              % Test // https://github.com/findify/s3mock/issues/189
   )
 
   val itOverrides = Seq(

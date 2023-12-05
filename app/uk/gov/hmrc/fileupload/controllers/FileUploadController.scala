@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import javax.inject.{Inject, Singleton}
+import org.apache.pekko.stream.Materializer
 import org.slf4j.MDC
 import play.api.Configuration
 import play.api.Logger
@@ -30,7 +31,6 @@ import uk.gov.hmrc.fileupload.notifier.{CommandHandler, QuarantineFile}
 import uk.gov.hmrc.fileupload.quarantine.EnvelopeConstraints
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{cacheFileInMemory, FileCachedInMemory}
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
-import uk.gov.hmrc.fileupload.utils.StreamImplicits._
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
@@ -44,7 +44,8 @@ class FileUploadController @Inject()(
   config   : Configuration,
   mcc      : MessagesControllerComponents
 )(implicit
-  ec: ExecutionContext
+  ec : ExecutionContext,
+  mat: Materializer
 ) extends FrontendController(mcc) {
 
   private val logger = Logger(getClass)

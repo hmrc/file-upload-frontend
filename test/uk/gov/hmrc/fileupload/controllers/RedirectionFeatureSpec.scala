@@ -80,7 +80,7 @@ class RedirectionFeatureSpec
   import redirectionFeature.redirect
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val as: ActorSystem = ActorSystem()
 
   "Redirection feature" should {
     "be backward compatible" in {
