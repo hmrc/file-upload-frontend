@@ -108,9 +108,8 @@ class FileUploadController @Inject()(
               if (logFileExtensions) {
                 val loggerValues = loggerHelper.getLoggerValues(formData.files.head, request)
                 logFileExtensionData(uploadResult)(loggerValues)
-              } else {
+              } else
                 uploadResult
-              }
           }
       }
     }

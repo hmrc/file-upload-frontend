@@ -4,10 +4,8 @@
 
 Frontend for uploading files to the Tax Platform. Please <i>**DO NOT USE**</i> Test-Only and Internal-Use-Only endpoints <i>**WITHOUT PERMISSION**</i>
 
-[ ![Download](https://api.bintray.com/packages/hmrc/releases/file-upload-frontend/images/download.svg) ](https://bintray.com/hmrc/releases/file-upload-frontend/_latestVersion)
-
 ## Software Requirements
-*   ClamAv Version 0.99 or later - the [clam-av client ReadMe](https://github.com/hmrc/clamav-client) provides documentation on how to install or alternatively you can download and run the [docker-clamav image](https://hub.docker.com/r/mkodockx/docker-clamav). ClamAv is also configured to block Macros.
+*   ClamAV Version 0.99 or later - the [ClamAV client README](https://github.com/hmrc/clamav-client) provides documentation on how to install or alternatively you can download and run the [docker-clamav image](https://hub.docker.com/r/mkodockx/docker-clamav). ClamAV is also configured to block Macros.
 *   Requires an AWS Account
 
 ## Run the application locally
@@ -18,7 +16,7 @@ Before you attempt to run file-upload-frontend locally ensure:
 
 You can start/stop them with docker compose file - file-upload-compose.yml:
 
-```
+```yaml
 version: '3'
 services:
   clamav:
@@ -26,11 +24,12 @@ services:
     ports:
     - "3310:3310"
 ```
+
 and bash commands:
-```
+
+```bash
 docker-compose -f file-upload-compose.yml up -d
 docker-compose -f file-upload-compose.yml stop
-
 ```
 
 
@@ -50,11 +49,11 @@ Once you have created your IAM user, you will have a pair of Access Keys automat
 
 By now you have your buckets and your IAM user created. Next you need to configure the following environment variables:
 
-```
-  S3_BUCKET_TRANSIENT="replace-with-your-bucket-name-for-transient"
-  S3_BUCKET_QUARANTINE="replace-with-your-bucket-name-for-quarantine"
-  AWS_KEY="replace-with-your-aws-key"
-  AWS_SECRET="replace-with-your-aws-secret"
+```bash
+S3_BUCKET_TRANSIENT="replace-with-your-bucket-name-for-transient"
+S3_BUCKET_QUARANTINE="replace-with-your-bucket-name-for-quarantine"
+AWS_KEY="replace-with-your-aws-key"
+AWS_SECRET="replace-with-your-aws-secret"
 ```
 
 To find your bucket names go to S3. To find your AWS KEY and AWS SECRET, they will be in the .csv file you downloaded as mentioned.
@@ -63,13 +62,13 @@ Note: Setting the environment variables in system for S3 will cause the integrat
 
 To run the application execute
 
-```
+```bash
 sbt run
 ```
 
 Alternatively, you can write up a bash script to have your terminal run with the environment variables mentioned.
 
-```
+```bash
 S3_BUCKET_TRANSIENT=replace-with-your-bucket-name-for-transient \
 S3_BUCKET_QUARANTINE=replace-with-your-bucket-name-for-quarantine \
 AWS_KEY=replace-with-your-aws-key \
@@ -81,27 +80,29 @@ The endpoints can then be accessed with the base url http://localhost:8899/
 
 ## Service manager
 
-```
-sm --start FILE_UPLOAD_ALL
+```bash
+sm2 --start FILE_UPLOAD_ALL
 ```
 
 Note: Does not have AWS.
 
 ## Table of Contents
 
-*   [Endpoints](#endpoints)
-*   [Optional Redirection](#redirection)
-*   [Internal Endpoints](./docs/internal-endpoints.md)
-*   [Test-Only Endpoints](./docs/test-only-endpoints.md)
-*   [Admin Endpoints](./docs/admin-endpoints.md)
-*   [File Upload Process](https://github.com/hmrc/file-upload/blob/HEAD/docs/file-upload-process.md)
+* [Endpoints](#endpoints)
+* [Optional Redirection](#redirection)
+* [Internal Endpoints](./docs/internal-endpoints.md)
+* [Test-Only Endpoints](./docs/test-only-endpoints.md)
+* [Admin Endpoints](./docs/admin-endpoints.md)
+* [File Upload Process](https://github.com/hmrc/file-upload/blob/HEAD/docs/file-upload-process.md)
 
 
 ## Endpoints <a name="endpoints"></a>
 
 ### Upload File
 Uploads a single file to the envelope via multipart form.
-File constraints (such as file type, max no of files and file size) are managed via the file-upload (back end) service.
+
+File constraints (such as file type, max number of files and file size) are managed via the `file-upload` (backend) service.
+
 If a routing request has been created for an envelope, any attempts after to upload a file will be rejected.
 
 ```
@@ -117,7 +118,8 @@ POST    /file-upload/upload/envelopes/{envelope-Id}/files/{file-Id}
 | Locked  | 423   |  Routing request has been made for this Envelope.  |
 
 ##### Example
-Request (POST): localhost:8899/file-upload/upload/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/file-id-1
+
+ Request (POST): localhost:8899/file-upload/upload/envelopes/0b215e97-11d4-4006-91db-c067e74fc653/files/file-id-1
 
 Body (Multipart Form): A single binary file.
 
@@ -126,9 +128,12 @@ Note: If maxSizePerItem is specified in the [envelope](https://github.com/hmrc/f
 Response: 200
 
 ##### Optional redirection <a name="redirection"></a>
+
 Upload File With Redirection-URL:
+
 You can provide optional navigation URLs for on success/failure(redirect-success-url/redirect-error-url) cases. They need to be provided as URL query prameters.
-ex.: `s"$UPLOAD_ENDPOINT?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar"`
+
+e.g: `s"$UPLOAD_ENDPOINT?redirect-success-url=https://service.gov.uk/foo&redirect-error-url=https://service.gov.uk/bar"`
 
 On error we append to the provided error-url: `s"?errorCode=$ERROR_CODE&reason=$BODY_OF_ERROR_RESPONSE"`.
 
