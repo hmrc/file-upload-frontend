@@ -47,13 +47,10 @@ lazy val microservice = Project("file-upload-frontend", file("."))
     routesGenerator := InjectedRoutesGenerator,
     scalacOptions += "-Wconf:src=routes/.*:s"
   )
-  .settings(
-    resolvers += Resolver.jcenterRepo // for metrics-play
-  )
 
 lazy val it = project
   .enablePlugins(PlayScala)
   .dependsOn(microservice % "test->test")
-  .settings(DefaultBuildSettings.itSettings)
+  .settings(DefaultBuildSettings.itSettings())
   .settings(libraryDependencies ++= AppDependencies.it)
   .settings(dependencyOverrides ++= AppDependencies.itOverrides)

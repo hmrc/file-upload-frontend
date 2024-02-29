@@ -45,17 +45,14 @@ class FileDownloadController @Inject()(
   val downloadFromQuarantine: DownloadFromBucket                                              = appModule.downloadFromQuarantine
   val zipAndPresign         : (EnvelopeId, List[(FileId, Option[String])]) => Future[ZipData] = appModule.zipAndPresign
 
-  def download(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
-    logger.info(s"downloading a file from S3 with envelopeId: $envelopeId fileId: $fileId")
-    downloadFileFromBucket(downloadFromTransient)(envelopeId, fileId)
-  }
+  def download(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] =
+    downloadFileFromBucket(downloadFromTransient, "S3")(envelopeId, fileId)
 
-  def illegalDownloadFromQuarantine(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] = {
-    logger.error(s"downloading a file from S3 QUARANTINE with envelopeId: $envelopeId fileId: $fileId")
-    downloadFileFromBucket(downloadFromQuarantine)(envelopeId, fileId)
-  }
+  def illegalDownloadFromQuarantine(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] =
+    downloadFileFromBucket(downloadFromQuarantine, "S3 QUARANTINE")(envelopeId, fileId)
 
-  def downloadFileFromBucket(fromBucket: DownloadFromBucket)(envelopeId: EnvelopeId, fileId: FileId) = Action {
+  def downloadFileFromBucket(fromBucket: DownloadFromBucket, label: String)(envelopeId: EnvelopeId, fileId: FileId) = Action {
+    logger.info(s"downloading a file from $label with envelopeId: $envelopeId fileId: $fileId")
     val key = createS3Key(envelopeId, fileId)
     fromBucket(key) match {
       case Some(result) =>
