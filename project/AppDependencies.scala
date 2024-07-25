@@ -35,13 +35,7 @@ private object AppDependencies {
     "org.apache.pekko"   %% "pekko-testkit"              % pekkoVersion         % Test
   )
 
-  val it = Seq(
-    "io.findify"         %% "s3mock"                     % "0.2.6"              % Test // https://github.com/findify/s3mock/issues/189
-  )
-
-  val itOverrides = Seq(
-    "com.typesafe" %% "ssl-config-core" % "0.4.3" % Test // s3Mock depends on this version, but it's evicted
-  )
+  val it = Seq.empty
 
   val dependencies = compile ++ test
 }

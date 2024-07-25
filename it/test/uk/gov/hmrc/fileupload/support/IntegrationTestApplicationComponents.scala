@@ -23,6 +23,7 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.fileupload.s3.S3Service
 import uk.gov.hmrc.fileupload.virusscan.AvClient
 
 trait IntegrationTestApplicationComponents
@@ -43,12 +44,7 @@ trait IntegrationTestApplicationComponents
       "clam.antivirus.runStub"                         -> "true",
       "clam.antivirus.disableScanning"                 -> disableAvScanning.toString,
       "clam.antivirus.numberOfTimeoutAttempts"         -> numberOfTimeoutAttempts.toString,
-      "microservice.services.file-upload-backend.port" -> backendPort.toString,
-      "aws.service_endpoint"                           -> s"http://127.0.0.1:$s3Port",
-      "aws.s3.bucket.upload.quarantine"                -> "file-upload-quarantine",
-      "aws.s3.bucket.upload.transient"                 -> "file-upload-transient",
-      "aws.access.key.id"                              -> "ENTER YOUR KEY",
-      "aws.secret.access.key"                          -> "ENTER YOUR SECRET KEY"
+      "microservice.services.file-upload-backend.port" -> backendPort.toString
     )
 
   // creates a new application and sets the components
@@ -56,6 +52,7 @@ trait IntegrationTestApplicationComponents
     val builder =
       new GuiceApplicationBuilder()
         .configure(conf: _*)
+        .overrides(bind(classOf[S3Service]).toInstance(s3Service))
     avClient
       .fold(builder)(avClient => builder.overrides(bind(classOf[AvClient]).toInstance(avClient)))
       .build()

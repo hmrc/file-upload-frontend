@@ -16,11 +16,6 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import java.io.InputStream
-import java.net.URL
-import java.util.concurrent.Executors
-import java.util.UUID
-
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.{ClosedShape, IOOperationIncompleteException, Materializer}
 import org.apache.pekko.stream.connectors.file.ArchiveMetadata
@@ -39,7 +34,6 @@ import com.amazonaws.services.s3.transfer.TransferManagerBuilder
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.codahale.metrics.MetricRegistry
-import javax.inject.{Inject, Singleton}
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder
 import play.api.Logger
 import play.api.libs.Files.SingletonTemporaryFileCreator
@@ -47,6 +41,11 @@ import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 
+import java.io.InputStream
+import java.net.URL
+import java.util.concurrent.Executors
+import java.util.UUID
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.jdk.CollectionConverters._

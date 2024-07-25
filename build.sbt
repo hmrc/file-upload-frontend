@@ -39,4 +39,3 @@ lazy val it = project
   .dependsOn(microservice % "test->test")
   .settings(DefaultBuildSettings.itSettings())
   .settings(libraryDependencies ++= AppDependencies.it)
-  .settings(dependencyOverrides ++= AppDependencies.itOverrides)

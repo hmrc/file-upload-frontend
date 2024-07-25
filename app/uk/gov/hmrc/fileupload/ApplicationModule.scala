@@ -28,8 +28,8 @@ import uk.gov.hmrc.fileupload.controllers.{EnvelopeChecker, RedirectionFeature}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, CommandHandlerImpl}
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService
+import uk.gov.hmrc.fileupload.s3.{AwsConfig, S3Service, S3Key, S3KeyName}
 import uk.gov.hmrc.fileupload.s3.S3Service.DeleteFileFromQuarantineBucket
-import uk.gov.hmrc.fileupload.s3.{S3JavaSdkService, S3Key, S3KeyName}
 import uk.gov.hmrc.fileupload.transfer.TransferActor
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerHelperFileExtensionAndUserAgent}
 import uk.gov.hmrc.fileupload.virusscan.{AvClient, DeletionActor, ScannerActor, ScanningService, VirusScanner}
@@ -46,6 +46,8 @@ class ApplicationModule @Inject()(
   auditConnector                   : AuditConnector,
   metricsRegistry                  : MetricRegistry,
   avClient                         : AvClient,
+  s3Service                        : S3Service,
+  awsConfig                        : AwsConfig,
   httpErrorHandler                 : HttpErrorHandler,
   actorSystem                      : org.apache.pekko.actor.ActorSystem,
   override val applicationLifecycle: play.api.inject.ApplicationLifecycle,
@@ -58,15 +60,13 @@ class ApplicationModule @Inject()(
 
   private val logger = Logger(getClass)
 
-  lazy val s3Service = new S3JavaSdkService(configuration.underlying, metricsRegistry)
-
   lazy val downloadFromTransient = s3Service.downloadFromTransient
 
   lazy val uploadToQuarantine = s3Service.uploadToQuarantine
 
   lazy val deleteObjectFromQuarantineBucket: DeleteFileFromQuarantineBucket = s3Service.deleteObjectFromQuarantine
 
-  lazy val createS3Key = S3Key.forEnvSubdir(s3Service.awsConfig.envSubdir)
+  lazy val createS3Key = S3Key.forEnvSubdir(awsConfig.envSubdir)
 
   val redirectionFeature = new RedirectionFeature(configuration.underlying, httpErrorHandler)
 
