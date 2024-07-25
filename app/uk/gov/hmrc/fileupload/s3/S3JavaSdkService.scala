@@ -75,7 +75,6 @@ class S3JavaSdkService @Inject()(
   val metricUploadFailed = metrics.meter("s3.upload.failed")
   val metricCopyFromQtoT = metrics.meter("s3.copyFromQtoT")
 
-  awsConfig.proxyEnabled
   val proxyConfig = new ClientConfiguration()
     .withProxyHost(awsConfig.proxyHost)
     .withProxyPort(awsConfig.proxyPort)

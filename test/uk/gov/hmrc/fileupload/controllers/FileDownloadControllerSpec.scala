@@ -17,10 +17,11 @@
 package uk.gov.hmrc.fileupload.controllers
 
 import org.apache.pekko.stream.Materializer
-import org.mockito.MockitoSugar
+import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.test.Helpers._
@@ -33,7 +34,7 @@ import scala.concurrent.Future
 import java.net.URL
 
 class FileDownloadControllerSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with MockitoSugar
      with ScalaFutures

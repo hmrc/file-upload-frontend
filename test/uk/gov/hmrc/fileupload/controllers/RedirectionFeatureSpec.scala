@@ -20,7 +20,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.http.Status.INTERNAL_SERVER_ERROR
@@ -34,7 +34,7 @@ import uk.gov.hmrc.fileupload.utils.ErrorResponse
 import scala.concurrent.Future
 
 class RedirectionFeatureSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with OptionValues
      with ScalaFutures

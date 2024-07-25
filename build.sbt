@@ -17,30 +17,16 @@
 import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.PlayImport.PlayKeys
 import play.sbt.routes.RoutesKeys.routesGenerator
-import scoverage.ScoverageKeys
 import uk.gov.hmrc.DefaultBuildSettings
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
 ThisBuild / majorVersion := 1
 ThisBuild / scalaVersion := "2.13.12"
 
-lazy val scoverageSettings =
-  Seq(
-    ScoverageKeys.coverageExcludedPackages := List("<empty>", "Reverse.*", ".*AuthService.*", "models/.data/..*", "view.*").mkString(";"),
-    ScoverageKeys.coverageExcludedFiles := List(".*/frontendGlobal.*", ".*/frontendAppConfig.*", ".*/frontendWiring.*",
-      ".*/views/.*_template.*", ".*/govuk_wrapper.*", ".*/routes_routing.*", ".*/BuildInfo.*").mkString(";"),
-    // Minimum is deliberately low to avoid failures initially - please increase as we add more coverage
-    ScoverageKeys.coverageMinimumStmtTotal := 25,
-    ScoverageKeys.coverageFailOnMinimum := false,
-    ScoverageKeys.coverageHighlighting := true,
-    Test / parallelExecution := false
-  )
-
 lazy val microservice = Project("file-upload-frontend", file("."))
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(PlayKeys.playDefaultPort := 8899)
-  .settings(scoverageSettings: _*)
   .settings(
     libraryDependencies ++= AppDependencies.dependencies,
     Test / parallelExecution  := false,

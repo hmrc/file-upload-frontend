@@ -18,11 +18,12 @@ package uk.gov.hmrc.fileupload.controllers
 
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.apache.pekko.actor.ActorSystem
-import org.mockito.MockitoSugar
+import org.mockito.Mockito.when
 import org.scalatest.EitherValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.Configuration
 import play.api.http.Status
 import play.api.libs.json.Json
@@ -44,7 +45,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileUploadControllerSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with MockitoSugar
      with EitherValues

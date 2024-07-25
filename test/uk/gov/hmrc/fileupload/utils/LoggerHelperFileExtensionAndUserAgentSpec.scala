@@ -18,13 +18,13 @@ package uk.gov.hmrc.fileupload.utils
 
 import org.apache.pekko.util.ByteString
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.mvc.MultipartFormData
 import play.api.test.FakeRequest
 import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 
 class LoggerHelperFileExtensionAndUserAgentSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers {
 
   "LoggerHelper" should {

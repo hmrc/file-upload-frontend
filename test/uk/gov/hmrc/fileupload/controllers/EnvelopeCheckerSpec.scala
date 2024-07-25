@@ -18,7 +18,7 @@ package uk.gov.hmrc.fileupload.controllers
 
 import org.apache.pekko.actor.ActorSystem
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.MimeTypes
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
@@ -36,7 +36,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class EnvelopeCheckerSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers {
 
   val testRequest = FakeRequest()

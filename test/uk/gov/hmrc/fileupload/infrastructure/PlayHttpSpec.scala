@@ -22,7 +22,7 @@ import com.github.tomakehurst.wiremock.http.Fault
 import org.scalatest.{BeforeAndAfterEach, EitherValues, OptionValues, Suite}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.Application
 import play.api.http.Status
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -38,7 +38,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class PlayHttpSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers
      with OptionValues
      with EitherValues
