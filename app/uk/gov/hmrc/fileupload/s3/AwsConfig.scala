@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.fileupload.s3
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{Duration, DurationLong}
 
-class AwsConfig(config: com.typesafe.config.Config) {
+@Singleton
+class AwsConfig @Inject() (config: com.typesafe.config.Config) {
   def quarantineBucketName: String = config.getString("aws.s3.bucket.upload.quarantine")
   def transientBucketName: String = config.getString("aws.s3.bucket.upload.transient")
   def accessKeyId: String = config.getString("aws.access.key.id")
@@ -28,9 +30,9 @@ class AwsConfig(config: com.typesafe.config.Config) {
   def zipDuration: Duration = config.getDuration("aws.s3.bucket.zip-duration").toMillis.millis
   def endpoint: Option[String] = {
     val path = "aws.service_endpoint"
-    if (config.hasPath(path)) {
+    if (config.hasPath(path))
       Some(config.getString(path))
-    } else
+    else
       None
   }
   def proxyEnabled = config.getBoolean("proxy.proxyRequiredForThisEnvironment")

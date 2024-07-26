@@ -16,8 +16,10 @@
 
 package uk.gov.hmrc.fileupload.support
 
+import org.mockito.Mockito.reset
 import org.scalatest.{BeforeAndAfterEach, Suite}
-import org.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
+
 import uk.gov.hmrc.fileupload.virusscan.AvClient
 
 trait ITTestAppComponentsWithStubbedClamAV

@@ -16,9 +16,7 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import java.io.InputStream
-import java.net.URL
-
+import com.google.inject.ImplementedBy
 import com.amazonaws.services.s3.model.{CopyObjectResult, S3ObjectSummary}
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.apache.pekko.NotUsed
@@ -30,9 +28,12 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service.{DeleteFileFromQuarantineBucket, DownloadFromBucket, StreamResult, UploadToQuarantine}
 
+import java.io.InputStream
+import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
+@ImplementedBy(classOf[S3JavaSdkService])
 trait S3Service {
   def awsConfig: AwsConfig
 

@@ -16,19 +16,30 @@
 
 package uk.gov.hmrc.fileupload.support
 
-import better.files.File
+import com.amazonaws.services.s3.model.{CopyObjectResult, S3ObjectSummary}
+import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, post, postRequestedFor, put, putRequestedFor, urlPathMatching, urlEqualTo}
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
-import io.findify.s3mock.S3Mock
-import io.findify.s3mock.request.CreateBucketConfiguration
+import com.typesafe.config.ConfigFactory
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.{IOResult, Materializer}
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, Suite}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import play.api.http.Status
+import play.api.libs.json.JsValue
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
+import uk.gov.hmrc.fileupload.s3._
+import uk.gov.hmrc.fileupload.quarantine.FileData
 
+import java.io.{ByteArrayInputStream, InputStream}
+import java.util.concurrent.atomic.AtomicReference
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
+import scala.util.Try
 
 trait FakeFileUploadBackend
   extends BeforeAndAfterAll
@@ -39,25 +50,20 @@ trait FakeFileUploadBackend
 
   lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
   lazy val backendPort: Int = backend.port()
-
-  // create and start S3 API mock
-  lazy val s3Port = 8001
-  lazy val workDir = s"/tmp/s3"
-  lazy val s3MockServer = S3Mock(port = s3Port, dir = workDir)
-
   final lazy val fileUploadBackendBaseUrl = s"http://localhost:$backendPort"
 
-  s3MockServer.start
-  s3MockServer.p.createBucket("file-upload-quarantine", new CreateBucketConfiguration(locationConstraint = None))
-  s3MockServer.p.createBucket("file-upload-transient", new CreateBucketConfiguration(locationConstraint = None))
+  private val awsConfig: AwsConfig =
+    new AwsConfig(ConfigFactory.load()) // should get this from Guice (IntegrationTestApplicationComponents)
+
+  val s3Service = new InMemoryS3Service(awsConfig)
+  s3Service.initBucket(awsConfig.quarantineBucketName)
+  s3Service.initBucket(awsConfig.transientBucketName)
 
   backend.start()
 
   override def afterAll(): Unit = {
     super.afterAll()
     backend.stop()
-    s3MockServer.stop
-    File(workDir).delete()
   }
 
   override def beforeEach(): Unit = {
@@ -77,6 +83,8 @@ trait FakeFileUploadBackend
     )
     super.beforeEach()
   }
+  def deleteQuarantineBucket(): Unit =
+    s3Service.deleteBucket(awsConfig.quarantineBucketName)
 
   val ENVELOPE_OPEN_RESPONSE: String =
     """ { "status" : "OPEN",
@@ -151,4 +159,92 @@ trait FakeFileUploadBackend
     private def fileContentUrl(envelopeId: EnvelopeId, fileId: FileId) =
       s"/file-upload/envelopes/$envelopeId/files/$fileId"
   }
+}
+
+case class S3File(content: String, fileSize: Int) {
+  def toStreamWithMetadata: StreamWithMetadata =
+    StreamWithMetadata(
+      stream   = Source.single(ByteString(content.getBytes("UTF-8")))
+                   .mapMaterializedValue {
+                     _ => Future.successful(IOResult(0))
+                   },
+      metadata = Metadata(
+        contentType   = "binary/octet-stream",
+        contentLength = fileSize,
+        versionId     = "",
+        ETag          = "",
+        s3Metadata    = None
+      )
+    )
+
+  def toFileData: FileData =
+    FileData(
+      length      = fileSize,
+      filename    = "",
+      contentType = None,
+      data        = new ByteArrayInputStream(content.getBytes("UTF-8"))
+    )
+}
+
+class InMemoryS3Service(
+  override val awsConfig: AwsConfig
+) extends S3Service {
+  private val buckets = new AtomicReference(Map[String, Map[String, S3File]]())
+
+  def initBucket(bucket: String): Unit =
+    buckets.updateAndGet(_ + (bucket -> Map[String, S3File]()))
+
+  def deleteBucket(bucketName: String): Unit =
+    buckets.updateAndGet(_ - bucketName)
+
+  private def getBucket(bucketName: String): Map[String, S3File] =
+    buckets.get().get(bucketName).getOrElse(sys.error(s"Bucket $bucketName does not exist"))
+
+  private def updateBucket(bucketName: String)(f: Map[String, S3File] => Map[String, S3File]): Unit =
+    buckets.updateAndGet(_ + (bucketName -> f(getBucket(bucketName))))
+
+  override def download(bucketName: String, key: S3KeyName): Option[StreamWithMetadata] =
+    getBucket(bucketName).get(key.value).map(_.toStreamWithMetadata)
+
+  override def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata] =
+    ??? // Ony used by S3TestController
+
+  override def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
+    val bucketName = awsConfig.quarantineBucketName
+    Future.successful(getBucket(bucketName).get(key.value).map(_.toFileData))
+  }
+
+  override def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[UploadResult] = {
+    updateBucket(bucketName)(_ + (key.value -> new S3File(scala.io.Source.fromInputStream(file).mkString, fileSize)))
+    Future.successful(new UploadResult())
+  }
+
+  override def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], NotUsed] =
+    Source.single(
+      getBucket(bucketName).toSeq.map {_ => new S3ObjectSummary()}
+    )
+
+  override def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResult] =
+    scala.util.Try {
+      val fromBucket = awsConfig.quarantineBucketName
+      val toBucket   = awsConfig.transientBucketName
+      val s3File = getBucket(fromBucket).getOrElse(key.value, sys.error(s"File $key was not found in bucket $fromBucket"))
+      updateBucket(toBucket)(_ + (key.value -> s3File))
+      new CopyObjectResult()
+    }
+
+  override def getFileLengthFromQuarantine(key: S3KeyName, versionId: String): Long = {
+    val bucketName = awsConfig.quarantineBucketName
+    getBucket(bucketName).get(key.value).map(_.fileSize)
+      .fold(sys.error(s"File $key was not found in bucket $bucketName"))(_.toLong)
+  }
+
+  override def getBucketProperties(bucketName: String): JsValue =
+    ???  // Ony used by S3TestController
+
+  override def deleteObjectFromBucket(bucketName: String, key: S3KeyName): Unit =
+    updateBucket(bucketName)(_ - key.value)
+
+  override def zipAndPresign(envelopeId: EnvelopeId, files: List[(FileId, Option[String])])(implicit ec : ExecutionContext, materializer: Materializer): Future[ZipData] =
+    ???
 }

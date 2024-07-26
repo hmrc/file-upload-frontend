@@ -173,7 +173,7 @@ class FileUploadRedirectionISpec extends GivenWhenThen with FileActions with Env
       Wiremock.respondToEnvelopeCheck(envelopeId)
 
       Then("s3 is down")
-      s3MockServer.p.deleteBucket("file-upload-quarantine")
+      deleteQuarantineBucket()
 
       When(s"a file is uploaded provided a redirect on error to a ${BaseUrl.dev} url")
       val redirectSuccessUrl = s"${BaseUrl.dev}/estimate-paye-take-home-pay/your-pay"

@@ -17,11 +17,11 @@
 package uk.gov.hmrc.fileupload.s3
 
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 class S3JavaSdkServiceSpec
-  extends AnyWordSpecLike
+  extends AnyWordSpec
      with Matchers {
 
   val testEnvelopeId = EnvelopeId()

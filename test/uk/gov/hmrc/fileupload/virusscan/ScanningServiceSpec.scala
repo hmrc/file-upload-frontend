@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.fileupload.virusscan
 
-import java.io.{FileInputStream, InputStream}
-
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.Mockito.{times, verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatestplus.mockito.MockitoSugar
+import org.mockito.ArgumentMatchers.any
 import uk.gov.hmrc.fileupload.quarantine.QuarantineService.QuarantineDownloadResult
 import uk.gov.hmrc.fileupload.s3.S3KeyName
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 import uk.gov.hmrc.fileupload.{DomainFixtures, EnvelopeId, File, FileId, FileRefId}
 
+import java.io.{FileInputStream, InputStream}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -34,7 +35,6 @@ class ScanningServiceSpec
   extends AnyFlatSpec
      with Matchers
      with MockitoSugar
-     with ArgumentMatchersSugar
      with ScalaFutures
      with IntegrationPatience {
 

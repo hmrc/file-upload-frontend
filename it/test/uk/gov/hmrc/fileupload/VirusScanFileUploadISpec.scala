@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.io.InputStream
-
-import org.mockito.{ArgumentMatchersSugar, MockitoSugar}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{times, verify, when}
 import org.scalatest.concurrent.{IntegrationPatience, Eventually}
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
 import uk.gov.hmrc.fileupload.DomainFixtures.{anyEnvelopeId, anyFileId}
 import uk.gov.hmrc.fileupload.support.{EnvelopeActions, FileActions, ITTestAppComponentsWithStubbedClamAV}
 
+import java.io.InputStream
 import scala.concurrent.{ExecutionContext, Future}
 
 class VirusScanFileUploadISpec
@@ -32,7 +33,6 @@ class VirusScanFileUploadISpec
      with Eventually
      with ITTestAppComponentsWithStubbedClamAV
      with MockitoSugar
-     with ArgumentMatchersSugar
      with IntegrationPatience {
 
   "File upload front-end" should {
