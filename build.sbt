@@ -21,7 +21,7 @@ import uk.gov.hmrc.DefaultBuildSettings
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
 ThisBuild / majorVersion := 1
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "3.3.3"
 
 lazy val microservice = Project("file-upload-frontend", file("."))
   .enablePlugins(PlayScala, SbtDistributablesPlugin)

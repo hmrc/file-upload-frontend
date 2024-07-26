@@ -61,7 +61,7 @@ class ClamAntiVirus private[clamav] (clamAvConfig: ClamAvConfig)(implicit ec: Ex
     }
 
   private def readResponse(connection: Connection): Future[String] = Future {
-    IOUtils.toString(connection.in)
+    IOUtils.toString(connection.in, "UTF-8")
   }
 
   private def parseResponse(response: String) =

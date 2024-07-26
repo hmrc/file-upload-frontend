@@ -22,7 +22,7 @@ import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.http.HttpVerbs.POST
 import play.api.libs.json._
-import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.libs.ws.{WSClient, WSResponse, writeableOf_JsValue}
 import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
 import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.fileupload.s3.S3JavaSdkService

@@ -22,7 +22,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.MimeTypes
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
-import play.api.mvc.BodyParser
+import play.api.mvc.{BodyParser, Result}
 import play.api.mvc.Results._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -79,7 +79,7 @@ class EnvelopeCheckerSpec
 
   "When an envelope is OPEN it" should {
     "be possible to execute an Action" in {
-      lazy val expectedAction = Action(_ => Ok)
+      lazy val expectedAction = Action(Ok)
 
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
       val checkEnvelopeDetails = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Right(envelopeOpen))
@@ -94,7 +94,7 @@ class EnvelopeCheckerSpec
 
   "When an envelope is OPEN and has no constraints" should {
     "be possible to execute an Action" in {
-      val expectedAction = Action { _ => Ok }
+      val expectedAction = Action(Ok)
 
       val envelopeOpen = Json.parse("""{ "status" : "OPEN" }""")
       val checkEnvelopeDetails = (envId: EnvelopeId, headerCarrier: HeaderCarrier) => Future(Right(envelopeOpen))
@@ -225,9 +225,10 @@ class EnvelopeCheckerSpec
     }
   }
 
-  def actionThatShouldNotExecute = Action(bodyParserThatShouldNotExecute) { _ =>
-    fail("action executed which we wanted to prevent")
-  }
+  def actionThatShouldNotExecute =
+    Action(bodyParserThatShouldNotExecute)(
+      fail("action executed which we wanted to prevent"): Result
+    )
 
   def bodyParserThatShouldNotExecute: BodyParser[AnyContent] = BodyParser { _ =>
     Accumulator.done(

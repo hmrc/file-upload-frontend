@@ -16,11 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.util.concurrent.Executors
-
 import org.apache.pekko.actor.ActorRef
-import com.codahale.metrics.MetricRegistry
-import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.libs.ws.ahc.AhcWSComponents
@@ -37,6 +33,8 @@ import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScan, ScanResult, Sca
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.util.concurrent.Executors
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -44,7 +42,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class ApplicationModule @Inject()(
   servicesConfig                   : ServicesConfig,
   auditConnector                   : AuditConnector,
-  metricsRegistry                  : MetricRegistry,
   avClient                         : AvClient,
   s3Service                        : S3Service,
   awsConfig                        : AwsConfig,

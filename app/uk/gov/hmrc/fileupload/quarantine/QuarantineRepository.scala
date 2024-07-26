@@ -44,8 +44,8 @@ case class EnvelopeReport(
 
 object EnvelopeReport{
   implicit val envelopeFormat: OFormat[EnvelopeReport] = {
-    implicit val dtr = Reads[DateTime](_.validate[String].map[DateTime](dtString => new DateTime(dtString)))
-    implicit val dtw = Writes[DateTime](dt => JsString(dt.toString))
+    implicit val dtr: Reads[DateTime]  = Reads[DateTime](_.validate[String].map[DateTime](dtString => new DateTime(dtString)))
+    implicit val dtw: Writes[DateTime] = Writes[DateTime](dt => JsString(dt.toString))
     Json.format[EnvelopeReport]
   }
 }

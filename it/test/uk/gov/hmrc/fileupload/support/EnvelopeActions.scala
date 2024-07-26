@@ -19,7 +19,7 @@ package uk.gov.hmrc.fileupload.support
 import java.io.File
 
 import org.scalatest.Suite
-import play.api.libs.ws.WSResponse
+import play.api.libs.ws.{WSResponse, writeableOf_ByteArray}
 import uk.gov.hmrc.fileupload.EnvelopeId
 
 import scala.io.Source

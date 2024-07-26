@@ -34,7 +34,7 @@ object DomainFixtures {
   def temporaryFile(fileType: String, data: Option[String] = None) = {
     val temporaryFile = java.io.File.createTempFile("tmp", fileType)
 
-    data.foreach(FileUtils.writeStringToFile(temporaryFile, _))
+    data.foreach(FileUtils.writeStringToFile(temporaryFile, _, "UTF-8"))
 
     temporaryFile.deleteOnExit()
     temporaryFile

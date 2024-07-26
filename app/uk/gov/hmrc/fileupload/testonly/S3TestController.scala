@@ -72,7 +72,7 @@ trait S3TestController { self: FrontendController =>
      Future.successful(BadRequest("Expected exactly one file to be attached"))
   }
 
-  def copyFromQtoT(fileName: String, versionId: String) = Action { _ =>
+  def copyFromQtoT(fileName: String, versionId: String) = Action {
     s3Service.copyFromQtoT(S3KeyName(fileName), versionId) match {
       case Success(result) => Ok(s"Successfully copied file: $fileName, etag: ${result.getETag}, versionId: ${result.getVersionId}")
       case Failure(ex) => InternalServerError("Problem copying to transient: " + ex.getMessage)
@@ -82,7 +82,7 @@ trait S3TestController { self: FrontendController =>
   def s3downloadFileQ(fileName: String, version: Option[String]) = s3downloadFile(quarantineBucketName, fileName, version)
   def s3downloadFileT(fileName: String, version: Option[String]) = s3downloadFile(transientBucketName, fileName, version)
 
-  def s3downloadFile(bucket: String, fileName: String, version: Option[String]) = Action { _ =>
+  def s3downloadFile(bucket: String, fileName: String, version: Option[String]) = Action {
     logger.info(s"downloading $fileName from bucket: $bucket, versionO: $version")
     val result = (version match {
       case Some(v) => s3Service.download(bucket, S3KeyName(fileName), v)

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.fileupload
 
 import org.scalatest.concurrent.Eventually
+import play.api.libs.ws.DefaultBodyReadables.readableAsString
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.support._
 

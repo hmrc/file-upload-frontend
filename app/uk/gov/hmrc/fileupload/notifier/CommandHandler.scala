@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.json.{Json, Writes}
-import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse, writeableOf_JsValue}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import uk.gov.hmrc.fileupload.notifier.NotifierService.{NotifyError, NotifyResult, NotifySuccess}

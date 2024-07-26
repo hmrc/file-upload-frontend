@@ -23,7 +23,7 @@ import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.{IOResult, Materializer}
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsValue, Writes}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service.{DeleteFileFromQuarantineBucket, DownloadFromBucket, StreamResult, UploadToQuarantine}
@@ -118,12 +118,12 @@ case class ZipData(
 object ZipData {
   import play.api.libs.json.__
   import play.api.libs.functional.syntax._
-  val writes =
+  val writes: Writes[ZipData] =
     ( (__ \ "name"       ).write[String]
     ~ (__ \ "size"       ).write[Long]
     ~ (__ \ "md5Checksum").write[String]
     ~ (__ \ "url"        ).write[String].contramap[URL](_.toString)
-    )(unlift(ZipData.unapply))
+    )(zd => Tuple.fromProductTyped(zd))
 }
 
 class MissingFileException(message: String) extends RuntimeException(message)
