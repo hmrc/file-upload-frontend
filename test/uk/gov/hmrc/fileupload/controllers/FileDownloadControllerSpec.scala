@@ -42,7 +42,7 @@ class FileDownloadControllerSpec
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit lazy val mat: Materializer = app.injector.instanceOf[Materializer]
+  given Materializer = app.injector.instanceOf[Materializer]
 
   val appModule = mock[ApplicationModule]
 
@@ -61,7 +61,7 @@ class FileDownloadControllerSpec
     when(appModule.downloadFromQuarantine).thenReturn(download)
     when(appModule.zipAndPresign         ).thenReturn(zipAndPresign)
 
-    new FileDownloadController(
+    FileDownloadController(
       appModule,
       app.injector.instanceOf[MessagesControllerComponents]
     )
@@ -76,7 +76,7 @@ class FileDownloadControllerSpec
           name        = "name",
           size        = 100,
           md5Checksum = "checksum",
-          url         = new URL("http://asd.com")
+          url         = URL("http://asd.com")
         ))
 
       val result =
@@ -96,7 +96,7 @@ class FileDownloadControllerSpec
       val message = "fileId1 missing"
 
       val zipAndPresign: (EnvelopeId, List[(FileId, Option[String])]) => Future[ZipData] =
-        (_,_) => Future.failed(new MissingFileException(message))
+        (_,_) => Future.failed(MissingFileException(message))
 
       val request = FakeRequest("POST", "/zip")
 

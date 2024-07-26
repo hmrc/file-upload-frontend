@@ -33,19 +33,18 @@ class ScannerActor(
   subscribe: (ActorRef, Class[_]) => Boolean,
   scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
   commandHandler: CommandHandler
-)(implicit
-  ec: ExecutionContext
-) extends Actor {
+)(using
+  ExecutionContext
+) extends Actor:
 
   private val logger = Logger(getClass)
 
   private var outstandingScans = Queue.empty[Event]
   private var scanningEvent: Option[Event] = None
 
-  override def preStart(): Unit = {
+  override def preStart(): Unit =
     subscribe(self, classOf[QuarantineFile])
     subscribe(self, classOf[VirusScanRequested])
-  }
 
   def receive: PartialFunction[Any, Unit] = {
     case e: QuarantineFile =>
@@ -67,17 +66,17 @@ class ScannerActor(
       outstandingScans = outstandingScans enqueue e
 
     case executed: ScanExecuted =>
-      executed.result match {
+      executed.result match
         case Right(ScanResultFileClean) =>
           notify(hasVirus = false)
           scanNext()
-        case Left(ScanResultVirusDetected) =>
+        case Left(ScanError.ScanResultVirusDetected) =>
           notify(hasVirus = true)
           scanNext()
         case Left(a: ScanError) =>
           logger.error(s"Scan of file ${executed.requestedFor} failed with ScanError: $a")
           scanNext()
-      }
+
     case e: Failure =>
       logger.error("Unknown Failure status.", e.cause)
       scanNext()
@@ -90,42 +89,40 @@ class ScannerActor(
   case class ScanExecuted(requestedFor: FileRefId, result: ScanResult)
 
   def scanNext(): Unit =
-    outstandingScans.dequeueOption match {
+    outstandingScans.dequeueOption match
       case Some((e, newQueue)) =>
-        context become receiveWhenScanning
+        context.become(receiveWhenScanning)
         outstandingScans = newQueue
-        scanningEvent = Some(e)
+        scanningEvent    = Some(e)
 
         logger.info(s"Scan $e")
         scanBinaryData(e.envelopeId, e.fileId, e.fileRefId)
-          .map(ScanExecuted(e.fileRefId, _)) pipeTo self
+          .map(ScanExecuted(e.fileRefId, _))
+          .pipeTo(self)
 
       case None =>
-        context become receive
+        context.become(receive)
         scanningEvent = None
-    }
 
-  def notify(hasVirus: Boolean): Unit = {
-    implicit val hc = HeaderCarrier()
-    scanningEvent.foreach { e =>
+  def notify(hasVirus: Boolean): Unit =
+    given HeaderCarrier = HeaderCarrier()
+    scanningEvent.foreach: e =>
       val command =
-        if (hasVirus)
+        if hasVirus then
           MarkFileAsInfected(e.envelopeId, e.fileId, e.fileRefId)
         else
           MarkFileAsClean(e.envelopeId, e.fileId, e.fileRefId)
       commandHandler.notify(command)
-    }
-  }
-}
 
-object ScannerActor {
+end ScannerActor
+
+object ScannerActor:
 
   def props(
     subscribe     : (ActorRef, Class[_]) => Boolean,
     scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult],
     commandHandler: CommandHandler
-  )(implicit
-    ec: ExecutionContext
+  )(using
+    ExecutionContext
   ): Props =
-    Props(new ScannerActor(subscribe, scanBinaryData, commandHandler))
-}
+    Props(ScannerActor(subscribe, scanBinaryData, commandHandler))

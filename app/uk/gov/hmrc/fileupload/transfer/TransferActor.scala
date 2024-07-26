@@ -33,16 +33,15 @@ class TransferActor(
   commandHandler: CommandHandler,
   getFileLength : (EnvelopeId, FileId, FileRefId) => Long,
   transferFile  : (S3KeyName, String) => Try[CopyObjectResult]
-)(implicit
-  ec: ExecutionContext
-) extends Actor {
+)(using
+  ExecutionContext
+) extends Actor:
 
   private val logger = Logger(getClass)
 
-  override def preStart(): Unit = {
+  override def preStart(): Unit =
     subscribe(self, classOf[MarkFileAsClean])
     subscribe(self, classOf[TransferRequested])
-  }
 
   def receive = {
     case e: MarkFileAsClean =>
@@ -55,19 +54,18 @@ class TransferActor(
   }
 
   private def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId): Unit =
-    transferFile(createS3Key(envelopeId, fileId), fileRefId.value) match {
+    transferFile(createS3Key(envelopeId, fileId), fileRefId.value) match
       case Success(_) =>
-        implicit val hc = HeaderCarrier()
-        commandHandler.notify(
+        given HeaderCarrier = HeaderCarrier()
+        commandHandler.notify:
           StoreFile(envelopeId, fileId, fileRefId, getFileLength(envelopeId, fileId, fileRefId))
-        )
         logger.info(s"File successfully transferred for envelopeId: $envelopeId, fileId: $fileId and version: $fileRefId")
       case Failure(ex) =>
         logger.error(s"File not transferred for $envelopeId and $fileId and $fileRefId", ex)
-    }
-}
 
-object TransferActor {
+end TransferActor
+
+object TransferActor:
 
   def props(
     subscribe     : (ActorRef, Class[_]) => Boolean,
@@ -75,8 +73,7 @@ object TransferActor {
     commandHandler: CommandHandler,
     getFileLength : (EnvelopeId, FileId, FileRefId) => Long,
     transferFile  : (S3KeyName, String) => Try[CopyObjectResult]
-  )(implicit
-    ec: ExecutionContext
+  )(using
+    ExecutionContext
   ): Props =
-    Props(new TransferActor(subscribe, createS3Key, commandHandler, getFileLength, transferFile))
-}
+    Props(TransferActor(subscribe, createS3Key, commandHandler, getFileLength, transferFile))

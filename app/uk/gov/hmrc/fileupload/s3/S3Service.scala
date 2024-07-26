@@ -34,14 +34,14 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 @ImplementedBy(classOf[S3JavaSdkService])
-trait S3Service {
+trait S3Service:
   def awsConfig: AwsConfig
 
   def download(bucketName: String, key: S3KeyName): Option[StreamWithMetadata]
 
   def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata]
 
-  def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]]
+  def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(using ExecutionContext): Future[Option[FileData]]
 
   def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[UploadResult]
 
@@ -82,10 +82,11 @@ trait S3Service {
   def deleteObjectFromQuarantine: DeleteFileFromQuarantineBucket =
     deleteObjectFromBucket(awsConfig.quarantineBucketName, _)
 
-  def zipAndPresign(envelopeId: EnvelopeId, files: List[(FileId, Option[String])])(implicit ec : ExecutionContext, materializer: Materializer): Future[ZipData]
-}
+  def zipAndPresign(envelopeId: EnvelopeId, files: List[(FileId, Option[String])])(using ExecutionContext, Materializer): Future[ZipData]
 
-object S3Service {
+end S3Service
+
+object S3Service:
   type StreamResult = Source[ByteString, Future[IOResult]]
 
   type UploadToQuarantine = (S3KeyName, InputStream, Int) => Future[UploadResult]
@@ -93,7 +94,6 @@ object S3Service {
   type DownloadFromBucket = S3KeyName => Option[StreamWithMetadata]
 
   type DeleteFileFromQuarantineBucket = S3KeyName => Unit
-}
 
 case class Metadata(
   contentType  : String,
@@ -115,7 +115,8 @@ case class ZipData(
   md5Checksum: String,
   url        : URL
 )
-object ZipData {
+
+object ZipData:
   import play.api.libs.json.__
   import play.api.libs.functional.syntax._
   val writes: Writes[ZipData] =
@@ -124,6 +125,5 @@ object ZipData {
     ~ (__ \ "md5Checksum").write[String]
     ~ (__ \ "url"        ).write[String].contramap[URL](_.toString)
     )(zd => Tuple.fromProductTyped(zd))
-}
 
 class MissingFileException(message: String) extends RuntimeException(message)

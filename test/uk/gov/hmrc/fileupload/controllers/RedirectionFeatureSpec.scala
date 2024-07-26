@@ -49,24 +49,22 @@ class RedirectionFeatureSpec
     stubControllerComponents(bodyParser = stubBodyParser(AnyContent(jsonBody))) // we can't get the body from the request?
       .actionBuilder
 
-  val redirectionFeature = new RedirectionFeature(allowedHosts, null)
+  val redirectionFeature = RedirectionFeature(allowedHosts, null)
   val redirectionWithExceptions =
-    new RedirectionFeature(
+    RedirectionFeature(
       allowedHosts,
       new HttpErrorHandler() {
         private val logger = Logger(getClass)
 
-        implicit val erFormats: Format[ErrorResponse] = Json.format[ErrorResponse]
+        given Format[ErrorResponse] = Json.format[ErrorResponse]
 
         override def onClientError(request: RequestHeader, statusCode: Int, message: String) = ???
 
         override def onServerError(request: RequestHeader, ex: Throwable) = {
           logger.error(ex.getMessage, ex)
           Future.successful {
-            val (code, message) = ex match {
-              case e: Throwable => (INTERNAL_SERVER_ERROR, e.getMessage)
-            }
-            new Status(code)(Json.toJson(ErrorResponse(code, message)))
+            val code = INTERNAL_SERVER_ERROR
+            Status(code)(Json.toJson(ErrorResponse(code, ex.getMessage)))
           }
         }
       }
@@ -80,7 +78,7 @@ class RedirectionFeatureSpec
   import redirectionFeature.redirect
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  implicit val as: ActorSystem = ActorSystem()
+  given ActorSystem = ActorSystem()
 
   "Redirection feature" should {
     "be backward compatible" in {
@@ -142,7 +140,7 @@ class RedirectionFeatureSpec
 
     "redirect on failure with exception thrown" in {
       val errorMsg = "Anything can be thrown"
-      val badAction: EssentialAction = Action ( _ => throw new RuntimeException("Anything can be thrown"))
+      val badAction: EssentialAction = Action ( _ => throw RuntimeException("Anything can be thrown"))
       val redirectA = redirectionWithExceptions.redirect(None, Some(OK_URL_ALLOWED))(badAction)
       val result = call(redirectA, request)
 

@@ -50,7 +50,7 @@ trait IntegrationTestApplicationComponents
   // creates a new application and sets the components
   implicit override lazy val app: Application = {
     val builder =
-      new GuiceApplicationBuilder()
+      GuiceApplicationBuilder()
         .configure(conf: _*)
         .overrides(bind(classOf[S3Service]).toInstance(s3Service))
     avClient

@@ -24,11 +24,9 @@ object NonFatalWithLogging {
 
   private val logger = Logger(getClass)
 
-  def unapply(t: Throwable) = {
+  def unapply(t: Throwable) =
     val result = NonFatal.unapply(t)
-    result.foreach { _ =>
+    result.foreach: _ =>
       logger.warn(t.getMessage, t)
-    }
     result
-  }
 }

@@ -27,18 +27,18 @@ import play.core.parsers.Multipart.{FileInfo, FilePartHandler}
 
 import scala.concurrent.ExecutionContext
 
-object InMemoryMultipartFileHandler {
+object InMemoryMultipartFileHandler:
   type InMemoryMultiPartBodyParser = () => BodyParser[MultipartFormData[FileCachedInMemory]]
 
-  case class FileCachedInMemory(data: ByteString) {
-    def size: Int = data.size
-    def inputStream: InputStream = data.iterator.asInputStream
-  }
+  case class FileCachedInMemory(data: ByteString):
+    def size: Int =
+      data.size
 
-  def cacheFileInMemory(implicit ec: ExecutionContext): FilePartHandler[FileCachedInMemory] = {
+    def inputStream: InputStream =
+      data.iterator.asInputStream
+
+  def cacheFileInMemory(using ExecutionContext): FilePartHandler[FileCachedInMemory] =
     case FileInfo(partName, filename, contentType, dispositionType) =>
-      Accumulator(Sink.fold[ByteString, ByteString](ByteString.empty)(_ ++ _)).map { fullFile =>
-        FilePart(partName, filename, contentType, FileCachedInMemory(fullFile))
-      }
-  }
-}
+      Accumulator(Sink.fold[ByteString, ByteString](ByteString.empty)(_ ++ _))
+        .map: fullFile =>
+          FilePart(partName, filename, contentType, FileCachedInMemory(fullFile))

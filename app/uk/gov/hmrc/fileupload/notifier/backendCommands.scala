@@ -40,7 +40,7 @@ case class QuarantineFile(
 }
 
 object QuarantineFile {
-  implicit val format: Format[QuarantineFile] = Json.format[QuarantineFile]
+  given Format[QuarantineFile] = Json.format[QuarantineFile]
 }
 
 case class MarkFileAsClean(
@@ -52,7 +52,7 @@ case class MarkFileAsClean(
 }
 
 object MarkFileAsClean {
-  implicit val format: Format[MarkFileAsClean] = Json.format[MarkFileAsClean]
+  given Format[MarkFileAsClean] = Json.format[MarkFileAsClean]
 }
 
 case class MarkFileAsInfected(
@@ -64,7 +64,7 @@ case class MarkFileAsInfected(
 }
 
 object MarkFileAsInfected {
-  implicit val format: Format[MarkFileAsInfected] = Json.format[MarkFileAsInfected]
+  given Format[MarkFileAsInfected] = Json.format[MarkFileAsInfected]
 }
 
 case class StoreFile(
@@ -77,5 +77,5 @@ case class StoreFile(
 }
 
 object StoreFile {
-  implicit val format: Format[StoreFile] = Json.format[StoreFile]
+  given Format[StoreFile] = Json.format[StoreFile]
 }

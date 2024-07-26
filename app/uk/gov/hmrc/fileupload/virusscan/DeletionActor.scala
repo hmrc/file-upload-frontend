@@ -26,7 +26,7 @@ class DeletionActor(
   subscribe                       : (ActorRef, Class[_]) => Boolean,
   deleteObjectFromQuarantineBucket: S3Service.DeleteFileFromQuarantineBucket,
   createS3Key                     : (EnvelopeId, FileId) => S3KeyName
-) extends Actor {
+) extends Actor:
 
   private val logger = Logger(getClass)
 
@@ -39,11 +39,9 @@ class DeletionActor(
       deleteInfectedFile(e)
   }
 
-  private def deleteInfectedFile(infectedFile: MarkFileAsInfected): Unit = {
+  private def deleteInfectedFile(infectedFile: MarkFileAsInfected): Unit =
     val key = createS3Key(infectedFile.id, infectedFile.fileId)
     deleteObjectFromQuarantineBucket(key)
-  }
-}
 
 object DeletionActor {
   def props(
@@ -51,5 +49,5 @@ object DeletionActor {
     deleteObjectFromQuarantineBucket: S3Service.DeleteFileFromQuarantineBucket,
     createS3Key                     : (EnvelopeId, FileId) => S3KeyName
   ): Props =
-    Props(new DeletionActor(subscribe, deleteObjectFromQuarantineBucket, createS3Key))
+    Props(DeletionActor(subscribe, deleteObjectFromQuarantineBucket, createS3Key))
 }

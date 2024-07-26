@@ -48,14 +48,14 @@ trait FakeFileUploadBackend
      with IntegrationPatience {
   this: Suite =>
 
-  lazy val backend = new WireMockServer(wireMockConfig().dynamicPort())
+  lazy val backend = WireMockServer(wireMockConfig().dynamicPort())
   lazy val backendPort: Int = backend.port()
   final lazy val fileUploadBackendBaseUrl = s"http://localhost:$backendPort"
 
   private val awsConfig: AwsConfig =
-    new AwsConfig(ConfigFactory.load()) // should get this from Guice (IntegrationTestApplicationComponents)
+    AwsConfig(ConfigFactory.load()) // should get this from Guice (IntegrationTestApplicationComponents)
 
-  val s3Service = new InMemoryS3Service(awsConfig)
+  val s3Service = InMemoryS3Service(awsConfig)
   s3Service.initBucket(awsConfig.quarantineBucketName)
   s3Service.initBucket(awsConfig.transientBucketName)
 
@@ -182,14 +182,14 @@ case class S3File(content: String, fileSize: Int) {
       length      = fileSize,
       filename    = "",
       contentType = None,
-      data        = new ByteArrayInputStream(content.getBytes("UTF-8"))
+      data        = ByteArrayInputStream(content.getBytes("UTF-8"))
     )
 }
 
 class InMemoryS3Service(
   override val awsConfig: AwsConfig
 ) extends S3Service {
-  private val buckets = new AtomicReference(Map[String, Map[String, S3File]]())
+  private val buckets = AtomicReference(Map[String, Map[String, S3File]]())
 
   def initBucket(bucket: String): Unit =
     buckets.updateAndGet(_ + (bucket -> Map[String, S3File]()))
@@ -209,19 +209,19 @@ class InMemoryS3Service(
   override def download(bucketName: String, key: S3KeyName, versionId: String): Option[StreamWithMetadata] =
     ??? // Ony used by S3TestController
 
-  override def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
+  override def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(using ExecutionContext): Future[Option[FileData]] = {
     val bucketName = awsConfig.quarantineBucketName
     Future.successful(getBucket(bucketName).get(key.value).map(_.toFileData))
   }
 
   override def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[UploadResult] = {
-    updateBucket(bucketName)(_ + (key.value -> new S3File(scala.io.Source.fromInputStream(file).mkString, fileSize)))
-    Future.successful(new UploadResult())
+    updateBucket(bucketName)(_ + (key.value -> S3File(scala.io.Source.fromInputStream(file).mkString, fileSize)))
+    Future.successful(UploadResult())
   }
 
   override def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], NotUsed] =
     Source.single(
-      getBucket(bucketName).toSeq.map {_ => new S3ObjectSummary()}
+      getBucket(bucketName).toSeq.map {_ => S3ObjectSummary()}
     )
 
   override def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResult] =
@@ -230,7 +230,7 @@ class InMemoryS3Service(
       val toBucket   = awsConfig.transientBucketName
       val s3File = getBucket(fromBucket).getOrElse(key.value, sys.error(s"File $key was not found in bucket $fromBucket"))
       updateBucket(toBucket)(_ + (key.value -> s3File))
-      new CopyObjectResult()
+      CopyObjectResult()
     }
 
   override def getFileLengthFromQuarantine(key: S3KeyName, versionId: String): Long = {
@@ -245,6 +245,6 @@ class InMemoryS3Service(
   override def deleteObjectFromBucket(bucketName: String, key: S3KeyName): Unit =
     updateBucket(bucketName)(_ - key.value)
 
-  override def zipAndPresign(envelopeId: EnvelopeId, files: List[(FileId, Option[String])])(implicit ec : ExecutionContext, materializer: Materializer): Future[ZipData] =
+  override def zipAndPresign(envelopeId: EnvelopeId, files: List[(FileId, Option[String])])(using ExecutionContext, Materializer): Future[ZipData] =
     ???
 }

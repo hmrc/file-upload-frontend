@@ -38,7 +38,7 @@ class ScanningServiceSpec
      with ScalaFutures
      with IntegrationPatience {
 
-  private val exception = new Exception("error")
+  private val exception = Exception("error")
 
   private val timeoutAttempts = 3
 
@@ -48,23 +48,23 @@ class ScanningServiceSpec
 
   "A successful scan with -1 scanTimeoutAttempts" should behave like scanWithNumberOfAttempts(Right(ScanResultFileClean), 1, -1)
 
-  "A scan with a virus" should behave like scanWithNumberOfAttempts(Left(ScanResultVirusDetected), 1)
+  "A scan with a virus" should behave like scanWithNumberOfAttempts(Left(ScanError.ScanResultVirusDetected), 1)
 
-  "A scan with a failure sending chunks" should behave like scanWithNumberOfAttempts(Left(ScanResultFailureSendingChunks(exception)), 1)
+  "A scan with a failure sending chunks" should behave like scanWithNumberOfAttempts(Left(ScanError.ScanResultFailureSendingChunks(exception)), 1)
 
-  "A scan with an unexpected result" should behave like scanWithNumberOfAttempts(Left(ScanResultUnexpectedResult), 1)
+  "A scan with an unexpected result" should behave like scanWithNumberOfAttempts(Left(ScanError.ScanResultUnexpectedResult), 1)
 
-  "A scan with an error result" should behave like scanWithNumberOfAttempts(Left(ScanResultError(exception)), 1)
+  "A scan with an error result" should behave like scanWithNumberOfAttempts(Left(ScanError.ScanResultError(exception)), 1)
 
-  "A scan with multiple timeouts" should behave like scanWithNumberOfAttempts(Left(ScanReadCommandTimeOut), timeoutAttempts)
+  "A scan with multiple timeouts" should behave like scanWithNumberOfAttempts(Left(ScanError.ScanReadCommandTimeOut), timeoutAttempts)
 
   "A scan with a timeout" should behave like timeoutFollowedByNonTimeout(Right(ScanResultFileClean), "clean", 2)
 
-  it should behave like timeoutFollowedByNonTimeout(Left(ScanResultVirusDetected), "virus", 2)
-  it should behave like timeoutFollowedByNonTimeout(Left(ScanResultFailureSendingChunks(exception)), "chunk failure", 2)
-  it should behave like timeoutFollowedByNonTimeout(Left(ScanResultUnexpectedResult), "unexpected", 2)
-  it should behave like timeoutFollowedByNonTimeout(Left(ScanResultError(exception)), "error", 2)
-  it should behave like timeoutFollowedByNonTimeout(Left(ScanReadCommandTimeOut), "timeout", 3)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanError.ScanResultVirusDetected), "virus", 2)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanError.ScanResultFailureSendingChunks(exception)), "chunk failure", 2)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanError.ScanResultUnexpectedResult), "unexpected", 2)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanError.ScanResultError(exception)), "error", 2)
+  it should behave like timeoutFollowedByNonTimeout(Left(ScanError.ScanReadCommandTimeOut), "timeout", 3)
 
   def timeoutFollowedByNonTimeout(scanResult: ScanResult, scanResultType: String, attempts: Int): Unit = {
     it should s"make exactly $attempts when followed by a $scanResultType scan result" in {
@@ -72,7 +72,7 @@ class ScanningServiceSpec
 
       when(scanner.apply(any[InputStream], any[Long]))
         .thenReturn(
-          Future.successful(Left(ScanReadCommandTimeOut)),
+          Future.successful(Left(ScanError.ScanReadCommandTimeOut)),
         Future.successful(scanResult))
 
       val result = ScanningService.scanBinaryData(scanner = scanner, scanTimeoutAttempts = timeoutAttempts, getFile = (_, _) => file)((_, _) => S3KeyName("some-key"))(EnvelopeId(), FileId(), FileRefId()).futureValue
@@ -100,6 +100,6 @@ class ScanningServiceSpec
 
   private def file: Future[QuarantineDownloadResult] = {
     val tempFile = DomainFixtures.temporaryFile("file", Some("hello world"))
-    Future.successful(Right(File(new FileInputStream(tempFile), 0, tempFile.getName, None)))
+    Future.successful(Right(File(FileInputStream(tempFile), 0, tempFile.getName, None)))
   }
 }

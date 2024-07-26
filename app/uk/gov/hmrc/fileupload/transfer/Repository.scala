@@ -25,17 +25,17 @@ import uk.gov.hmrc.fileupload.infrastructure.PlayHttp.PlayHttpError
 import scala.concurrent.{ExecutionContext, Future}
 import uk.gov.hmrc.http.HeaderCarrier
 
-object Repository {
+object Repository:
 
-  val userAgent = "User-Agent" -> "FU-frontend-transfer"
+  val userAgent =
+    "User-Agent" -> "FU-frontend-transfer"
 
-  private val hcConfig = HeaderCarrier.Config.fromConfig(ConfigFactory.load())
+  private val hcConfig =
+    HeaderCarrier.Config.fromConfig(ConfigFactory.load())
 
-  sealed trait EnvelopeDetailError
-  object EnvelopeDetailError {
-    case class EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeDetailError
-    case class EnvelopeDetailServiceError(id: EnvelopeId, message: String) extends EnvelopeDetailError
-  }
+  enum EnvelopeDetailError:
+    case EnvelopeDetailNotFoundError(id: EnvelopeId) extends EnvelopeDetailError
+    case EnvelopeDetailServiceError(id: EnvelopeId, message: String) extends EnvelopeDetailError
 
   type EnvelopeDetailResult = Either[EnvelopeDetailError, JsValue]
 
@@ -45,9 +45,9 @@ object Repository {
     wsClient        : WSClient
   )(envelopeId      : EnvelopeId,
     hc              : HeaderCarrier
-  )(implicit
-    ec              : ExecutionContext
-  ): Future[EnvelopeDetailResult] = {
+  )(using
+    ExecutionContext
+  ): Future[EnvelopeDetailResult] =
     val url = s"$baseUrl/file-upload/envelopes/${envelopeId.value}"
     auditedHttpCall(
       wsClient
@@ -55,13 +55,11 @@ object Repository {
         .withMethod("GET")
         .withHttpHeaders(userAgent +: hc.headersForUrl(hcConfig)(url) :_ *),
       hc
-    ).map {
-      case Left(error)     => Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, error.message))
-      case Right(response) => response.status match {
-        case Status.OK        => Right(Json.parse(response.body))
-        case Status.NOT_FOUND => Left(EnvelopeDetailError.EnvelopeDetailNotFoundError(envelopeId))
-        case _                => Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, response.body))
-      }
-    }
-  }
-}
+    ).map:
+      case Left(error)     =>
+        Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, error.message))
+      case Right(response) =>
+        response.status match
+          case Status.OK        => Right(Json.parse(response.body))
+          case Status.NOT_FOUND => Left(EnvelopeDetailError.EnvelopeDetailNotFoundError(envelopeId))
+          case _                => Left(EnvelopeDetailError.EnvelopeDetailServiceError(envelopeId, response.body))

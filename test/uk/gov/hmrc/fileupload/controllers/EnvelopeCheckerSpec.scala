@@ -47,7 +47,7 @@ class EnvelopeCheckerSpec
 
   lazy val Action = stubControllerComponents().actionBuilder
 
-  implicit val as: ActorSystem = ActorSystem()
+  given ActorSystem = ActorSystem()
 
   def envelopeMaxSizePerItemJson(size:String) = Json.parse(
     s"""{"status" : "OPEN",

@@ -29,11 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AvClient @Inject()(
   configuration: Configuration
-)(implicit
-  ec: ExecutionContext
-) {
+)(using
+  ExecutionContext
+):
+
   val clamAvConfig =
-    new ClamAvConfig {
+    new ClamAvConfig:
       def getString(key: String) =
         configuration.getOptional[String](key).getOrElse(sys.error(s"No config for key `$key` defined"))
 
@@ -44,10 +45,9 @@ class AvClient @Inject()(
       override val host   : String = getString(s"clam.antivirus.host")
       override val port   : Int    = getInt(s"clam.antivirus.port")
       override val timeout: Int    = getInt(s"clam.antivirus.timeout")
-    }
 
-  val clamAntiVirus: ClamAntiVirus = new ClamAntiVirusFactory(clamAvConfig).getClient()
+  val clamAntiVirus: ClamAntiVirus =
+    ClamAntiVirusFactory(clamAvConfig).getClient()
 
-  def sendAndCheck(inputStream: InputStream, length: Int)(implicit ec: ExecutionContext): Future[ScanningResult] =
+  def sendAndCheck(inputStream: InputStream, length: Int)(using ExecutionContext): Future[ScanningResult] =
     clamAntiVirus.sendAndCheck(inputStream, length)
-}

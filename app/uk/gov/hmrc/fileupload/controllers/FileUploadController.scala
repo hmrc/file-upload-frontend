@@ -33,7 +33,6 @@ import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.{cacheFileInMemory
 import uk.gov.hmrc.fileupload.s3.{S3KeyName, S3Service}
 import uk.gov.hmrc.fileupload.utils.{LoggerHelper, LoggerValues, errorAsJson}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,10 +42,10 @@ class FileUploadController @Inject()(
   appModule: ApplicationModule,
   config   : Configuration,
   mcc      : MessagesControllerComponents
-)(implicit
-  ec : ExecutionContext,
-  mat: Materializer
-) extends FrontendController(mcc) {
+)(using
+  ExecutionContext,
+  Materializer
+) extends FrontendController(mcc):
 
   private val logger = Logger(getClass)
 
@@ -67,82 +66,75 @@ class FileUploadController @Inject()(
     `redirect-success-url`: Option[String],
     `redirect-error-url`  : Option[String],
   ): EssentialAction =
-    redirectionFeature.redirect(`redirect-success-url`, `redirect-error-url`) {
-      uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId)
-    }
+    redirectionFeature.redirect(`redirect-success-url`, `redirect-error-url`):
+      uploadWithEnvelopeValidation(envelopeId, fileId)
 
   def uploadWithEnvelopeValidation(envelopeId: EnvelopeId, fileId: FileId): EssentialAction =
-    withValidEnvelope(envelopeId) {
+    withValidEnvelope(envelopeId):
       setMaxFileSize => upload(setMaxFileSize)(envelopeId, fileId)
-    }
 
   def upload(
     constraints: Option[EnvelopeConstraints]
   )(envelopeId : EnvelopeId,
     fileId     : FileId
-  ): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] = {
+  ): Action[Either[MaxSizeExceeded, MultipartFormData[FileCachedInMemory]]] =
     val maxSize = getMaxFileSizeFromEnvelope(constraints)
     Action.async(parse.maxLength(maxSize, parse.multipartFormData(cacheFileInMemory))) { implicit request =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-      request.body match {
+      request.body match
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
           val allowZeroLengthFiles = constraints.flatMap(_.allowZeroLengthFiles)
           val fileIsEmpty = formData.files.headOption.map(_.ref.size)
 
           val failedRequirementsO =
-            if (formData.files.size != 1)
+            if formData.files.size != 1 then
               Some(BadRequest(errorAsJson("Request must have exactly 1 file attached")))
-            else if (allowZeroLengthFiles.contains(false) && fileIsEmpty.contains(0))
+            else if allowZeroLengthFiles.contains(false) && fileIsEmpty.contains(0) then
               Some(BadRequest(errorAsJson("Envelope does not allow zero length files, and submitted file has length 0")))
             else
               None
 
-          failedRequirementsO match {
+          failedRequirementsO match
             case Some(failure) =>
               Future.successful(failure)
             case _ =>
               logger.info(s"Uploading $fileId to $envelopeId. allowZeroLengthFiles flag is $allowZeroLengthFiles, " +
                 s"fileIsEmpty value is $fileIsEmpty.")
-              val uploadResult = uploadTheProperFile(envelopeId, fileId, formData)
-              if (logFileExtensions) {
+              val uploadResult =
+                uploadTheProperFile(envelopeId, fileId, formData)
+              if logFileExtensions then
                 val loggerValues = loggerHelper.getLoggerValues(formData.files.head, request)
                 logFileExtensionData(uploadResult)(loggerValues)
-              } else
+              else
                 uploadResult
-          }
-      }
     }
-  }
 
   private def uploadTheProperFile(
     envelopeId   : EnvelopeId,
     fileId       : FileId,
     formData     : MultipartFormData[FileCachedInMemory]
-  )(implicit
-    hc: HeaderCarrier
-  ) = {
+  )(using
+    HeaderCarrier
+  ): Future[Result] =
     val file = formData.files.head
     val key = createS3Key(envelopeId, fileId)
-    uploadToQuarantine(key, file.ref.inputStream, file.ref.size).flatMap { uploadResult =>
-      val fileRefId = FileRefId(uploadResult.getVersionId)
-      commandHandler.notify(
-        QuarantineFile(
-          id          = envelopeId, fileId,
-          fileRefId   = fileRefId,
-          created     = now(),
-          name        = file.filename,
-          contentType = file.contentType.getOrElse(""),
-          length      = file.ref.size,
-          metadata    = metadataAsJson(formData)
-        )
-      )
-      .map {
-        case Right(_) => Ok
-        case Left(e) => Status(e.statusCode)(e.reason)
-      }
-    }
-  }
+    uploadToQuarantine(key, file.ref.inputStream, file.ref.size)
+      .flatMap: uploadResult =>
+        val fileRefId = FileRefId(uploadResult.getVersionId)
+        commandHandler
+          .notify:
+            QuarantineFile(
+              id          = envelopeId, fileId,
+              fileRefId   = fileRefId,
+              created     = now(),
+              name        = file.filename,
+              contentType = file.contentType.getOrElse(""),
+              length      = file.ref.size,
+              metadata    = metadataAsJson(formData)
+            )
+          .map:
+            case Right(_) => Ok
+            case Left(e)  => Status(e.statusCode)(e.reason)
 
   private def logFileExtensionData(upload: Future[Result])(values: LoggerValues) =
     try {
@@ -154,20 +146,17 @@ class FileUploadController @Inject()(
       MDC.remove("upload-file-extension")
       MDC.remove("upload-user-agent")
     }
-}
 
-object FileUploadController {
-  def metadataAsJson(formData: MultipartFormData[FileCachedInMemory]): JsObject = {
-    val metadataParams = formData.dataParts.collect {
-      case (key, singleValue :: Nil) => key -> JsString(singleValue)
-      case (key, values: Seq[String]) if values.nonEmpty => key -> Json.toJson(values)
-    }
+end FileUploadController
 
-    val metadata =
-      if (metadataParams.nonEmpty)
-        Json.toJson(metadataParams).as[JsObject]
-      else
-        Json.obj()
-    metadata
-  }
-}
+object FileUploadController:
+  def metadataAsJson(formData: MultipartFormData[FileCachedInMemory]): JsObject =
+    val metadataParams =
+      formData.dataParts.collect:
+        case (key, Seq(singleValue)) => key -> JsString(singleValue)
+        case (key, values) if values.nonEmpty => key -> Json.toJson(values)
+
+    if metadataParams.nonEmpty then
+      Json.toJson(metadataParams).as[JsObject]
+    else
+      Json.obj()

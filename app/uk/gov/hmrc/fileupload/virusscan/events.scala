@@ -26,9 +26,8 @@ case class FileScanned(
   hasVirus  : Boolean
 ) extends Event
 
-object FileScanned {
-  implicit val fileScannedFormats: Format[FileScanned] = Json.format[FileScanned]
-}
+object FileScanned:
+  given Format[FileScanned] = Json.format[FileScanned]
 
 case class VirusScanRequested(
   envelopeId: EnvelopeId,

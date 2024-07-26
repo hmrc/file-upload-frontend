@@ -30,6 +30,5 @@ case class FileInQuarantineStored(
   metadata   : JsObject
 ) extends Event
 
-object FileInQuarantineStored {
-  implicit val fileQuarantinedFormats: Format[FileInQuarantineStored] = Json.format[FileInQuarantineStored]
-}
+object FileInQuarantineStored:
+  given Format[FileInQuarantineStored] = Json.format[FileInQuarantineStored]

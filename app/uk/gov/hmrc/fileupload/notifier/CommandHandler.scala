@@ -29,26 +29,23 @@ import uk.gov.hmrc.http.HeaderCarrier
 import scala.concurrent.{ExecutionContext, Future}
 
 trait CommandHandler {
-  def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[NotifyResult]
+  def notify(command: AnyRef)(using ExecutionContext, HeaderCarrier): Future[NotifyResult]
 }
 
 object CommandHandler {
 
   type NotificationResult = Either[NotificationError, EnvelopeId]
 
-  sealed trait NotificationError {
-    def statusCode: Int
-    def reason    : String
-  }
-
-  object NotificationError {
-    case class NotificationFailedError(
+  enum NotificationError(
+    val statusCode: Int,
+    val reason    : String
+  ):
+    case NotificationFailedError(
       envelopeId: EnvelopeId,
       fileId    : FileId,
       override val statusCode: Int,
       override val reason    : String
-    ) extends NotificationError
-  }
+    ) extends NotificationError(statusCode, reason)
 }
 
 class CommandHandlerImpl(
@@ -56,7 +53,7 @@ class CommandHandlerImpl(
   baseUrl        : String,
   wsClient       : WSClient,
   publish        : AnyRef => Unit
-) extends CommandHandler {
+) extends CommandHandler:
   import CommandHandler._
 
   private val logger = Logger(getClass)
@@ -67,7 +64,7 @@ class CommandHandlerImpl(
 
   def sendBackendCommand[T <: BackendCommand : Writes](
     command: T
-  )(implicit
+  )(using
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[NotificationResult] = {
@@ -79,45 +76,42 @@ class CommandHandlerImpl(
         .withMethod("POST")
         .withHttpHeaders(userAgent +: hc.headersForUrl(hcConfig)(url) :_ *),
       hc
-    ).map {
-      case Left(error)     => Left(NotificationError.NotificationFailedError(command.id, command.fileId, 500, error.message))
-      case Right(response) => response.status match {
-        case Status.OK => Right(command.id)
-        case _         => Left(NotificationError.NotificationFailedError(command.id, command.fileId, response.status, response.body))
-      }
-    }
+    ).map:
+      case Left(error)     =>
+        Left(NotificationError.NotificationFailedError(command.id, command.fileId, 500, error.message))
+      case Right(response) =>
+        response.status match
+          case Status.OK => Right(command.id)
+          case _         => Left(NotificationError.NotificationFailedError(command.id, command.fileId, response.status, response.body))
   }
 
   private def sendNotification[T <: BackendCommand : Writes](
     c: T
-  )(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier
+  )(using
+    ExecutionContext,
+    HeaderCarrier
   ): Future[NotifierService.NotifyResult] =
-    sendBackendCommand(c).map {
-      case Right(_) => Right(NotifySuccess)
-      case Left(e) =>
+    sendBackendCommand(c).map:
+      case Right(_) =>
+        Right(NotifySuccess)
+      case Left(e)  =>
         logger.warn(s"Sending command to File Upload Backend failed ${e.statusCode} ${e.reason} $c")
         Left(NotifyError(e.statusCode, e.reason))
-    }
 
   val notifySuccess = Right(NotifySuccess)
 
-  def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[NotifyResult] = {
-
-    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T)(implicit hc: HeaderCarrier) = {
+  def notify(command: AnyRef)(using ExecutionContext, HeaderCarrier): Future[NotifyResult] =
+    def sendCommandToBackendAndPublish[T <: BackendCommand : Writes](backendCommand: T) =
       val result = sendNotification(backendCommand)
       result.map(_.foreach(_ => publish(command)))
       result
-    }
 
-    command match {
+    command match
       case c: QuarantineFile     => sendCommandToBackendAndPublish(c)
       case c: MarkFileAsClean    => sendCommandToBackendAndPublish(c)
       case c: MarkFileAsInfected => sendCommandToBackendAndPublish(c)
       case c: StoreFile          => sendCommandToBackendAndPublish(c)
       case _                     => publish(command)
                                     Future.successful(notifySuccess)
-    }
-  }
-}
+
+end CommandHandlerImpl

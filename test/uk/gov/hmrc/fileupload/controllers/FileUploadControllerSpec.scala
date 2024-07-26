@@ -58,10 +58,11 @@ class FileUploadControllerSpec
     val noEnvelopeValidation = null
     //val noParsingIsActuallyDoneHere = InMemoryMultipartFileHandler.parser
     val commandHandler = new CommandHandler {
-      def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier) = Future.successful(Right(NotifySuccess))
+      def notify(command: AnyRef)(using ExecutionContext, HeaderCarrier) =
+        Future.successful(Right(NotifySuccess))
     }
     val fakeCurrentTime = () => 10L
-    val uploadToQuarantine: UploadToQuarantine = (_,_,_) => Future.successful(new UploadResult())
+    val uploadToQuarantine: UploadToQuarantine = (_,_,_) => Future.successful(UploadResult())
     val createS3Key: (EnvelopeId, FileId) => S3KeyName = (_,_) => S3KeyName("key")
     val configuration = Configuration.from(Map.empty)
     val loggerHelper = new LoggerHelper {
@@ -69,7 +70,7 @@ class FileUploadControllerSpec
         LoggerValues("txt", "some-user-agent")
     }
 
-    implicit val as: ActorSystem = ActorSystem()
+    given ActorSystem = ActorSystem()
 
     val appModule = mock[ApplicationModule]
     when(appModule.withValidEnvelope).thenReturn(noEnvelopeValidation)
@@ -80,7 +81,7 @@ class FileUploadControllerSpec
     when(appModule.now).thenReturn(fakeCurrentTime)
     when(appModule.loggerHelper).thenReturn(loggerHelper)
 
-    new FileUploadController(
+    FileUploadController(
       appModule,
       configuration,
       app.injector.instanceOf[MessagesControllerComponents]
