@@ -30,16 +30,18 @@ object QuarantineService {
   )(
     key: S3KeyName,
     version: String
-  )(implicit
-    ec: ExecutionContext
+  )(using
+    ExecutionContext
   ): Future[QuarantineDownloadResult] =
-    for {
+    for
       maybeFileData <- retrieveFile(key, version)
-    } yield
+    yield
       maybeFileData.toRight(QuarantineDownloadFileNotFound)
-        .map(fd => File(data        = fd.data,
-                        length      = fd.length,
-                        filename    = fd.filename,
-                        contentType = fd.contentType
-        ))
+        .map: fd =>
+          File(
+            data        = fd.data,
+            length      = fd.length,
+            filename    = fd.filename,
+            contentType = fd.contentType
+          )
 }

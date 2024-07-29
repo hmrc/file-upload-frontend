@@ -20,28 +20,57 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.{Duration, DurationLong}
 
 @Singleton
-class AwsConfig @Inject() (config: com.typesafe.config.Config) {
-  def quarantineBucketName: String = config.getString("aws.s3.bucket.upload.quarantine")
-  def transientBucketName: String = config.getString("aws.s3.bucket.upload.transient")
-  def accessKeyId: String = config.getString("aws.access.key.id")
-  def secretAccessKey: String = config.getString("aws.secret.access.key")
-  def envSubdir: String = config.getString("aws.s3.bucket.env-subdir")
-  def zipSubdir: String = config.getString("aws.s3.bucket.zip-subdir")
-  def zipDuration: Duration = config.getDuration("aws.s3.bucket.zip-duration").toMillis.millis
-  def endpoint: Option[String] = {
+class AwsConfig @Inject() (config: com.typesafe.config.Config):
+  def quarantineBucketName: String =
+    config.getString("aws.s3.bucket.upload.quarantine")
+
+  def transientBucketName: String =
+    config.getString("aws.s3.bucket.upload.transient")
+
+  def accessKeyId: String =
+    config.getString("aws.access.key.id")
+
+  def secretAccessKey: String =
+    config.getString("aws.secret.access.key")
+
+  def envSubdir: String =
+    config.getString("aws.s3.bucket.env-subdir")
+
+  def zipSubdir: String =
+    config.getString("aws.s3.bucket.zip-subdir")
+
+  def zipDuration: Duration =
+    config.getDuration("aws.s3.bucket.zip-duration").toMillis.millis
+
+  def endpoint: Option[String] =
     val path = "aws.service_endpoint"
-    if (config.hasPath(path))
+    if config.hasPath(path) then
       Some(config.getString(path))
     else
       None
-  }
-  def proxyEnabled = config.getBoolean("proxy.proxyRequiredForThisEnvironment")
-  def proxyHost: String = config.getString("proxy.host")
-  def proxyPort: Int = config.getInt("proxy.port")
-  def proxyUsername: String = config.getString("proxy.username")
-  def proxyPassword: String = config.getString("proxy.password")
 
-  def connectionTimeout: Int = config.getDuration("aws.s3.timeout.connection").toMillis.toInt
-  def requestTimeout: Int = config.getDuration("aws.s3.timeout.request").toMillis.toInt
-  def socketTimeout: Int = config.getDuration("aws.s3.timeout.socket").toMillis.toInt
-}
+  def proxyEnabled: Boolean =
+    config.getBoolean("proxy.proxyRequiredForThisEnvironment")
+
+  def proxyHost: String =
+    config.getString("proxy.host")
+
+  def proxyPort: Int =
+    config.getInt("proxy.port")
+
+  def proxyUsername: String =
+    config.getString("proxy.username")
+
+  def proxyPassword: String =
+    config.getString("proxy.password")
+
+  def connectionTimeout: Int =
+    config.getDuration("aws.s3.timeout.connection").toMillis.toInt
+
+  def requestTimeout: Int =
+    config.getDuration("aws.s3.timeout.request").toMillis.toInt
+
+  def socketTimeout: Int =
+    config.getDuration("aws.s3.timeout.socket").toMillis.toInt
+
+end AwsConfig

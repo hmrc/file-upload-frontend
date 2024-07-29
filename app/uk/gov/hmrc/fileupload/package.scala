@@ -16,43 +16,44 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.util.UUID
-import java.io.InputStream
-
 import play.api.libs.json.{JsError, JsSuccess, _}
 import play.api.mvc.PathBindable
 import play.core.routing.dynamicString
+
+import java.util.UUID
+import java.io.InputStream
+import scala.reflect.ClassTag
 
 case class EnvelopeId(value: String = UUID.randomUUID().toString) extends AnyVal {
   override def toString: String = value
 }
 
-object EnvelopeId {
-  implicit val writes: Writes[EnvelopeId] =
+object EnvelopeId:
+  given Writes[EnvelopeId] =
     (id: EnvelopeId) => JsString(id.value)
 
-  implicit val reads: Reads[EnvelopeId] =
+  given Reads[EnvelopeId] =
     (json: JsValue) =>
       json match {
         case JsString(value) => JsSuccess(EnvelopeId(value))
         case _               => JsError("invalid envelopeId")
       }
 
-  implicit val binder: PathBindable[EnvelopeId] =
-    new SimpleObjectBinder[EnvelopeId](EnvelopeId.apply, _.value)
-}
+  given PathBindable[EnvelopeId] =
+    SimpleObjectBinder[EnvelopeId](EnvelopeId.apply, _.value)
+
+end EnvelopeId
 
 case class FileId(
   value: String = UUID.randomUUID().toString
-) extends AnyVal {
+) extends AnyVal:
   override def toString: String = value
-}
 
-object FileId {
-  implicit val writes: Writes[FileId] =
+object FileId:
+  given Writes[FileId] =
     (id: FileId) => JsString(id.value)
 
-  implicit val reads: Reads[FileId] =
+  given Reads[FileId] =
     (json: JsValue) =>
       json match {
         case JsString(value) => JsSuccess(FileId(value))
@@ -60,12 +61,13 @@ object FileId {
       }
 
   // should reflect backend version
-  implicit val urlBinder: PathBindable[FileId] =
-    new SimpleObjectBinder[FileId](
+  given PathBindable[FileId] =
+    SimpleObjectBinder[FileId](
       FileId.apply, // play already decodes the endpoint parameters
       fId => dynamicString(fId.value)
     )
-}
+
+end FileId
 
 case class File(
   data       : InputStream,
@@ -76,23 +78,21 @@ case class File(
 
 case class FileRefId(
   value: String = UUID.randomUUID().toString
-) extends AnyVal {
+) extends AnyVal:
   override def toString: String = value
-}
 
 object FileRefId {
-  implicit val writes: Writes[FileRefId] =
+  given Writes[FileRefId] =
     (id: FileRefId) => JsString(id.value)
 
-  implicit val reads: Reads[FileRefId] =
+  given Reads[FileRefId] =
     (json: JsValue) =>
-      json match {
+      json match
         case JsString(value) => JsSuccess(FileRefId(value))
         case _               => JsError("invalid fileId")
-      }
 
-  implicit val binder: PathBindable[FileRefId] =
-    new SimpleObjectBinder[FileRefId](FileRefId.apply, _.value)
+  given PathBindable[FileRefId] =
+    SimpleObjectBinder[FileRefId](FileRefId.apply, _.value)
 }
 
 trait Event {
@@ -101,14 +101,13 @@ trait Event {
   def fileRefId : FileRefId
 }
 
-class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(implicit m: Manifest[T]) extends PathBindable[T] {
+class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(using ct: ClassTag[T]) extends PathBindable[T]:
   override def bind(key: String, value: String): Either[String, T] =
     try {
       Right(bind(value))
     } catch {
-      case _: Throwable => Left(s"Cannot parse parameter '$key' with value '$value' as '${m.runtimeClass.getSimpleName}'")
+      case _: Throwable => Left(s"Cannot parse parameter '$key' with value '$value' as '${ct.runtimeClass.getSimpleName}'")
     }
 
   override def unbind(key: String, value: T): String =
     unbind(value)
-}

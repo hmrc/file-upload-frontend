@@ -24,7 +24,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.Json
 import uk.gov.hmrc.fileupload.notifier.NotifierService.NotifySuccess
 import uk.gov.hmrc.fileupload.notifier.{CommandHandler, MarkFileAsClean, MarkFileAsInfected, QuarantineFile}
-import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanResultVirusDetected}
+import uk.gov.hmrc.fileupload.virusscan.ScanningService.{ScanResult, ScanResultFileClean, ScanError}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -98,11 +98,11 @@ class ScannerActorSpec
     def scanBinaryDataInfected(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = {
       Thread.sleep(100)
       collector = fileRefId :: collector
-      Future.successful(Left(ScanResultVirusDetected))
+      Future.successful(Left(ScanError.ScanResultVirusDetected))
     }
 
     val commandHandler = new CommandHandler {
-      def notify(command: AnyRef)(implicit ec: ExecutionContext, hc: HeaderCarrier) = {
+      def notify(command: AnyRef)(using ExecutionContext, HeaderCarrier) = {
         collector = command :: collector
         Future.successful(Right(NotifySuccess))
       }

@@ -42,13 +42,11 @@ case class EnvelopeReport(
   files      : Option[Seq[JsObject]]       = None
 )
 
-object EnvelopeReport{
-  implicit val envelopeFormat: OFormat[EnvelopeReport] = {
-    implicit val dtr = Reads[DateTime](_.validate[String].map[DateTime](dtString => new DateTime(dtString)))
-    implicit val dtw = Writes[DateTime](dt => JsString(dt.toString))
+object EnvelopeReport:
+  given OFormat[EnvelopeReport] =
+    given Reads[DateTime]  = Reads[DateTime](_.validate[String].map[DateTime](dtString => DateTime(dtString)))
+    given Writes[DateTime] = Writes[DateTime](dt => JsString(dt.toString))
     Json.format[EnvelopeReport]
-  }
-}
 
 
 case class EnvelopeConstraints(
@@ -59,5 +57,5 @@ case class EnvelopeConstraints(
 )
 
 object EnvelopeConstraints {
-  implicit val constraintsFormat: Format[EnvelopeConstraints] = Json.format[EnvelopeConstraints]
+  given Format[EnvelopeConstraints] = Json.format[EnvelopeConstraints]
 }

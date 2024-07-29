@@ -23,28 +23,24 @@ import uk.gov.hmrc.fileupload.s3.InMemoryMultipartFileHandler.FileCachedInMemory
 
 case class LoggerValues(fileExtension: String, userAgent: String)
 
-trait LoggerHelper {
+trait LoggerHelper:
   def getLoggerValues(
     formData: MultipartFormData.FilePart[InMemoryMultipartFileHandler.FileCachedInMemory],
     request : Request[_]
   ): LoggerValues
-}
 
-class LoggerHelperFileExtensionAndUserAgent extends LoggerHelper {
+class LoggerHelperFileExtensionAndUserAgent extends LoggerHelper:
   override def getLoggerValues(
     formData: MultipartFormData.FilePart[InMemoryMultipartFileHandler.FileCachedInMemory],
     request : Request[_]
   ): LoggerValues =
     LoggerValues(fileExtensionFromFileName(formData), userAgentFromRequest(request))
 
-  private def fileExtensionFromFileName(file: MultipartFormData.FilePart[FileCachedInMemory]): String = {
+  private def fileExtensionFromFileName(file: MultipartFormData.FilePart[FileCachedInMemory]): String =
     val parts = Option(file.filename).map(_.split("\\.").toList).getOrElse(Nil)
-    parts.length match {
+    parts.length match
       case 0 | 1 => "no-file-type"
       case _     => parts.last.toLowerCase
-    }
-  }
 
   private def userAgentFromRequest(request: Request[_]): String =
     request.headers.get(HeaderNames.USER_AGENT).getOrElse("no-user-agent")
-}

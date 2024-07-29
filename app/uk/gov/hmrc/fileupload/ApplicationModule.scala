@@ -16,11 +16,7 @@
 
 package uk.gov.hmrc.fileupload
 
-import java.util.concurrent.Executors
-
 import org.apache.pekko.actor.ActorRef
-import com.codahale.metrics.MetricRegistry
-import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.libs.ws.ahc.AhcWSComponents
@@ -37,6 +33,8 @@ import uk.gov.hmrc.fileupload.virusscan.ScanningService.{AvScan, ScanResult, Sca
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.util.concurrent.Executors
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -44,7 +42,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class ApplicationModule @Inject()(
   servicesConfig                   : ServicesConfig,
   auditConnector                   : AuditConnector,
-  metricsRegistry                  : MetricRegistry,
   avClient                         : AvClient,
   s3Service                        : S3Service,
   awsConfig                        : AwsConfig,
@@ -53,43 +50,58 @@ class ApplicationModule @Inject()(
   override val applicationLifecycle: play.api.inject.ApplicationLifecycle,
   override val configuration       : play.api.Configuration,
   override val environment         : play.api.Environment
-)(implicit
+)(using
   override val executionContext    : scala.concurrent.ExecutionContext,
   override val materializer        : org.apache.pekko.stream.Materializer
 ) extends AhcWSComponents {
 
   private val logger = Logger(getClass)
 
-  lazy val downloadFromTransient = s3Service.downloadFromTransient
+  lazy val downloadFromTransient =
+    s3Service.downloadFromTransient
 
-  lazy val uploadToQuarantine = s3Service.uploadToQuarantine
+  lazy val uploadToQuarantine =
+    s3Service.uploadToQuarantine
 
-  lazy val deleteObjectFromQuarantineBucket: DeleteFileFromQuarantineBucket = s3Service.deleteObjectFromQuarantine
+  lazy val deleteObjectFromQuarantineBucket: DeleteFileFromQuarantineBucket =
+    s3Service.deleteObjectFromQuarantine
 
-  lazy val createS3Key = S3Key.forEnvSubdir(awsConfig.envSubdir)
+  lazy val createS3Key =
+    S3Key.forEnvSubdir(awsConfig.envSubdir)
 
-  val redirectionFeature = new RedirectionFeature(configuration.underlying, httpErrorHandler)
+  val redirectionFeature =
+    RedirectionFeature(configuration.underlying, httpErrorHandler)
 
-  lazy val zipAndPresign = s3Service.zipAndPresign _
+  lazy val zipAndPresign =
+    s3Service.zipAndPresign _
 
-  val downloadFromQuarantine = s3Service.downloadFromQuarantine
+  val downloadFromQuarantine =
+    s3Service.downloadFromQuarantine
 
-  lazy val loggerHelper: LoggerHelper = new LoggerHelperFileExtensionAndUserAgent
+  lazy val loggerHelper: LoggerHelper =
+    LoggerHelperFileExtensionAndUserAgent()
 
-  lazy val fileUploadBackendBaseUrl = servicesConfig.baseUrl("file-upload-backend")
+  lazy val fileUploadBackendBaseUrl: String =
+    servicesConfig.baseUrl("file-upload-backend")
 
-  lazy val testOnlySdesStubIsEnabled = servicesConfig.getConfBool("sdes-stub.enabled", defBool = false)
+  lazy val testOnlySdesStubIsEnabled: Boolean =
+    servicesConfig.getConfBool("sdes-stub.enabled", defBool = false)
 
-  lazy val optTestOnlySdesStubBaseUrl = if (testOnlySdesStubIsEnabled) Some(servicesConfig.baseUrl("sdes-stub")) else None
+  lazy val optTestOnlySdesStubBaseUrl =
+    if testOnlySdesStubIsEnabled then Some(servicesConfig.baseUrl("sdes-stub")) else None
 
 
-  val subscribe: (ActorRef, Class[_]) => Boolean = actorSystem.eventStream.subscribe
+  val subscribe: (ActorRef, Class[_]) => Boolean =
+    actorSystem.eventStream.subscribe
 
-  val publish: (AnyRef) => Unit = actorSystem.eventStream.publish
+  val publish: AnyRef => Unit =
+    actorSystem.eventStream.publish
 
-  val now: () => Long = () => System.currentTimeMillis()
+  val now: () => Long =
+    () => System.currentTimeMillis()
 
-  lazy val commandHandler: CommandHandler = new CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
+  lazy val commandHandler: CommandHandler =
+    CommandHandlerImpl(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient, publish)
 
   lazy val getFileLength =
     (envelopeId: EnvelopeId, fileId: FileId, version: FileRefId) =>
@@ -101,28 +113,31 @@ class ApplicationModule @Inject()(
   actorSystem.actorOf(DeletionActor.props(subscribe, deleteObjectFromQuarantineBucket, createS3Key), "deletionActor")
 
 
-  //lazy val retrieveFileFromQuarantineBucket = s3Service.retrieveFileFromQuarantine _
   //TODO discuss alternative thread pools
-  lazy val getFileFromQuarantine = {
+  lazy val getFileFromQuarantine =
     lazy val ec = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(25))
-    QuarantineService.getFileFromQuarantine(s3Service.retrieveFileFromQuarantine)(_: S3KeyName, _: String)(ec)
-  }
+    QuarantineService.getFileFromQuarantine(s3Service.retrieveFileFromQuarantine)(_: S3KeyName, _: String)(using ec)
 
   // auditing
-  lazy val auditedHttpExecute = PlayHttp.execute(auditConnector, "file-upload-frontend", Some(t => logger.warn(t.getMessage, t))) _
+  lazy val auditedHttpExecute =
+    PlayHttp.execute(auditConnector, "file-upload-frontend", Some(t => logger.warn(t.getMessage, t))) _
 
   // transfer
-  lazy val envelopeResult = transfer.Repository.envelopeDetail(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
+  lazy val envelopeResult =
+    transfer.Repository.envelopeDetail(auditedHttpExecute, fileUploadBackendBaseUrl, wsClient) _
 
-  lazy val numberOfTimeoutAttempts: Int = configuration.getOptional[Int](s"clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
+  lazy val numberOfTimeoutAttempts: Int =
+    configuration.getOptional[Int](s"clam.antivirus.numberOfTimeoutAttempts").getOrElse(1)
 
-  lazy val scanner: AvScan = new VirusScanner(avClient).scan
+  lazy val scanner: AvScan =
+    VirusScanner(avClient).scan
 
-  lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] = {
+  lazy val scanBinaryData: (EnvelopeId, FileId, FileRefId) => Future[ScanResult] =
     val disableScanning = configuration.getOptional[Boolean](s"clam.antivirus.disableScanning").getOrElse(false)
-    if (disableScanning) (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Right(ScanResultFileClean))
-    else ScanningService.scanBinaryData(scanner, numberOfTimeoutAttempts, getFileFromQuarantine)(createS3Key)
-  }
+    if disableScanning then
+      (_: EnvelopeId, _: FileId, _: FileRefId) => Future.successful(Right(ScanResultFileClean))
+    else
+      ScanningService.scanBinaryData(scanner, numberOfTimeoutAttempts, getFileFromQuarantine)(createS3Key)
 
   lazy val withValidEnvelope = EnvelopeChecker.withValidEnvelope(envelopeResult) _
 }

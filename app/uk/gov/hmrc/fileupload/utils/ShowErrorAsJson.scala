@@ -43,34 +43,30 @@ class ShowErrorAsJson @Inject()(
   configuration,
   sourceMapper = None,
   router       = None
-) {
-
+):
   private val logger = Logger(getClass)
 
-  implicit val erFormats: Format[ErrorResponse] = Json.format[ErrorResponse]
+  private given Format[ErrorResponse] =
+    Json.format[ErrorResponse]
 
-  override def onServerError(request: RequestHeader, ex: Throwable) = {
+  override def onServerError(request: RequestHeader, ex: Throwable) =
     logger.error(ex.getMessage, ex)
-    Future.successful {
-      val (code, message) = ex match {
+    Future.successful:
+      val (code, message) = ex match
         case e: HttpException         => (e.responseCode       , e.getMessage)
         case e: UpstreamErrorResponse => (e.reportAs           , e.getMessage)
         case e: Throwable             => (INTERNAL_SERVER_ERROR, e.getMessage)
-      }
 
-      new Status(code)(Json.toJson(ErrorResponse(code, message)))
-    }
-  }
+      Status(code)(Json.toJson(ErrorResponse(code, message)))
 
   override def onNotFound(request: RequestHeader, message: String) =
-    Future.successful {
+    Future.successful:
       val er = ErrorResponse(NOT_FOUND, "URI not found " + message, requested = Some(request.path))
       NotFound(Json.toJson(er))
-    }
 
   override def onBadRequest(request: RequestHeader, error: String) =
-    Future.successful {
+    Future.successful:
       val er = ErrorResponse(BAD_REQUEST, error)
       BadRequest(Json.toJson(er))
-    }
-}
+
+end ShowErrorAsJson

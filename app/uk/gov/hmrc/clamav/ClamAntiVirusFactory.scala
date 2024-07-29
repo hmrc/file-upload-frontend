@@ -21,6 +21,9 @@ import uk.gov.hmrc.clamav.config.ClamAvConfig
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ClamAntiVirusFactory @Inject()(clamAvConfig: ClamAvConfig)(implicit ec: ExecutionContext) {
-  def getClient(): ClamAntiVirus = new ClamAntiVirus(clamAvConfig)
-}
+class ClamAntiVirusFactory @Inject()(
+  clamAvConfig: ClamAvConfig
+)(using ExecutionContext):
+
+  def getClient(): ClamAntiVirus =
+    ClamAntiVirus(clamAvConfig)

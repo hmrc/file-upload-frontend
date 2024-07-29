@@ -16,41 +16,36 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import javax.inject.{Inject, Singleton}
-import play.api.mvc.MessagesControllerComponents
+import play.api.mvc.{MessagesControllerComponents, RequestHeader}
 import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class AdminController @Inject()(
   appModule: ApplicationModule,
   mcc      : MessagesControllerComponents
-)(implicit
-  ec       : ExecutionContext
-) extends FrontendController(mcc) {
+)(using ExecutionContext
+) extends FrontendController(mcc):
 
-  val commandHandler: CommandHandler = appModule.commandHandler
+  val commandHandler: CommandHandler =
+    appModule.commandHandler
 
-  def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-    commandHandler.notify(
-      VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId)
-    )
-    Future.successful(Ok)
-  }
+  def scan(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) =
+    Action { implicit request: RequestHeader =>
+      commandHandler.notify:
+        VirusScanRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId)
+      Ok
+    }
 
-  def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) = Action.async { request =>
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-    commandHandler.notify(
-      TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId)
-    )
-    Future.successful(Ok)
-  }
-}
+  def transfer(envelopeId: EnvelopeId, fileId: FileId, fileRefId: FileRefId) =
+    Action { implicit request: RequestHeader =>
+      commandHandler.notify:
+        TransferRequested(envelopeId = envelopeId, fileId = fileId, fileRefId = fileRefId)
+      Ok
+    }

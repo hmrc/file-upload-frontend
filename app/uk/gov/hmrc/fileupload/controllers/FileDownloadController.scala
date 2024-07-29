@@ -20,7 +20,7 @@ import org.apache.pekko.util.ByteString
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpEntity
-import play.api.libs.json.{__, Json, JsObject, JsSuccess, JsError, JsValue, Reads}
+import play.api.libs.json.{__, Json, JsObject, JsSuccess, JsError, JsValue, Reads, Writes}
 import play.api.mvc.{AnyContent, Action, MessagesControllerComponents, ResponseHeader, Result}
 import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.s3.{MissingFileException, S3KeyName, ZipData}
@@ -33,9 +33,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileDownloadController @Inject()(
   appModule: ApplicationModule,
   mcc      : MessagesControllerComponents
-)(implicit
-  ec: ExecutionContext
-) extends FrontendController(mcc) {
+)(using
+  ExecutionContext
+) extends FrontendController(mcc):
 
   private val logger = Logger(getClass)
 
@@ -51,54 +51,57 @@ class FileDownloadController @Inject()(
   def illegalDownloadFromQuarantine(envelopeId: EnvelopeId, fileId: FileId): Action[AnyContent] =
     downloadFileFromBucket(downloadFromQuarantine, "S3 QUARANTINE")(envelopeId, fileId)
 
-  def downloadFileFromBucket(fromBucket: DownloadFromBucket, label: String)(envelopeId: EnvelopeId, fileId: FileId) = Action {
-    logger.info(s"downloading a file from $label with envelopeId: $envelopeId fileId: $fileId")
-    val key = createS3Key(envelopeId, fileId)
-    fromBucket(key) match {
-      case Some(result) =>
-        logger.info(s"download result: contentType: ${result.metadata.contentType} & length: " +
-          s"${result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}")
-
-        Result(
-          header = ResponseHeader(200, Map.empty),
-          body = HttpEntity.Streamed(
-            result.stream,
-            Some(result.metadata.contentLength),
-            Some(result.metadata.contentType))
+  def downloadFileFromBucket(fromBucket: DownloadFromBucket, label: String)(envelopeId: EnvelopeId, fileId: FileId) =
+    Action {
+      logger.info(s"downloading a file from $label with envelopeId: $envelopeId fileId: $fileId")
+      val key = createS3Key(envelopeId, fileId)
+      fromBucket(key) match
+        case Some(result) =>
+          logger.info(
+            s"download result: contentType: ${result.metadata.contentType} & length: "
+              + s"${result.metadata.contentLength}, metadata: ${result.metadata.s3Metadata}"
+          )
+          Result(
+            header = ResponseHeader(200, Map.empty),
+            body   = HttpEntity.Streamed(
+                       result.stream,
+                       Some(result.metadata.contentLength),
+                       Some(result.metadata.contentType)
+                     )
+          )
+        case None =>
+          Result(
+            header = ResponseHeader(404, Map.empty),
+            body   = HttpEntity.Strict(ByteString("{\"msg\":\"File not found\"}"), Some("application/json")
+          )
         )
-      case None => Result(
-        header = ResponseHeader(404, Map.empty),
-        body = HttpEntity.Strict(ByteString("{\"msg\":\"File not found\"}"), Some("application/json"))
-      )
     }
-  }
 
-  def zip(envelopeId: EnvelopeId): Action[JsValue] = Action.async(parse.json) { request =>
-    logger.info(s"zipping files for envelopeId: $envelopeId")
-    implicit val zrr = ZipRequest.reads
-    request.body.validate[ZipRequest] match {
-      case JsSuccess(zipRequest, _) =>
-        zipAndPresign(envelopeId, zipRequest.files).map { zipData =>
-          implicit val zdw = ZipData.writes
-          Ok(Json.toJson(zipData))
-        }
-        .recover {
-          case e: MissingFileException =>
-            logger.warn(s"could not zip files for envelopeId $envelopeId - missing files")
-            Gone(e.getMessage())
-        }
-      case JsError(errors) => Future.successful(BadRequest(s"$errors"))
+  def zip(envelopeId: EnvelopeId): Action[JsValue] =
+    Action.async(parse.json) { request =>
+      logger.info(s"zipping files for envelopeId: $envelopeId")
+      given Reads[ZipRequest] = ZipRequest.reads
+      request.body.validate[ZipRequest] match
+        case JsSuccess(zipRequest, _) =>
+          zipAndPresign(envelopeId, zipRequest.files)
+            .map: zipData =>
+              given Writes[ZipData] = ZipData.writes
+              Ok(Json.toJson(zipData))
+            .recover:
+              case e: MissingFileException =>
+                logger.warn(s"could not zip files for envelopeId $envelopeId - missing files")
+                Gone(e.getMessage())
+        case JsError(errors) => Future.successful(BadRequest(s"$errors"))
     }
-  }
-}
+
+end FileDownloadController
 
 case class ZipRequest(
   files: List[(FileId, Option[String])]
 )
 
-object ZipRequest {
+object ZipRequest:
   val reads: Reads[ZipRequest] =
     Reads.at[JsObject](__ \ "files")
-      .map(_.fieldSet.map { case (k, v) => FileId(k) -> v.asOpt[String] }.toList)
+      .map(_.fieldSet.map((k, v) => FileId(k) -> v.asOpt[String]).toList)
       .map(ZipRequest.apply)
-}

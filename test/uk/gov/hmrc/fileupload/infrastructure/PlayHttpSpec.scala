@@ -57,7 +57,7 @@ class PlayHttpSpec
   private val testAppName = "test-app"
 
   implicit override lazy val app: Application =
-    new GuiceApplicationBuilder()
+    GuiceApplicationBuilder()
       .configure(
         "appName"                            -> testAppName,
         "auditing.enabled"                   -> true,
@@ -125,7 +125,7 @@ class PlayHttpSpec
     "logs errors" in {
       wireMockServer.addStubMapping(
         get(urlPathMatching(downstreamPath))
-          .willReturn(new ResponseDefinitionBuilder()
+          .willReturn(ResponseDefinitionBuilder()
             .withFault(Fault.MALFORMED_RESPONSE_CHUNK)
           )
           .build()

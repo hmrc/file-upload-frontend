@@ -32,17 +32,17 @@ class ShowErrorAsJsonSpec
      with ScalaFutures
      with TestApplicationComponents {
 
-  implicit val ec: ExecutionContext = ExecutionContext.global
+  given ExecutionContext = ExecutionContext.global
   val errorHandler = app.injector.instanceOf[ShowErrorAsJson]
 
   "Error Handler For the Controllers" should {
     "convert a BadRequestException to NotFound response" in {
-      val result = errorHandler.onServerError(FakeRequest(), new BadRequestException("40x Bad Request"))
+      val result = errorHandler.onServerError(FakeRequest(), BadRequestException("40x Bad Request"))
       result.map(res => res.header.status should be(404))
     }
 
     "500 Internal Server Error is handled" in {
-      val result = errorHandler.onServerError(FakeRequest(), new RuntimeException("Unexpected Error"))
+      val result = errorHandler.onServerError(FakeRequest(), RuntimeException("Unexpected Error"))
       result.map(res => {
         res.header.status should be(500)
         res.body.contentType should be(Some("application/json"))

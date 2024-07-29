@@ -22,7 +22,7 @@ import javax.inject.{Inject, Singleton}
 import org.joda.time.DateTime
 import play.api.http.HttpVerbs.POST
 import play.api.libs.json._
-import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.libs.ws.{WSClient, WSResponse, writeableOf_JsValue}
 import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
 import uk.gov.hmrc.fileupload.ApplicationModule
 import uk.gov.hmrc.fileupload.s3.S3JavaSdkService
@@ -37,124 +37,135 @@ class TestOnlyController @Inject()(
   wSClient     : WSClient,
   val s3Service: S3JavaSdkService,
   mcc          : MessagesControllerComponents
-)(implicit
-  val ec: ExecutionContext
+)(using
+  ExecutionContext
 ) extends FrontendController(mcc)
-     with S3TestController {
+     with S3TestController:
 
   val baseUrl                    = appModule.fileUploadBackendBaseUrl
   val optTestOnlySdesStubBaseUrl = appModule.optTestOnlySdesStubBaseUrl
 
-  def createEnvelope() = Action.async(parse.json[CreateEnvelopeRequest]) { implicit request =>
-    def extractEnvelopeId(response: WSResponse): String =
-      response
-        .header("Location")
-        .map(l => l.substring(l.lastIndexOf("/") + 1))
-        .getOrElse("missing/invalid")
+  def createEnvelope() =
+    Action.async(parse.json[CreateEnvelopeRequest]) { implicit request =>
+      def extractEnvelopeId(response: WSResponse): String =
+        response
+          .header("Location")
+          .map(l => l.substring(l.lastIndexOf("/") + 1))
+          .getOrElse("missing/invalid")
 
-    val payload = Json.toJson(request.body)
+      val payload = Json.toJson(request.body)
 
-    wSClient.url(s"$baseUrl/file-upload/envelopes").post(payload).map { response =>
-      if (response.status >= 200 && response.status <= 299)
-        Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
-      else
-        InternalServerError(
-          Json.obj("upstream_status" -> response.status, "error_message" -> response.statusText)
-        )
+      wSClient.url(s"$baseUrl/file-upload/envelopes").post(payload)
+        .map: response =>
+          if response.status >= 200 && response.status <= 299 then
+            Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
+          else
+            InternalServerError(
+              Json.obj("upstream_status" -> response.status, "error_message" -> response.statusText)
+            )
     }
-  }
 
-  def getEnvelope(envelopeId: String) = Action.async {
-    wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId").get().map { response =>
-      new Status(response.status)(response.body).withHeaders(
-        "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
-      )
-    }
-  }
+  def getEnvelope(envelopeId: String) =
+    Action.async:
+      wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId").get()
+        .map: response =>
+          Status(response.status)(response.body)
+            .withHeaders(
+              "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
+            )
 
-  def downloadFile(envelopeId: String, fileId: String) = Action.async {
-    wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").get().map {
-      resultFromBackEnd => if (resultFromBackEnd.status == 200) {
-        Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
-          "Content-Length" -> resultFromBackEnd.header("Content-Length").getOrElse("unknown"),
-          "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
-        )
-      } else Ok(resultFromBackEnd.json)
-    }
-  }
+  def downloadFile(envelopeId: String, fileId: String) =
+    Action.async:
+      wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").get()
+        .map: resultFromBackEnd =>
+          if resultFromBackEnd.status == 200 then
+            Ok(resultFromBackEnd.bodyAsBytes)
+              .withHeaders(
+                "Content-Length"      -> resultFromBackEnd.header("Content-Length"     ).getOrElse("unknown"),
+                "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
+              )
+          else
+            Ok(resultFromBackEnd.json)
 
-  def routingRequests() = Action.async(parse.json) { implicit request =>
-    wSClient.url(s"$baseUrl/file-routing/requests").post(request.body).map { response =>
-      new Status(response.status)(response.body)
+  def routingRequests() =
+    Action.async(parse.json) { implicit request =>
+      wSClient.url(s"$baseUrl/file-routing/requests").post(request.body)
+        .map: response =>
+          Status(response.status)(response.body)
     }
-  }
 
-  def transferGetEnvelopes(destination: Option[String]) = Action.async {
-    val transferUrl = s"$baseUrl/file-transfer/envelopes"
-    val wsUrl = destination match {
-      case Some(d)  => wSClient.url(transferUrl).addQueryStringParameters(("destination", URLEncoder.encode(d, "UTF-8")))
-      case None     => wSClient.url(transferUrl)
-    }
-    wsUrl.get().map { response =>
-      val body = Json.parse(response.body)
-      if (response.status != 200)
-        InternalServerError(s"$body backendStatus:${response.status}")
-      else
-        Ok(body)
-    }
-  }
+  def transferGetEnvelopes(destination: Option[String]) =
+    Action.async {
+      val transferUrl = s"$baseUrl/file-transfer/envelopes"
 
-  def transferDownloadEnvelope(envelopeId: String) = Action.async {
-    wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").get().flatMap {
-      resultFromBackEnd => if (resultFromBackEnd.status == 200) {
-        Future.successful(Ok(resultFromBackEnd.bodyAsBytes).withHeaders(
-          "Content-Type" -> resultFromBackEnd.header("Content-Type").getOrElse("unknown"),
-          "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
-        ))
-      } else Future.successful(Ok(resultFromBackEnd.json))
-    }
-  }
+      val wsUrl =
+        destination match
+          case Some(d)  => wSClient.url(transferUrl).addQueryStringParameters(("destination", URLEncoder.encode(d, "UTF-8")))
+          case None     => wSClient.url(transferUrl)
 
-  def transferDeleteEnvelope(envelopeId: String) = Action.async {
-    wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").delete().map { response =>
-      new Status(response.status)(response.body)
+      wsUrl.get()
+        .map: response =>
+          val body = Json.parse(response.body)
+          if response.status != 200 then
+            InternalServerError(s"$body backendStatus:${response.status}")
+          else
+            Ok(body)
     }
-  }
 
-  def getEvents(streamId: String) = Action.async {
-    wSClient.url(s"$baseUrl/file-upload/events/$streamId").get().map { response =>
-      new Status(response.status)(response.body).withHeaders {
-        "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
-      }
-    }
-  }
+  def transferDownloadEnvelope(envelopeId: String) =
+    Action.async:
+      wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").get()
+        .map: resultFromBackEnd =>
+          if resultFromBackEnd.status == 200 then
+            Ok(resultFromBackEnd.bodyAsBytes)
+              .withHeaders(
+                "Content-Type"        -> resultFromBackEnd.header("Content-Type"       ).getOrElse("unknown"),
+                "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
+              )
+          else Ok(resultFromBackEnd.json)
 
-  def filesInProgress() = Action.async {
-    wSClient.url(s"$baseUrl/file-upload/files/inprogress").get().map { response =>
-      Ok(Json.parse(response.body))
-    }
-  }
+  def transferDeleteEnvelope(envelopeId: String) =
+    Action.async:
+      wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").delete()
+        .map: response =>
+          Status(response.status)(response.body)
 
-  def recreateAllCollections() = Action.async {
-    wSClient.url(s"$baseUrl/file-upload/test-only/recreate-collections").post(Json.obj()).map {
-      response => new Status(response.status)(response.body)
-    }
-  }
+  def getEvents(streamId: String) =
+    Action.async:
+      wSClient.url(s"$baseUrl/file-upload/events/$streamId").get()
+        .map: response =>
+          Status(response.status)(response.body)
+            .withHeaders {
+              "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
+            }
 
-  def configureFileReadyNotification(): Action[AnyContent] = Action.async { implicit request =>
-    optTestOnlySdesStubBaseUrl.fold(Future.successful(NotImplemented("sdes-stub is not enabled for this deployment"))) { sdesStubBaseUrl =>
-      val params = request.queryString.toSeq.flatMap { case (name, values) =>
-        values.map(name -> _)
-      }
-      wSClient.url(s"$sdesStubBaseUrl/sdes-stub/configure/notification/fileready")
-        .withQueryStringParameters(params: _*)
-        .execute(POST)
-        .map { response =>
-          new Status(response.status)(response.body)
-        }
+  def filesInProgress() =
+    Action.async:
+      wSClient.url(s"$baseUrl/file-upload/files/inprogress").get()
+        .map: response =>
+          Ok(Json.parse(response.body))
+
+  def recreateAllCollections() =
+    Action.async:
+      wSClient.url(s"$baseUrl/file-upload/test-only/recreate-collections").post(Json.obj())
+        .map: response =>
+          Status(response.status)(response.body)
+
+  def configureFileReadyNotification(): Action[AnyContent] =
+    Action.async { implicit request =>
+      optTestOnlySdesStubBaseUrl
+        .fold(Future.successful(NotImplemented("sdes-stub is not enabled for this deployment"))): sdesStubBaseUrl =>
+          val params =
+            request.queryString.toSeq.flatMap: (name, values) =>
+              values.map(name -> _)
+          wSClient.url(s"$sdesStubBaseUrl/sdes-stub/configure/notification/fileready")
+            .withQueryStringParameters(params: _*)
+            .execute(POST)
+            .map: response =>
+              Status(response.status)(response.body)
     }
-  }
-}
+
+end TestOnlyController
 
 case class EnvelopeConstraintsUserSetting(
   maxItems      : Option[Int]                = None,
@@ -172,45 +183,46 @@ case class CreateEnvelopeRequest(
 
 object CreateEnvelopeRequest {
   type ContentTypes = String
-  implicit val createEnvelopeRequestReads: Reads[CreateEnvelopeRequest] = EnvelopeRequestReads
-  implicit val createEnvelopeRequestWrites: Writes[CreateEnvelopeRequest] = EnvelopeRequestWrites
+  given Reads[CreateEnvelopeRequest]  = EnvelopeRequestReads
+  given Writes[CreateEnvelopeRequest] = EnvelopeRequestWrites
 }
 
-object EnvelopeRequestWrites extends Writes[CreateEnvelopeRequest] {
-  override def writes(s: CreateEnvelopeRequest): JsValue = {
-    implicit val dateWrites: Writes[DateTime] = {
+object EnvelopeRequestWrites extends Writes[CreateEnvelopeRequest]:
+  override def writes(s: CreateEnvelopeRequest): JsValue =
+    given Writes[DateTime] =
       val pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'"
       val df      = org.joda.time.format.DateTimeFormat.forPattern(pattern)
-      Writes[DateTime] { d => JsString(d.toString(df)) }
-    }
-    val envelopeConstraintsUserSetting = s.constraints.getOrElse(EnvelopeConstraintsUserSetting(None,None,None,None))
-    Json.obj("expiryDate" -> s.expiryDate,
-             "metadata" -> s.metadata,
-             "callbackUrl" -> s.callbackUrl,
-             "constraints" -> Json.obj("contentTypes" -> envelopeConstraintsUserSetting.contentTypes,
-                                       "maxItems" -> envelopeConstraintsUserSetting.maxItems,
-                                       "maxSize" -> envelopeConstraintsUserSetting.maxSize,
-                                       "maxSizePerItem" -> envelopeConstraintsUserSetting.maxSizePerItem
-                              )
-    )
-  }
-}
+      Writes[DateTime](d => JsString(d.toString(df)))
 
-object EnvelopeRequestReads extends Reads[CreateEnvelopeRequest] {
-  implicit val dateReads: Reads[DateTime] = new Reads[DateTime] {
-    val pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-    val df      = org.joda.time.format.DateTimeFormat.forPattern(pattern)
-    def reads(json: JsValue): JsResult[DateTime] =
-      json match {
-        case JsNumber(d) => JsSuccess(new DateTime(d.toLong))
-        case JsString(s) => scala.util.Try(DateTime.parse(s, df)).toOption match {
+    val envelopeConstraintsUserSetting =
+      s.constraints.getOrElse(EnvelopeConstraintsUserSetting(None,None,None,None))
+
+    Json.obj(
+      "expiryDate"  -> s.expiryDate,
+      "metadata"    -> s.metadata,
+      "callbackUrl" -> s.callbackUrl,
+      "constraints" -> Json.obj(
+                         "contentTypes"   -> envelopeConstraintsUserSetting.contentTypes,
+                         "maxItems"       -> envelopeConstraintsUserSetting.maxItems,
+                         "maxSize"        -> envelopeConstraintsUserSetting.maxSize,
+                         "maxSizePerItem" -> envelopeConstraintsUserSetting.maxSizePerItem
+                       )
+    )
+
+object EnvelopeRequestReads extends Reads[CreateEnvelopeRequest]:
+  private given  Reads[DateTime] =
+    (json: JsValue) =>
+      val pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+      val df      = org.joda.time.format.DateTimeFormat.forPattern(pattern)
+      json match
+        case JsNumber(d) => JsSuccess(DateTime(d.toLong))
+        case JsString(s) => scala.util.Try(DateTime.parse(s, df)).toOption match
                               case Some(d) => JsSuccess(d)
                               case _       => JsError(Seq(JsPath() -> Seq(JsonValidationError("error.expected.jodadate.format", pattern))))
-                            }
-        case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError("error.expected.date"))))
-      }
-  }
-  implicit val constraintsFormats: OFormat[EnvelopeConstraintsUserSetting] = Json.format[EnvelopeConstraintsUserSetting]
+        case _            => JsError(Seq(JsPath() -> Seq(JsonValidationError("error.expected.date"))))
+
+  private given Format[EnvelopeConstraintsUserSetting] =
+    Json.format[EnvelopeConstraintsUserSetting]
 
   override def reads(value: JsValue): JsSuccess[CreateEnvelopeRequest] =
     JsSuccess(CreateEnvelopeRequest(
@@ -219,4 +231,3 @@ object EnvelopeRequestReads extends Reads[CreateEnvelopeRequest] {
       (value \ "metadata"   ).validate[JsObject].asOpt,
       (value \ "constraints").validate[EnvelopeConstraintsUserSetting].asOpt
     ))
-}

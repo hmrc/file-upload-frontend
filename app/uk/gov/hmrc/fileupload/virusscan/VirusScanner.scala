@@ -19,36 +19,34 @@ package uk.gov.hmrc.fileupload.virusscan
 import java.io.InputStream
 
 import play.api.Logger
-import uk.gov.hmrc.clamav.model.{Clean, Infected, ScanningResult}
+import uk.gov.hmrc.clamav.model.ScanningResult
 import uk.gov.hmrc.fileupload.utils.NonFatalWithLogging
 import uk.gov.hmrc.fileupload.virusscan.ScanningService._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class VirusScanner(avClient: AvClient) {
+class VirusScanner(avClient: AvClient):
 
   private val logger = Logger(getClass)
 
   private val commandReadTimedOutMessage = "COMMAND READ TIMED OUT"
 
-  def scan(implicit ec: ExecutionContext): AvScan =
+  def scan(using ExecutionContext): AvScan =
     scanWith(avClient.sendAndCheck)
 
   private[virusscan] def scanWith(
     sendAndCheck: (InputStream, Int) => Future[ScanningResult]
   )(is    : InputStream,
     length: Long
-  )(implicit
-    ec: ExecutionContext
-  ): Future[ScanResult] = {
-    sendAndCheck(is, length.toInt).map {
-      case Clean             => Right(ScanResultFileClean)
-      case Infected(message) if message.contains(commandReadTimedOutMessage) =>
-                                Left(ScanReadCommandTimeOut)
-      case Infected(message) => logger.warn(s"File is infected: [$message].")
-                                Left(ScanResultVirusDetected)
-    }.recover {
-      case NonFatalWithLogging(ex) => Left(ScanResultError(ex))
-    }
-  }
-}
+  )(using
+    ExecutionContext
+  ): Future[ScanResult] =
+    sendAndCheck(is, length.toInt)
+      .map:
+        case ScanningResult.Clean             => Right(ScanResultFileClean)
+        case ScanningResult.Infected(message) if message.contains(commandReadTimedOutMessage) =>
+                                                 Left(ScanError.ScanReadCommandTimeOut)
+        case ScanningResult.Infected(message) => logger.warn(s"File is infected: [$message].")
+                                                 Left(ScanError.ScanResultVirusDetected)
+      .recover:
+        case NonFatalWithLogging(ex) => Left(ScanError.ScanResultError(ex))

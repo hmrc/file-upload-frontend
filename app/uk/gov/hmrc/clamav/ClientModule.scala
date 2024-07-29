@@ -20,8 +20,8 @@ import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.clamav.config.{ClamAvConfig, PlayClamAvConfig}
 
-class ClientModule extends Module {
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
-    bind[ClamAvConfig].to[PlayClamAvConfig].eagerly()
-  )
-}
+class ClientModule extends Module:
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
+    Seq(
+      bind[ClamAvConfig].to[PlayClamAvConfig].eagerly()
+    )

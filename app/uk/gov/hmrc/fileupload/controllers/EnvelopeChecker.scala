@@ -33,7 +33,7 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object EnvelopeChecker {
+object EnvelopeChecker:
 
   type FileSize = Long
   type ContentType = String
@@ -49,47 +49,46 @@ object EnvelopeChecker {
     envelopeId: EnvelopeId
   )(
     action: Option[EnvelopeConstraints] => EssentialAction
-  )(implicit
-    ec : ExecutionContext,
-    mat: Materializer
+  )(using
+    ExecutionContext,
+    Materializer
   ) =
     EssentialAction { implicit rh =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(rh)
-      Accumulator.flatten {
-        checkEnvelopeDetails(envelopeId, hc).map {
+
+      given hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(rh)
+
+      Accumulator.flatten:
+        checkEnvelopeDetails(envelopeId, hc).map:
           case Right(envelope) =>
             val envelopeDetails = extractEnvelopeDetails(envelope)
             val status = envelopeDetails.status.getOrElse("")
-            status match {
+            status match
               case "OPEN" =>
                 val constraints = envelopeDetails.constraints
                 action(constraints)(rh)
-              case "CLOSED" | "SEALED" => logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
-              case _ => logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
-            }
+              case "CLOSED" | "SEALED" =>
+                logAndReturn(LOCKED, s"Unable to upload to envelope: $envelopeId with status: $status")
+              case _ =>
+                logAndReturn(BAD_REQUEST, s"Unable to upload to envelope: $envelopeId with status: $status")
           case Left(EnvelopeDetailError.EnvelopeDetailNotFoundError(_)) =>
             logAndReturn(NOT_FOUND, s"Unable to upload to nonexistent envelope: $envelopeId")
           case Left(error) =>
             logAndReturn(INTERNAL_SERVER_ERROR, error.toString)
-        }
-      }
     }
 
   def extractEnvelopeDetails(envelope: JsValue): EnvelopeReport =
     envelope.as[EnvelopeReport]
 
-  def getMaxFileSizeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): FileSize = {
+  def getMaxFileSizeFromEnvelope(definedConstraints: Option[EnvelopeConstraints]): FileSize =
     val sizeRegex = "([1-9][0-9]{0,3})([KB,MB]{2})".r
-    definedConstraints.map(_.maxSizePerItem match {
+    definedConstraints.map(_.maxSizePerItem match
       case sizeRegex(size, fileSizeType) =>
         val fileSize = size.toLong
-        fileSizeType match {
+        fileSizeType match
           case "KB" => fileSize * 1024
           case "MB" => fileSize * 1024 * 1024
-        }
       case _ => defaultFileSize
-    }).getOrElse(defaultFileSize)
-  }
+    ).getOrElse(defaultFileSize)
 
   def getFormContentType(getFormContentType: MultipartFormData[FileCachedInMemory]): ContentType =
     getFormContentType.files
@@ -99,10 +98,10 @@ object EnvelopeChecker {
   def logAndReturn(
     statusCode: Int,
     problem   : String
-  )(implicit
+  )(using
     rh: RequestHeader
-  ): Accumulator[ByteString, Result] = {
+  ): Accumulator[ByteString, Result] =
     logger.warn(s"Request: $rh failed because: $problem")
-    Accumulator.done(new Status(statusCode).apply(Json.obj("message" -> problem)))
-  }
-}
+    Accumulator.done(Status(statusCode).apply(Json.obj("message" -> problem)))
+
+end EnvelopeChecker

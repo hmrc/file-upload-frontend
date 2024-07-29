@@ -17,7 +17,7 @@
 package uk.gov.hmrc.fileupload.support
 
 import org.scalatest.Suite
-import play.api.libs.ws.WSResponse
+import play.api.libs.ws.{WSResponse, writeableOf_ByteArray, writeableOf_String}
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 
 trait FileActions extends ActionsSupport {

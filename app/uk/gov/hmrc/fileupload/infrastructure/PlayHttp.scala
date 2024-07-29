@@ -29,7 +29,7 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-object PlayHttp {
+object PlayHttp:
 
   def audit(
     connector  : AuditConnector,
@@ -39,24 +39,22 @@ object PlayHttp {
     status : Int,
     body   : String
   )(request: Request[_]
-  )(implicit
-    ec: ExecutionContext
-  ): Future[AuditResult] = {
+  )(using
+    ExecutionContext
+  ): Future[AuditResult] =
     val hc = HeaderCarrierConverter.fromRequest(request)
 
-    connector.sendEvent(
+    connector.sendEvent:
       DataEvent(
-        appName,
-        if (success) EventTypes.Succeeded else EventTypes.Failed,
-        tags   = Map(
+        appName
+      , if success then EventTypes.Succeeded else EventTypes.Failed
+      , tags   = Map(
                    "method"       -> request.method,
                    "statusCode"   -> status.toString,
                    "responseBody" -> ""
-                 ) ++ hc.toAuditTags(request.path, request.path),
-        detail = hc.toAuditDetails()
+                 ) ++ hc.toAuditTags(request.path, request.path)
+      , detail = hc.toAuditDetails()
       )
-    )
-  }
 
   case class PlayHttpError(message: String)
 
@@ -66,14 +64,14 @@ object PlayHttp {
     errorLogger: Option[(Throwable => Unit)]
   )(request: WSRequest,
     hc     : HeaderCarrier
-  )(implicit
-    ec: ExecutionContext
-  ): Future[Either[PlayHttpError, WSResponse]] = {
+  )(using
+    ExecutionContext
+  ): Future[Either[PlayHttpError, WSResponse]] =
     val eventualResponse = request.execute()
 
     eventualResponse.foreach {
       response =>
-        val path = new URL(request.url).getPath
+        val path = URL(request.url).getPath
         connector.sendEvent(
           DataEvent(
             appName,
@@ -89,10 +87,9 @@ object PlayHttp {
     }
 
     eventualResponse.map(Right.apply)
-      .recover {
+      .recover:
         case NonFatal(t) =>
           errorLogger.foreach(_.apply(t))
           Left(PlayHttpError(t.getMessage))
-      }
-  }
-}
+
+end PlayHttp

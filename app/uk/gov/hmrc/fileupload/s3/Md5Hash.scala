@@ -24,9 +24,9 @@ import org.apache.pekko.util.ByteString
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object Md5Hash {
-  def md5HashSink(implicit ec: ExecutionContext): Sink[ByteString, Future[String]] = {
-    val md  = MessageDigest.getInstance("MD5")
-    Sink.foreach[ByteString](bs => md.update(bs.toArray)).mapMaterializedValue(_.map(_ => Base64.getEncoder.encodeToString(md.digest())))
-  }
-}
+object Md5Hash:
+  def md5HashSink(using ExecutionContext): Sink[ByteString, Future[String]] =
+    val md = MessageDigest.getInstance("MD5")
+    Sink
+      .foreach[ByteString](bs => md.update(bs.toArray))
+      .mapMaterializedValue(_.map(_ => Base64.getEncoder.encodeToString(md.digest())))
