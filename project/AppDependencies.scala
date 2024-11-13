@@ -18,15 +18,15 @@ import play.core.PlayVersion.pekkoVersion
 import sbt._
 
 private object AppDependencies {
-  private val bootstrapPlayVersion = "9.1.0"
+  private val bootstrapPlayVersion = "9.5.0"
 
   val compile = Seq(
-    "uk.gov.hmrc"        %% "bootstrap-frontend-play-30" % bootstrapPlayVersion,
-    "uk.gov.hmrc"        %% "play-partials-play-30"      % "10.0.0",
-    "org.typelevel"      %% "cats-core"                  % "2.10.0",
-    "com.amazonaws"      %  "aws-java-sdk-s3"            % "1.12.763",
-    "org.apache.pekko"   %% "pekko-connectors-file"      % "1.0.2",
-    "commons-io"         %  "commons-io"                 % "2.15.0"
+    "uk.gov.hmrc"            %% "bootstrap-frontend-play-30" % bootstrapPlayVersion,
+    "org.typelevel"          %% "cats-core"                  % "2.12.0",
+    "software.amazon.awssdk" %  "s3"                         % "2.28.19",
+    "joda-time"              %  "joda-time"                  % "2.13.0",
+    "org.apache.pekko"       %% "pekko-connectors-file"      % "1.0.2",
+    "commons-io"             %  "commons-io"                 % "2.15.0"
   )
 
   val test = Seq(

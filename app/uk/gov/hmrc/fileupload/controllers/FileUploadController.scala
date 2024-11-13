@@ -120,7 +120,7 @@ class FileUploadController @Inject()(
     val key = createS3Key(envelopeId, fileId)
     uploadToQuarantine(key, file.ref.inputStream, file.ref.size)
       .flatMap: uploadResult =>
-        val fileRefId = FileRefId(uploadResult.getVersionId)
+        val fileRefId = FileRefId(uploadResult.versionId)
         commandHandler
           .notify:
             QuarantineFile(
