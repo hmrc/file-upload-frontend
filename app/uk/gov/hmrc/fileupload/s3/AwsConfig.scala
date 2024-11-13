@@ -49,28 +49,4 @@ class AwsConfig @Inject() (config: com.typesafe.config.Config):
     else
       None
 
-  def proxyEnabled: Boolean =
-    config.getBoolean("proxy.proxyRequiredForThisEnvironment")
-
-  def proxyHost: String =
-    config.getString("proxy.host")
-
-  def proxyPort: Int =
-    config.getInt("proxy.port")
-
-  def proxyUsername: String =
-    config.getString("proxy.username")
-
-  def proxyPassword: String =
-    config.getString("proxy.password")
-
-  def connectionTimeout: Int =
-    config.getDuration("aws.s3.timeout.connection").toMillis.toInt
-
-  def requestTimeout: Int =
-    config.getDuration("aws.s3.timeout.request").toMillis.toInt
-
-  def socketTimeout: Int =
-    config.getDuration("aws.s3.timeout.socket").toMillis.toInt
-
 end AwsConfig

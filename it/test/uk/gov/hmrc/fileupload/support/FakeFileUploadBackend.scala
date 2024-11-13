@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.fileupload.support
 
-import com.amazonaws.services.s3.model.{CopyObjectResult, S3ObjectSummary}
-import com.amazonaws.services.s3.transfer.model.UploadResult
+import software.amazon.awssdk.services.s3.model.{CopyObjectResponse, PutObjectResponse, S3Object}
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, post, postRequestedFor, put, putRequestedFor, urlPathMatching, urlEqualTo}
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
@@ -214,23 +213,23 @@ class InMemoryS3Service(
     Future.successful(getBucket(bucketName).get(key.value).map(_.toFileData))
   }
 
-  override def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[UploadResult] = {
+  override def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[PutObjectResponse] = {
     updateBucket(bucketName)(_ + (key.value -> S3File(scala.io.Source.fromInputStream(file).mkString, fileSize)))
-    Future.successful(UploadResult())
+    Future.successful(PutObjectResponse.builder.build())
   }
 
-  override def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], NotUsed] =
+  override def listFilesInBucket(bucketName: String): Source[Seq[S3Object], NotUsed] =
     Source.single(
-      getBucket(bucketName).toSeq.map {_ => S3ObjectSummary()}
+      getBucket(bucketName).toSeq.map {_ => S3Object.builder().build()}
     )
 
-  override def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResult] =
+  override def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResponse] =
     scala.util.Try {
       val fromBucket = awsConfig.quarantineBucketName
       val toBucket   = awsConfig.transientBucketName
       val s3File = getBucket(fromBucket).getOrElse(key.value, sys.error(s"File $key was not found in bucket $fromBucket"))
       updateBucket(toBucket)(_ + (key.value -> s3File))
-      CopyObjectResult()
+      CopyObjectResponse.builder.build()
     }
 
   override def getFileLengthFromQuarantine(key: S3KeyName, versionId: String): Long = {

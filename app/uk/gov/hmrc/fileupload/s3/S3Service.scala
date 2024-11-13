@@ -17,8 +17,7 @@
 package uk.gov.hmrc.fileupload.s3
 
 import com.google.inject.ImplementedBy
-import com.amazonaws.services.s3.model.{CopyObjectResult, S3ObjectSummary}
-import com.amazonaws.services.s3.transfer.model.UploadResult
+import software.amazon.awssdk.services.s3.model.{CopyObjectResponse, PutObjectResponse, S3Object}
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.{IOResult, Materializer}
 import org.apache.pekko.stream.scaladsl.Source
@@ -43,7 +42,7 @@ trait S3Service:
 
   def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(using ExecutionContext): Future[Option[FileData]]
 
-  def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[UploadResult]
+  def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[PutObjectResponse]
 
   def uploadToQuarantine: UploadToQuarantine =
     upload(awsConfig.quarantineBucketName, _, _, _)
@@ -54,15 +53,15 @@ trait S3Service:
   def downloadFromQuarantine: DownloadFromBucket =
     download(awsConfig.quarantineBucketName, _)
 
-  def listFilesInBucket(bucketName: String): Source[Seq[S3ObjectSummary], NotUsed]
+  def listFilesInBucket(bucketName: String): Source[Seq[S3Object], NotUsed]
 
-  def listFilesInQuarantine: Source[Seq[S3ObjectSummary], NotUsed] =
+  def listFilesInQuarantine: Source[Seq[S3Object], NotUsed] =
     listFilesInBucket(awsConfig.quarantineBucketName)
 
-  def listFilesInTransient: Source[Seq[S3ObjectSummary], NotUsed] =
+  def listFilesInTransient: Source[Seq[S3Object], NotUsed] =
     listFilesInBucket(awsConfig.transientBucketName)
 
-  def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResult]
+  def copyFromQtoT(key: S3KeyName, versionId: String): Try[CopyObjectResponse]
 
   def getFileLengthFromQuarantine(key: S3KeyName, versionId: String): Long
 
@@ -89,7 +88,7 @@ end S3Service
 object S3Service:
   type StreamResult = Source[ByteString, Future[IOResult]]
 
-  type UploadToQuarantine = (S3KeyName, InputStream, Int) => Future[UploadResult]
+  type UploadToQuarantine = (S3KeyName, InputStream, Int) => Future[PutObjectResponse]
 
   type DownloadFromBucket = S3KeyName => Option[StreamWithMetadata]
 

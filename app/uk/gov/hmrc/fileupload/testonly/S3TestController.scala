@@ -47,7 +47,7 @@ trait S3TestController(using ExecutionContext):
         val header = Source.single(s"Files in bucket `$bucketName` are: \n")
         val files =
           s3Service.listFilesInBucket(bucketName)
-            .map(summaries => summaries.map(_.getKey))
+            .map(summaries => summaries.map(_.key))
             .map(_.mkString("\n"))
 
         Ok.chunked(header.concat(files))
@@ -64,15 +64,15 @@ trait S3TestController(using ExecutionContext):
         if numberOfFiles == 1 then
           val uploadedFile = req.body.files.head.ref
           s3Service.upload(bucketName, S3KeyName(fileName), uploadedFile.inputStream, uploadedFile.size)
-            .map(ur => Ok(s"key ${ur.getKey}, version: ${ur.getVersionId}, eTag: ${ur.getETag}"))
+            .map(ur => Ok(s"key $fileName, version: ${ur.versionId}"))
         else
           Future.successful(BadRequest("Expected exactly one file to be attached"))
 
     def copyFromQtoT(fileName: String, versionId: String) =
       Action:
         s3Service.copyFromQtoT(S3KeyName(fileName), versionId) match
-          case Success(result) => Ok(s"Successfully copied file: $fileName, etag: ${result.getETag}, versionId: ${result.getVersionId}")
-          case Failure(ex) => InternalServerError("Problem copying to transient: " + ex.getMessage)
+          case Success(result) => Ok(s"Successfully copied file: $fileName, versionId: ${result.versionId}")
+          case Failure(ex)     => InternalServerError("Problem copying to transient: " + ex.getMessage)
 
     def s3downloadFileQ(fileName: String, version: Option[String]) =
       s3downloadFile(quarantineBucketName, fileName, version)
@@ -83,17 +83,18 @@ trait S3TestController(using ExecutionContext):
     def s3downloadFile(bucket: String, fileName: String, version: Option[String]) =
       Action:
         logger.info(s"downloading $fileName from bucket: $bucket, versionO: $version")
-        val result = (version match {
+        val result = (version match
           case Some(v) => s3Service.download(bucket, S3KeyName(fileName), v)
-          case None => s3Service.download(bucket, S3KeyName(fileName))
-        }).get
+          case None    => s3Service.download(bucket, S3KeyName(fileName))
+        ).get
 
         Result(
           header = ResponseHeader(200, Map.empty),
-          body = HttpEntity.Streamed(
-            result.stream,
-            Some(result.metadata.contentLength),
-            Some(result.metadata.contentType))
+          body   = HttpEntity.Streamed(
+                     result.stream,
+                     Some(result.metadata.contentLength),
+                     Some(result.metadata.contentType)
+                   )
         )
 
     def getQuarantineProperties =

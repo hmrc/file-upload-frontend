@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.fileupload.controllers
 
-import com.amazonaws.services.s3.transfer.model.UploadResult
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.Mockito.when
 import org.scalatest.EitherValues
@@ -29,6 +28,7 @@ import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.mvc.{MessagesControllerComponents, MultipartFormData, Request}
 import play.api.test.Helpers._
+import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import uk.gov.hmrc.fileupload.DomainFixtures._
 import uk.gov.hmrc.fileupload.RestFixtures._
 import uk.gov.hmrc.fileupload._
@@ -62,7 +62,7 @@ class FileUploadControllerSpec
         Future.successful(Right(NotifySuccess))
     }
     val fakeCurrentTime = () => 10L
-    val uploadToQuarantine: UploadToQuarantine = (_,_,_) => Future.successful(UploadResult())
+    val uploadToQuarantine: UploadToQuarantine = (_,_,_) => Future.successful(PutObjectResponse.builder().build())
     val createS3Key: (EnvelopeId, FileId) => S3KeyName = (_,_) => S3KeyName("key")
     val configuration = Configuration.from(Map.empty)
     val loggerHelper = new LoggerHelper {

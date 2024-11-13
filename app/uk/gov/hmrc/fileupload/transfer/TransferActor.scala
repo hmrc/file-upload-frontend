@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.fileupload.transfer
 
-import com.amazonaws.services.s3.model.CopyObjectResult
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse
 import org.apache.pekko.actor.{Actor, ActorRef, Props}
 import play.api.Logger
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId, FileRefId}
@@ -32,7 +32,7 @@ class TransferActor(
   createS3Key   : (EnvelopeId, FileId) => S3KeyName,
   commandHandler: CommandHandler,
   getFileLength : (EnvelopeId, FileId, FileRefId) => Long,
-  transferFile  : (S3KeyName, String) => Try[CopyObjectResult]
+  transferFile  : (S3KeyName, String) => Try[CopyObjectResponse]
 )(using
   ExecutionContext
 ) extends Actor:
@@ -72,7 +72,7 @@ object TransferActor:
     createS3Key   : (EnvelopeId, FileId) => S3KeyName,
     commandHandler: CommandHandler,
     getFileLength : (EnvelopeId, FileId, FileRefId) => Long,
-    transferFile  : (S3KeyName, String) => Try[CopyObjectResult]
+    transferFile  : (S3KeyName, String) => Try[CopyObjectResponse]
   )(using
     ExecutionContext
   ): Props =

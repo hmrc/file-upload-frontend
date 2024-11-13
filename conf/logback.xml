@@ -23,7 +23,7 @@
 
 
     <logger name="uk.gov" level="DEBUG"/>
-    <logger name="com.amazonaws.services.s3" level="DEBUG"/>
+    <logger name="software.amazon.awssdk.services.s3" level="DEBUG"/>
 
     <logger name="org.asynchttpclient" level="INFO" />
     <logger name="io.netty" level="INFO" />

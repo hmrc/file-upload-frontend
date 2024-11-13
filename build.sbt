@@ -18,10 +18,10 @@ import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.PlayImport.PlayKeys
 import play.sbt.routes.RoutesKeys.routesGenerator
 import uk.gov.hmrc.DefaultBuildSettings
-import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
 
 ThisBuild / majorVersion := 1
-ThisBuild / scalaVersion := "3.3.3"
+ThisBuild / scalaVersion := "3.3.4"
+ThisBuild / scalacOptions += "-Wconf:msg=Flag.*repeatedly:s"
 
 lazy val microservice = Project("file-upload-frontend", file("."))
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
@@ -30,8 +30,7 @@ lazy val microservice = Project("file-upload-frontend", file("."))
   .settings(
     libraryDependencies ++= AppDependencies.dependencies,
     Test / parallelExecution  := false,
-    routesGenerator := InjectedRoutesGenerator,
-    scalacOptions += "-Wconf:src=routes/.*:s"
+    scalacOptions   += "-Wconf:src=routes/.*:s"
   )
 
 lazy val it = project
