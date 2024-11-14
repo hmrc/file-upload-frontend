@@ -47,7 +47,8 @@ import scala.util.Try
 @Singleton
 class S3JavaSdkService @Inject()(
   configuration: com.typesafe.config.Config,
-  metrics      : MetricRegistry
+  metrics      : MetricRegistry,
+  wsClient     : play.api.libs.ws.WSClient
 )(using
   ExecutionContext
 ) extends S3Service:
@@ -342,20 +343,34 @@ class S3JavaSdkService @Inject()(
     import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
     logger.debug(s"signature duration: ${expirationDuration.toSeconds} seconds (${java.time.Duration.ofSeconds(expirationDuration.toSeconds)})")
 
-    val presignRequest =
-      GetObjectPresignRequest.builder()
-        .signatureDuration(java.time.Duration.ofSeconds(expirationDuration.toSeconds))
-        .getObjectRequest:
-          GetObjectRequest.builder()
+    val presigner = S3Presigner.create()
+
+    val request =
+      GetObjectRequest.builder()
             .bucket(bucketName)
             .key(key)
             .build()
+
+    logger.info(s"confirming request")
+    val requestCheck = s3Client.getObject(request)
+    logger.info(s"confirming request: $requestCheck")
+
+    val presignRequest =
+      GetObjectPresignRequest.builder()
+        .signatureDuration(java.time.Duration.ofSeconds(expirationDuration.toSeconds))
+        .getObjectRequest(request)
         .build()
 
-    S3Presigner
-      .create()
+    val url = presigner
       .presignGetObject(presignRequest)
-      .url
+      .url()
+
+    logger.info(s"confirming url")
+    import scala.concurrent.duration.DurationInt
+    val urlCheck = scala.concurrent.Await.result(wsClient.url(url.toString).get(), 40.seconds)
+    logger.info(s"confirming url: ${urlCheck.status} ($urlCheck)")
+
+    url
 
 end S3JavaSdkService
 
