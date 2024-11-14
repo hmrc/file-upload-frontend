@@ -278,6 +278,7 @@ class S3JavaSdkService @Inject()(
                          key                = key.value,
                          expirationDuration = awsConfig.zipDuration
                        )
+       _            =  logger.debug(s"presigned to ${java.util.Base64.getEncoder.encodeToString(url.toString.getBytes)}")
      yield
        ZipData(
          name        = fileName,
@@ -339,6 +340,7 @@ class S3JavaSdkService @Inject()(
   def presign(bucketName: String, key: String, expirationDuration: Duration): URL =
     import software.amazon.awssdk.services.s3.presigner.S3Presigner
     import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
+    logger.debug(s"signature duration: ${expirationDuration.toSeconds} seconds (${java.time.Duration.ofSeconds(expirationDuration.toSeconds)})")
 
     val presignRequest =
       GetObjectPresignRequest.builder()

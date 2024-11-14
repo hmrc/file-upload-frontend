@@ -86,7 +86,7 @@ class TestOnlyController @Inject()(
                 "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
               )
           else
-            Ok(resultFromBackEnd.json)
+            Status(resultFromBackEnd.status)(resultFromBackEnd.json)
 
   def routingRequests() =
     Action.async(parse.json): request =>
@@ -126,7 +126,8 @@ class TestOnlyController @Inject()(
                 "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
               )
 
-          else Ok(resultFromBackEnd.json)
+          else
+            Status(resultFromBackEnd.status)(resultFromBackEnd.json)
 
   def transferDeleteEnvelope(envelopeId: String) =
     Action.async:
