@@ -70,9 +70,7 @@ class TestOnlyController @Inject()(
       wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId").get()
         .map: response =>
           Status(response.status)(response.body)
-            .withHeaders(
-              "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
-            )
+            .as(response.header("Content-Type").getOrElse("unknown"))
 
   def downloadFile(envelopeId: String, fileId: String) =
     Action.async:
@@ -117,11 +115,15 @@ class TestOnlyController @Inject()(
       wSClient.url(s"$baseUrl/file-transfer/envelopes/$envelopeId").get()
         .map: resultFromBackEnd =>
           if resultFromBackEnd.status == 200 then
+            val fileName = resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
+            play.api.Logger(getClass).info(s"Returning Content-Disposition: $fileName")
+            //Ok.sendBytes(resultFromBackEnd.bodyAsBytes, inline = true, fileName)
             Ok(resultFromBackEnd.bodyAsBytes)
               .withHeaders(
                 "Content-Type"        -> resultFromBackEnd.header("Content-Type"       ).getOrElse("unknown"),
                 "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
               )
+
           else Ok(resultFromBackEnd.json)
 
   def transferDeleteEnvelope(envelopeId: String) =
@@ -135,9 +137,7 @@ class TestOnlyController @Inject()(
       wSClient.url(s"$baseUrl/file-upload/events/$streamId").get()
         .map: response =>
           Status(response.status)(response.body)
-            .withHeaders {
-              "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
-            }
+            .as(response.header("Content-Type").getOrElse("unknown"))
 
   def filesInProgress() =
     Action.async:
