@@ -77,6 +77,9 @@ class TestOnlyController @Inject()(
       wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId/files/$fileId/content").get()
         .map: resultFromBackEnd =>
           if resultFromBackEnd.status == 200 then
+            val fileName = resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
+            play.api.Logger(getClass).info(s"Returning Content-Disposition: $fileName")
+            //Ok.sendBytes(resultFromBackEnd.bodyAsBytes, inline = true, fileName)
             Ok(resultFromBackEnd.bodyAsBytes)
               .withHeaders(
                 "Content-Length"      -> resultFromBackEnd.header("Content-Length"     ).getOrElse("unknown"),
