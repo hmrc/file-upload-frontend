@@ -32,6 +32,8 @@ import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model._
+import software.amazon.awssdk.services.s3.presigner.S3Presigner
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 
@@ -60,7 +62,7 @@ class S3JavaSdkService @Inject()(
 
   private val oldS3 = OldS3(awsConfig, wsClient)
 
-  val credentials = AwsBasicCredentials.create(awsConfig.accessKeyId, awsConfig.secretAccessKey)
+  private val credentials = AwsBasicCredentials.create(awsConfig.accessKeyId, awsConfig.secretAccessKey)
 
   val metricGetObjectContent      = metrics.meter("s3.getObjectContent")
   val metricGetObjectContentSize  = metrics.counter("s3.getObjectContentSize")
@@ -72,12 +74,12 @@ class S3JavaSdkService @Inject()(
   val metricUploadFailed          = metrics.meter("s3.upload.failed")
   val metricCopyFromQtoT          = metrics.meter("s3.copyFromQtoT")
 
-  val s3Builder =
-    S3Client
-      .builder()
-      .credentialsProvider(StaticCredentialsProvider.create(credentials))
-
   val s3Client =
+    val s3Builder =
+      S3Client
+        .builder()
+        .credentialsProvider(StaticCredentialsProvider.create(credentials))
+
     awsConfig.endpoint
       .fold(s3Builder.region(Region.EU_WEST_2)): endpoint =>
         s3Builder
@@ -346,12 +348,14 @@ class S3JavaSdkService @Inject()(
 
   end zipSource
 
-  def presign(bucketName: String, key: String, expirationDuration: Duration): URL =
-    import software.amazon.awssdk.services.s3.presigner.S3Presigner
-    import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
-    logger.debug(s"signature duration: ${expirationDuration.toSeconds} seconds (${java.time.Duration.ofSeconds(expirationDuration.toSeconds)})")
+  val presigner =
+    S3Presigner.builder()
+      .region(Region.EU_WEST_2)
+      .credentialsProvider(StaticCredentialsProvider.create(credentials))
+      .build()
 
-    val presigner = S3Presigner.create()
+  def presign(bucketName: String, key: String, expirationDuration: Duration): URL =
+    logger.debug(s"signature duration: ${expirationDuration.toSeconds} seconds (${java.time.Duration.ofSeconds(expirationDuration.toSeconds)})")
 
     val request =
       GetObjectRequest.builder()
