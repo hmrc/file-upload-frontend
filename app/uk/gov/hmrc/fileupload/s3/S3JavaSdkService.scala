@@ -58,6 +58,8 @@ class S3JavaSdkService @Inject()(
 
   override val awsConfig = AwsConfig(configuration)
 
+  private val oldS3 = OldS3(awsConfig, wsClient)
+
   val credentials = AwsBasicCredentials.create(awsConfig.accessKeyId, awsConfig.secretAccessKey)
 
   val metricGetObjectContent      = metrics.meter("s3.getObjectContent")
@@ -280,6 +282,12 @@ class S3JavaSdkService @Inject()(
                          expirationDuration = awsConfig.zipDuration
                        )
        _            =  logger.debug(s"presigned to ${java.util.Base64.getEncoder.encodeToString(url.toString.getBytes)}")
+       oldUrl       =  oldS3.presign(
+                         bucketName         = awsConfig.transientBucketName,
+                         key                = key.value,
+                         expirationDuration = awsConfig.zipDuration
+                       )
+       _            =  logger.debug(s"old presigned to ${java.util.Base64.getEncoder.encodeToString(oldUrl.toString.getBytes)}")
      yield
        ZipData(
          name        = fileName,
@@ -353,7 +361,7 @@ class S3JavaSdkService @Inject()(
 
     logger.info(s"confirming request")
     val requestCheck = s3Client.getObject(request)
-    logger.info(s"confirming request: $requestCheck")
+    logger.info(s"confirming request: ${requestCheck.response.contentType} ${requestCheck.response.contentLength} $requestCheck")
 
     val presignRequest =
       GetObjectPresignRequest.builder()
@@ -397,3 +405,43 @@ object S3JavaSdkService:
                                                 case (fileId, i) => (fileId, name + "-" + i + ext)
 
 end S3JavaSdkService
+
+
+class OldS3(
+  awsConfig: AwsConfig,
+  wsClient : play.api.libs.ws.WSClient
+) extends play.api.Logging:
+  import com.amazonaws._
+  import com.amazonaws.auth._
+  import com.amazonaws.client._
+  import com.amazonaws.services.s3.model._
+  import com.amazonaws.regions.Regions
+  import com.amazonaws.services.s3._
+
+  val oldS3Client =
+    AmazonS3ClientBuilder
+      .standard()
+      .withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsConfig.accessKeyId, awsConfig.secretAccessKey)))
+      .withRegion(Regions.EU_WEST_2)
+      .build()
+
+  def presign(bucketName: String, key: String, expirationDuration: Duration): URL =
+    import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest
+
+    val expiration = java.util.Date()
+    expiration.setTime(expiration.getTime + expirationDuration.toMillis)
+
+    val url =
+      oldS3Client.generatePresignedUrl:
+        GeneratePresignedUrlRequest(bucketName, key)
+          .withMethod(HttpMethod.GET)
+          .withExpiration(expiration)
+
+    logger.info(s"old confirming url")
+    import scala.concurrent.duration.DurationInt
+    val urlCheck = scala.concurrent.Await.result(wsClient.url(url.toString).get(), 40.seconds)
+    logger.info(s"old confirming url: ${urlCheck.status} ($urlCheck)")
+
+    url
+
+end OldS3

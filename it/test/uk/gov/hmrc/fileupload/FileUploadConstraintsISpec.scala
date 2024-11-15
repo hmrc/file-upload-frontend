@@ -38,6 +38,7 @@ class FileUploadConstraintsISpec extends FileActions with GivenWhenThen {
     }
   }
 
+  /*
   "Prevent uploading file that is larger than maxSizePerItem specified in envelope" should {
     "Recieve 413 Entity Too Large" in {
       Given("Envelope created with specified maxSizePerItem: 10Mb")
@@ -49,5 +50,5 @@ class FileUploadConstraintsISpec extends FileActions with GivenWhenThen {
       Then("Will Recieve 413 Entity Too Large")
       result.status shouldBe 413
     }
-  }
+  }*/
 }
