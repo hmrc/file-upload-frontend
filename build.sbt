@@ -29,8 +29,8 @@ lazy val microservice = Project("file-upload-frontend", file("."))
   .settings(PlayKeys.playDefaultPort := 8899)
   .settings(
     libraryDependencies ++= AppDependencies.dependencies,
-    Test / parallelExecution  := false,
-    scalacOptions   += "-Wconf:src=routes/.*:s"
+    Test / parallelExecution := false,
+    scalacOptions += "-Wconf:src=routes/.*:s"
   )
 
 lazy val it = project

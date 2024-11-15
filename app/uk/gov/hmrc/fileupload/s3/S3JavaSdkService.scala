@@ -32,6 +32,8 @@ import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model._
+import software.amazon.awssdk.services.s3.presigner.S3Presigner
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 
@@ -57,7 +59,7 @@ class S3JavaSdkService @Inject()(
 
   override val awsConfig = AwsConfig(configuration)
 
-  val credentials = AwsBasicCredentials.create(awsConfig.accessKeyId, awsConfig.secretAccessKey)
+  private val credentials = AwsBasicCredentials.create(awsConfig.accessKeyId, awsConfig.secretAccessKey)
 
   val metricGetObjectContent      = metrics.meter("s3.getObjectContent")
   val metricGetObjectContentSize  = metrics.counter("s3.getObjectContentSize")
@@ -69,12 +71,12 @@ class S3JavaSdkService @Inject()(
   val metricUploadFailed          = metrics.meter("s3.upload.failed")
   val metricCopyFromQtoT          = metrics.meter("s3.copyFromQtoT")
 
-  val s3Builder =
-    S3Client
-      .builder()
-      .credentialsProvider(StaticCredentialsProvider.create(credentials))
-
   val s3Client =
+    val s3Builder =
+      S3Client
+        .builder()
+        .credentialsProvider(StaticCredentialsProvider.create(credentials))
+
     awsConfig.endpoint
       .fold(s3Builder.region(Region.EU_WEST_2)): endpoint =>
         s3Builder
@@ -336,10 +338,15 @@ class S3JavaSdkService @Inject()(
 
   end zipSource
 
-  def presign(bucketName: String, key: String, expirationDuration: Duration): URL =
-    import software.amazon.awssdk.services.s3.presigner.S3Presigner
-    import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
+  private val presigner =
+    S3Presigner.builder()
+       // The creds on the s3client are not propaged - it tries to look them up and if not found
+       // will use temporary creds (which expect a Security-Token to be included in the request).
+       // Explicitly set so this doesn't happen.
+      .credentialsProvider(StaticCredentialsProvider.create(credentials))
+      .build()
 
+  def presign(bucketName: String, key: String, expirationDuration: Duration): URL =
     val presignRequest =
       GetObjectPresignRequest.builder()
         .signatureDuration(java.time.Duration.ofSeconds(expirationDuration.toSeconds))
@@ -350,8 +357,7 @@ class S3JavaSdkService @Inject()(
             .build()
         .build()
 
-    S3Presigner
-      .create()
+    presigner
       .presignGetObject(presignRequest)
       .url
 

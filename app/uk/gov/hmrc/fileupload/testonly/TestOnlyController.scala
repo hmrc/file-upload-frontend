@@ -46,7 +46,7 @@ class TestOnlyController @Inject()(
   val optTestOnlySdesStubBaseUrl = appModule.optTestOnlySdesStubBaseUrl
 
   def createEnvelope() =
-    Action.async(parse.json[CreateEnvelopeRequest]) { implicit request =>
+    Action.async(parse.json[CreateEnvelopeRequest]): request =>
       def extractEnvelopeId(response: WSResponse): String =
         response
           .header("Location")
@@ -58,21 +58,18 @@ class TestOnlyController @Inject()(
       wSClient.url(s"$baseUrl/file-upload/envelopes").post(payload)
         .map: response =>
           if response.status >= 200 && response.status <= 299 then
-            Created(Json.obj("envelopeId" -> extractEnvelopeId(response)))
+            Created:
+              Json.obj("envelopeId" -> extractEnvelopeId(response))
           else
-            InternalServerError(
+            InternalServerError:
               Json.obj("upstream_status" -> response.status, "error_message" -> response.statusText)
-            )
-    }
 
   def getEnvelope(envelopeId: String) =
     Action.async:
       wSClient.url(s"$baseUrl/file-upload/envelopes/$envelopeId").get()
         .map: response =>
           Status(response.status)(response.body)
-            .withHeaders(
-              "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
-            )
+            .as(response.header("Content-Type").getOrElse("unknown"))
 
   def downloadFile(envelopeId: String, fileId: String) =
     Action.async:
@@ -85,17 +82,16 @@ class TestOnlyController @Inject()(
                 "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
               )
           else
-            Ok(resultFromBackEnd.json)
+            Status(resultFromBackEnd.status)(resultFromBackEnd.json)
 
   def routingRequests() =
-    Action.async(parse.json) { implicit request =>
+    Action.async(parse.json): request =>
       wSClient.url(s"$baseUrl/file-routing/requests").post(request.body)
         .map: response =>
           Status(response.status)(response.body)
-    }
 
   def transferGetEnvelopes(destination: Option[String]) =
-    Action.async {
+    Action.async:
       val transferUrl = s"$baseUrl/file-transfer/envelopes"
 
       val wsUrl =
@@ -110,7 +106,6 @@ class TestOnlyController @Inject()(
             InternalServerError(s"$body backendStatus:${response.status}")
           else
             Ok(body)
-    }
 
   def transferDownloadEnvelope(envelopeId: String) =
     Action.async:
@@ -118,11 +113,13 @@ class TestOnlyController @Inject()(
         .map: resultFromBackEnd =>
           if resultFromBackEnd.status == 200 then
             Ok(resultFromBackEnd.bodyAsBytes)
+              .as(resultFromBackEnd.header("Content-Type").getOrElse("unknown"))
               .withHeaders(
-                "Content-Type"        -> resultFromBackEnd.header("Content-Type"       ).getOrElse("unknown"),
                 "Content-Disposition" -> resultFromBackEnd.header("Content-Disposition").getOrElse("unknown")
               )
-          else Ok(resultFromBackEnd.json)
+
+          else
+            Status(resultFromBackEnd.status)(resultFromBackEnd.json)
 
   def transferDeleteEnvelope(envelopeId: String) =
     Action.async:
@@ -135,9 +132,7 @@ class TestOnlyController @Inject()(
       wSClient.url(s"$baseUrl/file-upload/events/$streamId").get()
         .map: response =>
           Status(response.status)(response.body)
-            .withHeaders {
-              "Content-Type" -> response.header("Content-Type").getOrElse("unknown")
-            }
+            .as(response.header("Content-Type").getOrElse("unknown"))
 
   def filesInProgress() =
     Action.async:
