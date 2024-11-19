@@ -23,7 +23,7 @@ private object AppDependencies {
   val compile = Seq(
     "uk.gov.hmrc"            %% "bootstrap-frontend-play-30" % bootstrapPlayVersion,
     "org.typelevel"          %% "cats-core"                  % "2.12.0",
-    "software.amazon.awssdk" %  "s3"                         % "2.28.19",
+    "software.amazon.awssdk" %  "s3"                         % "2.29.15",
     "joda-time"              %  "joda-time"                  % "2.13.0",
     "org.apache.pekko"       %% "pekko-connectors-file"      % "1.0.2",
     "commons-io"             %  "commons-io"                 % "2.15.0"
