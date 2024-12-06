@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.PlayImport.PlayKeys
-import play.sbt.routes.RoutesKeys.routesGenerator
 import uk.gov.hmrc.DefaultBuildSettings
 
 ThisBuild / majorVersion := 1

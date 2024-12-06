@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import java.io.InputStream
-
 import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.util.ByteString
 import play.api.libs.streams.Accumulator
@@ -34,8 +32,8 @@ object InMemoryMultipartFileHandler:
     def size: Int =
       data.size
 
-    def inputStream: InputStream =
-      data.iterator.asInputStream
+    lazy val md5Hash: String =
+      Md5Hash.md5Hash(data)
 
   def cacheFileInMemory(using ExecutionContext): FilePartHandler[FileCachedInMemory] =
     case FileInfo(partName, filename, contentType, dispositionType) =>

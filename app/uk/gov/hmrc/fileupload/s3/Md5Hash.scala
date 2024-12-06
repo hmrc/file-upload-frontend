@@ -30,3 +30,8 @@ object Md5Hash:
     Sink
       .foreach[ByteString](bs => md.update(bs.toArray))
       .mapMaterializedValue(_.map(_ => Base64.getEncoder.encodeToString(md.digest())))
+
+  def md5Hash(data: ByteString): String =
+    val md = MessageDigest.getInstance("MD5")
+    md.update(data.toArray)
+    Base64.getEncoder.encodeToString(md.digest())

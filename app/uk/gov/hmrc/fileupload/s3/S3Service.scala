@@ -27,7 +27,6 @@ import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 import uk.gov.hmrc.fileupload.s3.S3Service.{DeleteFileFromQuarantineBucket, DownloadFromBucket, StreamResult, UploadToQuarantine}
 
-import java.io.InputStream
 import java.net.URL
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -42,7 +41,7 @@ trait S3Service:
 
   def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(using ExecutionContext): Future[Option[FileData]]
 
-  def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[PutObjectResponse]
+  def upload(bucketName: String, key: S3KeyName, file: ByteString, contentMd5: String): Future[PutObjectResponse]
 
   def uploadToQuarantine: UploadToQuarantine =
     upload(awsConfig.quarantineBucketName, _, _, _)
@@ -88,7 +87,7 @@ end S3Service
 object S3Service:
   type StreamResult = Source[ByteString, Future[IOResult]]
 
-  type UploadToQuarantine = (S3KeyName, InputStream, Int) => Future[PutObjectResponse]
+  type UploadToQuarantine = (S3KeyName, ByteString, String) => Future[PutObjectResponse]
 
   type DownloadFromBucket = S3KeyName => Option[StreamWithMetadata]
 
