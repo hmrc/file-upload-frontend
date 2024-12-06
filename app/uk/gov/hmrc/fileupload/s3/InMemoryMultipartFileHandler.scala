@@ -28,7 +28,9 @@ import scala.concurrent.ExecutionContext
 object InMemoryMultipartFileHandler:
   type InMemoryMultiPartBodyParser = () => BodyParser[MultipartFormData[FileCachedInMemory]]
 
-  case class FileCachedInMemory(data: ByteString)
+  case class FileCachedInMemory(data: ByteString):
+    def md5Hash: String =
+      Md5Hash.md5Hash(data)
 
   def cacheFileInMemory(using ExecutionContext): FilePartHandler[FileCachedInMemory] =
     case FileInfo(partName, filename, contentType, dispositionType) =>

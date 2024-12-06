@@ -41,10 +41,10 @@ trait S3Service:
 
   def retrieveFileFromQuarantine(key: S3KeyName, versionId: String)(using ExecutionContext): Future[Option[FileData]]
 
-  def upload(bucketName: String, key: S3KeyName, file: ByteString): Future[PutObjectResponse]
+  def upload(bucketName: String, key: S3KeyName, file: ByteString, contentMd5: String): Future[PutObjectResponse]
 
   def uploadToQuarantine: UploadToQuarantine =
-    upload(awsConfig.quarantineBucketName, _, _)
+    upload(awsConfig.quarantineBucketName, _, _, _)
 
   def downloadFromTransient: DownloadFromBucket =
     download(awsConfig.transientBucketName, _)
@@ -87,7 +87,7 @@ end S3Service
 object S3Service:
   type StreamResult = Source[ByteString, Future[IOResult]]
 
-  type UploadToQuarantine = (S3KeyName, ByteString) => Future[PutObjectResponse]
+  type UploadToQuarantine = (S3KeyName, ByteString, String) => Future[PutObjectResponse]
 
   type DownloadFromBucket = S3KeyName => Option[StreamWithMetadata]
 

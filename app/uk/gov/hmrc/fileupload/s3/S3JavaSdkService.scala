@@ -168,10 +168,10 @@ class S3JavaSdkService @Inject()(
           data        = result
         )
 
-  override def upload(bucketName: String, key: S3KeyName, file: ByteString): Future[PutObjectResponse] =
-    uploadFile(bucketName, key, file, None, None)
+  override def upload(bucketName: String, key: S3KeyName, file: ByteString, contentMd5: String): Future[PutObjectResponse] =
+    uploadFile(bucketName, key, file, None, contentMd5)
 
-  def uploadFile(bucketName: String, key: S3KeyName, file: ByteString, contentType: Option[String], contentMd5: Option[String]): Future[PutObjectResponse] =
+  def uploadFile(bucketName: String, key: S3KeyName, file: ByteString, contentType: Option[String], contentMd5: String): Future[PutObjectResponse] =
     val fileInfo = s"bucket=$bucketName key=${key.value} fileSize=${file.size}"
     logger.info(s"upload-s3 started: $fileInfo")
     val uploadTime = metricUploadCompleted.time()
@@ -180,9 +180,8 @@ class S3JavaSdkService @Inject()(
         .bucket(bucketName)
         .key(key.value)
         .serverSideEncryption(ServerSideEncryption.AWS_KMS)
-        //.contentLength(fileSize) //
+        .contentMD5(contentMd5)
     contentType.foreach(request.contentType)
-    contentMd5.foreach(request.contentMD5) // TODO ensure we always proide a md5 hash
 
     Future
       .apply:
@@ -271,7 +270,7 @@ class S3JavaSdkService @Inject()(
                          key         = key,
                          file        = zip,
                          contentType = Some("application/zip"),
-                         contentMd5  = Some(md5Hash)
+                         contentMd5  = md5Hash
                        )
        _            =  logger.debug(s"presigning $envelopeId")
        url          =  presign(

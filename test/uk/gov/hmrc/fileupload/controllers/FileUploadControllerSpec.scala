@@ -62,7 +62,7 @@ class FileUploadControllerSpec
         Future.successful(Right(NotifySuccess))
     }
     val fakeCurrentTime = () => 10L
-    val uploadToQuarantine: UploadToQuarantine = (_, _) => Future.successful(PutObjectResponse.builder().build())
+    val uploadToQuarantine: UploadToQuarantine = (_, _, _) => Future.successful(PutObjectResponse.builder().build())
     val createS3Key: (EnvelopeId, FileId) => S3KeyName = (_, _) => S3KeyName("key")
     val configuration = Configuration.from(Map.empty)
     val loggerHelper = new LoggerHelper {

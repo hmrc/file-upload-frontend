@@ -118,7 +118,7 @@ class FileUploadController @Inject()(
   ): Future[Result] =
     val file = formData.files.head
     val key = createS3Key(envelopeId, fileId)
-    uploadToQuarantine(key, file.ref.data)
+    uploadToQuarantine(key, file.ref.data, file.ref.md5Hash)
       .flatMap: uploadResult =>
         val fileRefId = FileRefId(uploadResult.versionId)
         commandHandler
