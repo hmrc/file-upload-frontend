@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.fileupload.s3
 
-import java.io.InputStream
-
 import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.util.ByteString
 import play.api.libs.streams.Accumulator
@@ -30,12 +28,7 @@ import scala.concurrent.ExecutionContext
 object InMemoryMultipartFileHandler:
   type InMemoryMultiPartBodyParser = () => BodyParser[MultipartFormData[FileCachedInMemory]]
 
-  case class FileCachedInMemory(data: ByteString):
-    def size: Int =
-      data.size
-
-    def inputStream: InputStream =
-      data.iterator.asInputStream
+  case class FileCachedInMemory(data: ByteString)
 
   def cacheFileInMemory(using ExecutionContext): FilePartHandler[FileCachedInMemory] =
     case FileInfo(partName, filename, contentType, dispositionType) =>

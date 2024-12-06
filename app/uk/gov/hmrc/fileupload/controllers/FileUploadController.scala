@@ -84,7 +84,7 @@ class FileUploadController @Inject()(
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
           val allowZeroLengthFiles = constraints.flatMap(_.allowZeroLengthFiles)
-          val fileIsEmpty = formData.files.headOption.map(_.ref.size)
+          val fileIsEmpty = formData.files.headOption.map(_.ref.data.size)
 
           val failedRequirementsO =
             if formData.files.size != 1 then
@@ -118,7 +118,7 @@ class FileUploadController @Inject()(
   ): Future[Result] =
     val file = formData.files.head
     val key = createS3Key(envelopeId, fileId)
-    uploadToQuarantine(key, file.ref.inputStream, file.ref.size)
+    uploadToQuarantine(key, file.ref.data)
       .flatMap: uploadResult =>
         val fileRefId = FileRefId(uploadResult.versionId)
         commandHandler
@@ -129,7 +129,7 @@ class FileUploadController @Inject()(
               created     = now(),
               name        = file.filename,
               contentType = file.contentType.getOrElse(""),
-              length      = file.ref.size,
+              length      = file.ref.data.size,
               metadata    = metadataAsJson(formData)
             )
           .map:

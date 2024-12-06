@@ -63,7 +63,7 @@ trait S3TestController(using ExecutionContext):
         val numberOfFiles = req.body.files.size
         if numberOfFiles == 1 then
           val uploadedFile = req.body.files.head.ref
-          s3Service.upload(bucketName, S3KeyName(fileName), uploadedFile.inputStream, uploadedFile.size)
+          s3Service.upload(bucketName, S3KeyName(fileName), uploadedFile.data)
             .map(ur => Ok(s"key $fileName, version: ${ur.versionId}"))
         else
           Future.successful(BadRequest("Expected exactly one file to be attached"))

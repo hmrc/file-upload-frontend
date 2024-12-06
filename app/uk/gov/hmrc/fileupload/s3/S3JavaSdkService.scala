@@ -37,7 +37,6 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import uk.gov.hmrc.fileupload.{EnvelopeId, FileId}
 import uk.gov.hmrc.fileupload.quarantine.FileData
 
-import java.io.InputStream
 import java.net.{URI, URL}
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
@@ -169,11 +168,11 @@ class S3JavaSdkService @Inject()(
           data        = result
         )
 
-  override def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[PutObjectResponse] =
-    uploadFile(bucketName, key, file, fileSize.toLong, None, None)
+  override def upload(bucketName: String, key: S3KeyName, file: ByteString): Future[PutObjectResponse] =
+    uploadFile(bucketName, key, file, None, None)
 
-  def uploadFile(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Long, contentType: Option[String], contentMd5: Option[String]): Future[PutObjectResponse] =
-    val fileInfo = s"bucket=$bucketName key=${key.value} fileSize=$fileSize"
+  def uploadFile(bucketName: String, key: S3KeyName, file: ByteString, contentType: Option[String], contentMd5: Option[String]): Future[PutObjectResponse] =
+    val fileInfo = s"bucket=$bucketName key=${key.value} fileSize=${file.size}"
     logger.info(s"upload-s3 started: $fileInfo")
     val uploadTime = metricUploadCompleted.time()
     val request =
@@ -181,24 +180,24 @@ class S3JavaSdkService @Inject()(
         .bucket(bucketName)
         .key(key.value)
         .serverSideEncryption(ServerSideEncryption.AWS_KMS)
-        .contentLength(fileSize)
+        //.contentLength(fileSize) //
     contentType.foreach(request.contentType)
-    contentMd5.foreach(request.contentMD5)
+    contentMd5.foreach(request.contentMD5) // TODO ensure we always proide a md5 hash
 
     Future
       .apply:
         s3Client.putObject(
           request.build(),
-          RequestBody.fromInputStream(file, fileSize)
+          RequestBody.fromByteBuffer(file.asByteBuffer)
         )
       .map: res =>
         uploadTime.stop()
-        metricUploadCompletedSize.inc(fileSize)
+        metricUploadCompletedSize.inc(file.size)
         logger.info(s"upload-s3 completed: $fileInfo")
         res
       .recoverWith: ex =>
         metricUploadFailed.mark()
-        logger.error(s"upload-s3 error: transfer failed: ${ex.getMessage}", ex)
+        logger.error(s"upload-s3 error: transfer failed: $fileInfo: ${ex.getMessage}", ex)
         Future.failed(ex)
 
   override def listFilesInBucket(bucketName: String): Source[Seq[S3Object], NotUsed] =
@@ -266,11 +265,11 @@ class S3JavaSdkService @Inject()(
        fileSize     =  tempFile.path.toFile.length
        _            =  logger.debug(s"uploading $envelopeId to S3")
        key          =  S3Key.forZipSubdir(awsConfig.zipSubdir)(fileName)
+       zip          <- FileIO.fromPath(tempFile.path).runReduce(_ ++ _) // TODO loading it all into memory?
        uploadResult <- uploadFile(
                          bucketName  = awsConfig.transientBucketName,
                          key         = key,
-                         file        = java.io.FileInputStream(tempFile.path.toFile),
-                         fileSize    = fileSize,
+                         file        = zip,
                          contentType = Some("application/zip"),
                          contentMd5  = Some(md5Hash)
                        )
