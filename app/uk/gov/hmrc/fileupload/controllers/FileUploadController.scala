@@ -84,7 +84,7 @@ class FileUploadController @Inject()(
         case Left(_) => Future.successful(EntityTooLarge)
         case Right(formData) =>
           val allowZeroLengthFiles = constraints.flatMap(_.allowZeroLengthFiles)
-          val fileIsEmpty = formData.files.headOption.map(_.ref.data.size)
+          val fileIsEmpty = formData.files.headOption.map(_.ref.size)
 
           val failedRequirementsO =
             if formData.files.size != 1 then
@@ -129,7 +129,7 @@ class FileUploadController @Inject()(
               created     = now(),
               name        = file.filename,
               contentType = file.contentType.getOrElse(""),
-              length      = file.ref.data.size,
+              length      = file.ref.size,
               metadata    = metadataAsJson(formData)
             )
           .map:

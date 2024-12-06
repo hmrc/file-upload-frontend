@@ -169,10 +169,10 @@ class S3JavaSdkService @Inject()(
         )
 
   override def upload(bucketName: String, key: S3KeyName, file: ByteString, contentMd5: String): Future[PutObjectResponse] =
-    uploadFile(bucketName, key, file, None, contentMd5)
+    uploadFile(bucketName, key, RequestBody.fromByteBuffer(file.asByteBuffer), file.size, contentMd5, None)
 
-  def uploadFile(bucketName: String, key: S3KeyName, file: ByteString, contentType: Option[String], contentMd5: String): Future[PutObjectResponse] =
-    val fileInfo = s"bucket=$bucketName key=${key.value} fileSize=${file.size}"
+  private def uploadFile(bucketName: String, key: S3KeyName, requestBody: RequestBody, fileSize: Long, contentMd5: String, contentType: Option[String]): Future[PutObjectResponse] =
+    val fileInfo = s"bucket=$bucketName key=${key.value} fileSize=$fileSize"
     logger.info(s"upload-s3 started: $fileInfo")
     val uploadTime = metricUploadCompleted.time()
     val request =
@@ -187,11 +187,11 @@ class S3JavaSdkService @Inject()(
       .apply:
         s3Client.putObject(
           request.build(),
-          RequestBody.fromByteBuffer(file.asByteBuffer)
+          requestBody
         )
       .map: res =>
         uploadTime.stop()
-        metricUploadCompletedSize.inc(file.size)
+        metricUploadCompletedSize.inc(fileSize)
         logger.info(s"upload-s3 completed: $fileInfo")
         res
       .recoverWith: ex =>
@@ -264,13 +264,13 @@ class S3JavaSdkService @Inject()(
        fileSize     =  tempFile.path.toFile.length
        _            =  logger.debug(s"uploading $envelopeId to S3")
        key          =  S3Key.forZipSubdir(awsConfig.zipSubdir)(fileName)
-       zip          <- FileIO.fromPath(tempFile.path).runReduce(_ ++ _) // TODO loading it all into memory?
        uploadResult <- uploadFile(
                          bucketName  = awsConfig.transientBucketName,
                          key         = key,
-                         file        = zip,
-                         contentType = Some("application/zip"),
-                         contentMd5  = md5Hash
+                         requestBody = RequestBody.fromFile(tempFile.path),
+                         fileSize    = fileSize,
+                         contentMd5  = md5Hash,
+                         contentType = Some("application/zip")
                        )
        _            =  logger.debug(s"presigning $envelopeId")
        url          =  presign(

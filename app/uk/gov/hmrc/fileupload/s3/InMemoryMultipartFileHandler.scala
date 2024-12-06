@@ -29,7 +29,10 @@ object InMemoryMultipartFileHandler:
   type InMemoryMultiPartBodyParser = () => BodyParser[MultipartFormData[FileCachedInMemory]]
 
   case class FileCachedInMemory(data: ByteString):
-    def md5Hash: String =
+    def size: Int =
+      data.size
+
+    lazy val md5Hash: String =
       Md5Hash.md5Hash(data)
 
   def cacheFileInMemory(using ExecutionContext): FilePartHandler[FileCachedInMemory] =

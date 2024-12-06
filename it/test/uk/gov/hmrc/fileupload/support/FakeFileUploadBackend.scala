@@ -213,10 +213,9 @@ class InMemoryS3Service(
     Future.successful(getBucket(bucketName).get(key.value).map(_.toFileData))
   }
 
-  override def upload(bucketName: String, key: S3KeyName, file: InputStream, fileSize: Int): Future[PutObjectResponse] = {
-    updateBucket(bucketName)(_ + (key.value -> S3File(scala.io.Source.fromInputStream(file).mkString, fileSize)))
+  override def upload(bucketName: String, key: S3KeyName, file: ByteString, contentMd5: String): Future[PutObjectResponse] =
+    updateBucket(bucketName)(_ + (key.value -> S3File(file.decodeString("UTF-8"), file.size)))
     Future.successful(PutObjectResponse.builder.build())
-  }
 
   override def listFilesInBucket(bucketName: String): Source[Seq[S3Object], NotUsed] =
     Source.single(
