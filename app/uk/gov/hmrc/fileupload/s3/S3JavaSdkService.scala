@@ -366,21 +366,23 @@ object S3JavaSdkService:
 
   // ensure no duplicate file names
   def dedupeFilenames(envelopeId: EnvelopeId, files: List[(FileId, Option[String])]): List[(FileId, String)] =
-    files
-      .groupBy(_._2)
-      .view.mapValues(_.map(_._1))
-      .toList
-      .flatMap:
-        case (None          , fileIds    ) => fileIds.map(_ -> UUID.randomUUID().toString)
-        case (Some(fileName), Seq(fileId)) => Seq(fileId -> fileName)
-        case (Some(fileName), fileIds    ) => logger.warn(s"Duplicate filename have been provided for envelope $envelopeId, they will be renamed")
-                                              lazy val (name, ext) =
+
+    def toName(name: String, ext: String, acc: List[(FileId, String)], i: Int = 0): String =
+      val isRename = i != 0
+      val newName = if (!isRename) name else name + "-" + i
+      if acc.exists(_._2 == newName + ext) || (isRename && files.exists(_._2 == Some(newName + ext)))
+      then toName(name, ext, acc, (i + 1))
+      else newName
+
+    files.foldLeft(List.empty){
+      case (acc, (fileId, None          )) => acc :+ (fileId, UUID.randomUUID().toString)
+      case (acc, (fileId, Some(fileName))) => lazy val (name, ext) = {
                                                 val pos = fileName.lastIndexOf('.')
                                                 if (pos == -1) (fileName, "")
                                                 else fileName.splitAt(pos)
+                                              }
+                                              acc :+ (fileId, toName(name, ext, acc) + ext)
+    }
 
-                                              fileIds.zipWithIndex.map:
-                                                case (fileId, 0) => (fileId, fileName)
-                                                case (fileId, i) => (fileId, name + "-" + i + ext)
 
 end S3JavaSdkService

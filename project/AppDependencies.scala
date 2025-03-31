@@ -18,7 +18,7 @@ import play.core.PlayVersion.pekkoVersion
 import sbt._
 
 private object AppDependencies {
-  private val bootstrapPlayVersion = "9.10.0"
+  private val bootstrapPlayVersion = "9.11.0"
 
   val compile = Seq(
     "uk.gov.hmrc"            %% "bootstrap-frontend-play-30" % bootstrapPlayVersion,

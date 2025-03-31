@@ -65,5 +65,18 @@ class S3JavaSdkServiceSpec
         FileId("3") -> "file3.pdf"
       )
     }
+
+    "not generate new duplicates" in {
+      S3JavaSdkService.dedupeFilenames(testEnvelopeId, files = List(
+          FileId("1") -> Some("file.pdf"),
+          FileId("2") -> Some("file.pdf"),
+          FileId("3") -> Some("file-1.pdf")
+        )
+      ).toSet shouldBe Set(
+        FileId("1") -> "file.pdf",
+        FileId("2") -> "file-2.pdf",
+        FileId("3") -> "file-1.pdf"
+      )
+    }
   }
 }
