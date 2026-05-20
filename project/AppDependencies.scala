@@ -15,37 +15,28 @@
  */
 
 import play.core.PlayVersion.pekkoVersion
-import sbt._
+import sbt.*
 
 private object AppDependencies {
-  private val bootstrapPlayVersion = "10.7.0"
-  private val connectorsVersion    = "1.0.2"
+  private val bootstrapPlayVersion   = "10.7.0"
+  private val pekkoConnectorsVersion = "1.0.2"
 
   val compile = Seq(
     "uk.gov.hmrc"            %% "bootstrap-frontend-play-30" % bootstrapPlayVersion,
     "org.typelevel"          %% "cats-core"                  % "2.13.0",
-    "software.amazon.awssdk" %  "s3"                         % "2.44.6",
-    "joda-time"              %  "joda-time"                  % "2.14.0",
-    "org.apache.pekko"       %% "pekko-connectors-file"      % connectorsVersion,
-    "commons-io"             %  "commons-io"                 % "2.19.0"
+    "software.amazon.awssdk" %  "s3"                         % "2.44.8",
+    "joda-time"              %  "joda-time"                  % "2.14.2",
+    "org.apache.pekko"       %% "pekko-connectors-file"      % pekkoConnectorsVersion,
+    "commons-io"             %  "commons-io"                 % "2.22.0"
   )
 
   val test = Seq(
-    "uk.gov.hmrc"        %% "bootstrap-test-play-30"     % bootstrapPlayVersion % Test,
-    "org.jsoup"          %  "jsoup"                      % "1.22.2"             % Test,
-    "org.apache.pekko"   %% "pekko-testkit"              % pekkoVersion         % Test
+    "uk.gov.hmrc"            %% "bootstrap-test-play-30"     % bootstrapPlayVersion % Test,
+    "org.jsoup"              %  "jsoup"                      % "1.22.2"             % Test,
+    "org.apache.pekko"       %% "pekko-testkit"              % pekkoVersion         % Test
   )
 
   val it = Seq.empty
 
   val dependencies = compile ++ test
-
-  val overrides = Seq(
-    "org.apache.pekko" %% "pekko-actor"                  % pekkoVersion,
-    "org.apache.pekko" %% "pekko-actor-typed"            % pekkoVersion,
-    "org.apache.pekko" %% "pekko-stream"                 % pekkoVersion,
-    "org.apache.pekko" %% "pekko-protobuf-v3"            % pekkoVersion,
-    "org.apache.pekko" %% "pekko-slf4j"                  % pekkoVersion,
-    "org.apache.pekko" %% "pekko-serialization-jackson"  % pekkoVersion
-  )
 }

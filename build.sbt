@@ -26,8 +26,7 @@ lazy val microservice = Project("file-upload-frontend", file("."))
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(PlayKeys.playDefaultPort := 8899)
   .settings(
-    libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
-    dependencyOverrides ++= AppDependencies.overrides,
+    libraryDependencies ++= AppDependencies.dependencies,
     Test / parallelExecution := false,
     scalacOptions += "-Wconf:src=routes/.*:s"
   )
