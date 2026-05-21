@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.fileupload.controllers
+package uk.gov.hmrc.fileupload.controllers.admin
 
 import play.api.mvc.{MessagesControllerComponents, RequestHeader}
-import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.fileupload.notifier.CommandHandler
 import uk.gov.hmrc.fileupload.transfer.TransferRequested
 import uk.gov.hmrc.fileupload.virusscan.VirusScanRequested
+import uk.gov.hmrc.fileupload.{ApplicationModule, EnvelopeId, FileId, FileRefId}
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import javax.inject.{Inject, Singleton}
